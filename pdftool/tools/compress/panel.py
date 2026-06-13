@@ -1,13 +1,26 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import flet as ft
+from pydantic import ValidationError
 
 from pdftool.core.plugin import PdfTool, ToolContext, ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.compress.logic import compress
 from pdftool.tools.compress.params import CompressParams
+
+
+def _open_folder(path: Path) -> None:
+    if sys.platform == "darwin":
+        subprocess.run(["open", str(path)], check=False)
+    elif sys.platform == "win32":
+        os.startfile(str(path))  # noqa: S606  (Windows-only)
+    else:
+        subprocess.run(["xdg-open", str(path)], check=False)
 
 
 @register
@@ -42,7 +55,8 @@ class CompressTool(PdfTool):
                 page.update()
 
         picker = ft.FilePicker(on_result=on_pick)
-        page.overlay.append(picker)
+        if picker not in page.overlay:
+            page.overlay.append(picker)
 
         def set_progress(pct: float, msg: str) -> None:
             progress.value = pct
@@ -68,7 +82,7 @@ class CompressTool(PdfTool):
                 return
             try:
                 params = CompressParams(target_mb=float(target_field.value))
-            except ValueError:
+            except (ValueError, ValidationError):
                 status.value = "Tamaño objetivo inválido"
                 page.update()
                 return
@@ -85,7 +99,7 @@ class CompressTool(PdfTool):
             )
 
         def open_folder(e) -> None:
-            page.launch_url(Path(open_btn.data).as_uri())
+            _open_folder(Path(open_btn.data))
 
         run_btn.on_click = do_run
         open_btn.on_click = open_folder

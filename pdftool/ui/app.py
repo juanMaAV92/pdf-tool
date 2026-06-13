@@ -21,8 +21,8 @@ def build_app(page: ft.Page) -> None:
     page.title = "pdf-tool"
     page.theme = build_theme()
     page.theme_mode = resolve_mode(settings.theme_mode)
-    page.window_width = 980
-    page.window_height = 680
+    page.window.width = 980
+    page.window.height = 680
 
     ctx = ToolContext(page=page, run_job=run_job)
     content = ft.Container(expand=True, padding=24)
