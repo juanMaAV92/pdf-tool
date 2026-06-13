@@ -80,11 +80,10 @@ jobs:
   # 2b) Build Windows -> instalador Inno Setup
   build-windows:
     needs: test
-    runs-on: windows-latest
-    # Flutter cae al generador "Visual Studio 16 2019" (inexistente) en los runners;
-    # forzamos el generador de VS 2022 que sí está instalado.
-    env:
-      CMAKE_GENERATOR: "Visual Studio 17 2022"
+    # windows-latest ya es windows-2025 con Visual Studio 2026, que Flutter 3.29.3
+    # (requerido por flet 0.28) no reconoce -> cae al generador "VS 16 2019" y falla.
+    # Fijamos windows-2022 (VS 2022), que este Flutter sí soporta.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
