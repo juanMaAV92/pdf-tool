@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "pdf-tool"
+version = "0.1.0"
+description = "App de escritorio para gestionar PDFs (modular)."
+authors = ["juanmaAV <juan.armero@naoweetech.com>"]
+readme = "README.md"
+packages = [{ include = "pdftool" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+flet = "^0.24.0"
+pymupdf = "^1.24.0"
+pydantic = "^2.6.0"
+platformdirs = "^4.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+
+[tool.poetry.scripts]
+pdftool = "pdftool.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
