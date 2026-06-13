@@ -52,11 +52,16 @@ class CompressTool(PdfTool):
                                      visible=False)
 
         def on_pick(e: ft.FilePickerResultEvent) -> None:
-            if e.files:
+            # En el navegador (modo web) f.path es None; estas herramientas
+            # necesitan rutas locales, así que solo operan en escritorio.
+            if e.files and e.files[0].path:
                 selected["file"] = Path(e.files[0].path)
                 file_label.value = selected["file"].name
                 file_label.italic = False
                 run_btn.disabled = False
+                page.update()
+            elif e.files:
+                status.value = "El modo navegador no da rutas locales; usa la app de escritorio."
                 page.update()
 
         picker = self._picker

@@ -82,14 +82,22 @@ class MergeTool(PdfTool):
             refresh()
 
         def on_pick(e: ft.FilePickerResultEvent) -> None:
-            if e.files:
-                for f in e.files:
-                    p = Path(f.path)
-                    if p not in files:
-                        files.append(p)
+            if not e.files:
+                return
+            added = 0
+            for f in e.files:
+                if not f.path:  # navegador (modo web): sin ruta local
+                    continue
+                p = Path(f.path)
+                if p not in files:
+                    files.append(p)
+                    added += 1
+            if added == 0 and e.files:
+                status.value = "El modo navegador no da rutas locales; usa la app de escritorio."
+            else:
                 open_btn.visible = False
                 status.value = ""
-                refresh()
+            refresh()
 
         self._picker.on_result = on_pick
         if self._picker not in page.overlay:
