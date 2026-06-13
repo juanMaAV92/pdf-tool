@@ -36,7 +36,15 @@ def _target_label(target_mb: float) -> str:
 
 def output_path_for(input_path: Path, target_mb: float) -> Path:
     stem = re.sub(r"(_compressed|_\d+(?:_\d+)?MB)+$", "", input_path.stem)
-    return input_path.parent / f"{stem}_{_target_label(target_mb)}.pdf"
+    candidate = input_path.parent / f"{stem}_{_target_label(target_mb)}.pdf"
+    if candidate == input_path:
+        counter = 1
+        while True:
+            candidate = input_path.parent / f"{stem}_{_target_label(target_mb)}_{counter}.pdf"
+            if candidate != input_path:
+                break
+            counter += 1
+    return candidate
 
 
 def _simple_compress(src: Path, dst: Path) -> None:

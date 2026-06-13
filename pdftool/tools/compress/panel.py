@@ -33,6 +33,11 @@ class CompressTool(PdfTool):
         category="Optimizar",
     )
 
+    def __init__(self) -> None:
+        super().__init__()
+        # Created once per tool instance to avoid leaking pickers into page.overlay.
+        self._picker = ft.FilePicker()
+
     def build_panel(self, ctx: ToolContext) -> ft.Control:
         page: ft.Page = ctx.page
         selected: dict[str, Path | None] = {"file": None}
@@ -54,7 +59,9 @@ class CompressTool(PdfTool):
                 run_btn.disabled = False
                 page.update()
 
-        picker = ft.FilePicker(on_result=on_pick)
+        picker = self._picker
+        # Rebind on_result to the current closure (new build call may have new locals).
+        picker.on_result = on_pick
         if picker not in page.overlay:
             page.overlay.append(picker)
 
