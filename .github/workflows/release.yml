@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+# flet 0.24.1 imprime emojis; en Windows (cp1252) eso revienta sin UTF-8.
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   # 1) Gate: si los tests fallan, no se construye ni publica nada.
   test:
@@ -37,6 +41,8 @@ jobs:
           python-version: "3.12"
       - uses: subosito/flutter-action@v2
         with:
+          # flet 0.24.1 no compila con Flutter >= 3.27 (rename TabBarTheme -> TabBarThemeData, etc.)
+          flutter-version: 3.24.5
           channel: stable
       - name: Install Poetry
         run: pipx install poetry
@@ -81,6 +87,8 @@ jobs:
           python-version: "3.12"
       - uses: subosito/flutter-action@v2
         with:
+          # flet 0.24.1 no compila con Flutter >= 3.27 (rename TabBarTheme -> TabBarThemeData, etc.)
+          flutter-version: 3.24.5
           channel: stable
       - name: Install Poetry
         run: pipx install poetry
