@@ -1,1 +1,3 @@
-__version__ = "0.1.0"
+# La versión real la hornea CI desde el tag git al construir el release
+# (ver .github/workflows/release.yml). En desarrollo local queda como dev.
+__version__ = "0.0.0+dev"
