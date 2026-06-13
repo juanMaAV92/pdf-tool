@@ -1,1 +1,16 @@
+# Superpowers design/plan docs (kept local, not in repo)
 docs/superpowers/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Build artifacts
+build/
+dist/
+*.dmg
+*.spec
