@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import fitz
 import pytest
 
 from pdftool.tools.compress.logic import compress, output_path_for
@@ -39,6 +40,8 @@ def test_compress_reduces_size(big_pdf):
     out = result.outputs[0]
     assert out.exists()
     assert out.stat().st_size < big_pdf.stat().st_size
+    with fitz.open(out) as doc:
+        assert len(doc) > 0
 
 
 def test_progress_is_reported(small_pdf):
@@ -46,3 +49,16 @@ def test_progress_is_reported(small_pdf):
     compress([small_pdf], CompressParams(target_mb=50.0),
              progress=lambda p, m: seen.append((p, m)))
     assert seen and seen[-1][0] == 1.0
+
+
+def test_empty_inputs_raises():
+    with pytest.raises(ValueError, match="inputs está vacío"):
+        compress([], CompressParams())
+
+
+def test_best_effort_branch(big_pdf):
+    """Impossibly small target exercises the 'no se alcanzó el objetivo' path."""
+    result = compress([big_pdf], CompressParams(target_mb=0.0001))
+    out = result.outputs[0]
+    assert out.exists()
+    assert "no se alcanzó el objetivo" in result.summary

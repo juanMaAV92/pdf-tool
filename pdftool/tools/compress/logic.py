@@ -29,7 +29,7 @@ def _size_mb(path: Path) -> float:
 
 
 def _target_label(target_mb: float) -> str:
-    if target_mb == int(target_mb):
+    if target_mb.is_integer():
         return f"{int(target_mb)}MB"
     return f"{target_mb:g}MB".replace(".", "_")
 
@@ -40,30 +40,30 @@ def output_path_for(input_path: Path, target_mb: float) -> Path:
 
 
 def _simple_compress(src: Path, dst: Path) -> None:
-    doc = fitz.open(str(src))
-    doc.save(str(dst), garbage=4, deflate=True, clean=True)
-    doc.close()
+    with fitz.open(src) as doc:
+        doc.save(str(dst), garbage=4, deflate=True, clean=True)
 
 
 def _rerender(src: Path, dst: Path, *, max_dimension: int, jpg_quality: int) -> None:
-    source = fitz.open(str(src))
-    doc = fitz.open()
-    for page_num in range(len(source)):
-        src_page = source[page_num]
-        rect = src_page.rect
-        zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
-        zoom = max(zoom, 0.5)
-        pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-        img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
-        new_page = doc.new_page(width=rect.width, height=rect.height)
-        new_page.insert_image(new_page.rect, stream=img_bytes)
-    doc.save(str(dst), garbage=4, deflate=True)
-    doc.close()
-    source.close()
+    with fitz.open(src) as source, fitz.open() as doc:
+        for page_num in range(len(source)):
+            src_page = source[page_num]
+            rect = src_page.rect
+            if rect.width == 0 or rect.height == 0:
+                continue
+            zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
+            zoom = max(zoom, 0.5)
+            pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
+            new_page = doc.new_page(width=rect.width, height=rect.height)
+            new_page.insert_image(new_page.rect, stream=img_bytes)
+        doc.save(str(dst), garbage=4, deflate=True)
 
 
 def compress(inputs: list[Path], params: CompressParams,
              progress: Progress = _noop) -> ToolResult:
+    if not inputs:
+        raise ValueError("inputs está vacío")
     input_path = Path(inputs[0])
     if not input_path.exists():
         raise FileNotFoundError(input_path)
@@ -74,7 +74,7 @@ def compress(inputs: list[Path], params: CompressParams,
     progress(0.0, f"Tamaño original: {original:.2f} MB")
 
     if original <= target_mb:
-        shutil.copy2(str(input_path), str(out))
+        shutil.copy2(input_path, out)
         progress(1.0, "Ya está bajo el objetivo")
         return ToolResult(outputs=[out], summary=f"{original:.2f} MB (sin cambios)")
 
