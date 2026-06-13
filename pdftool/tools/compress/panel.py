@@ -1,0 +1,111 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import flet as ft
+
+from pdftool.core.plugin import PdfTool, ToolContext, ToolMeta
+from pdftool.core.registry import register
+from pdftool.tools.compress.logic import compress
+from pdftool.tools.compress.params import CompressParams
+
+
+@register
+class CompressTool(PdfTool):
+    meta = ToolMeta(
+        id="compress",
+        name="Comprimir PDF",
+        description="Reduce el tamaño de un PDF a un objetivo en MB.",
+        icon=ft.icons.COMPRESS,
+        category="Optimizar",
+    )
+
+    def build_panel(self, ctx: ToolContext) -> ft.Control:
+        page: ft.Page = ctx.page
+        selected: dict[str, Path | None] = {"file": None}
+
+        file_label = ft.Text("Ningún archivo seleccionado", italic=True)
+        target_field = ft.TextField(label="Tamaño objetivo (MB)", value="5",
+                                     width=200, keyboard_type=ft.KeyboardType.NUMBER)
+        progress = ft.ProgressBar(value=0, visible=False)
+        status = ft.Text("")
+        run_btn = ft.FilledButton("Comprimir", icon=ft.icons.PLAY_ARROW, disabled=True)
+        open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.icons.FOLDER_OPEN,
+                                     visible=False)
+
+        def on_pick(e: ft.FilePickerResultEvent) -> None:
+            if e.files:
+                selected["file"] = Path(e.files[0].path)
+                file_label.value = selected["file"].name
+                file_label.italic = False
+                run_btn.disabled = False
+                page.update()
+
+        picker = ft.FilePicker(on_result=on_pick)
+        page.overlay.append(picker)
+
+        def set_progress(pct: float, msg: str) -> None:
+            progress.value = pct
+            status.value = msg
+            page.update()
+
+        def on_done(result) -> None:
+            progress.visible = False
+            status.value = result.summary
+            open_btn.visible = True
+            open_btn.data = result.outputs[0].parent
+            run_btn.disabled = False
+            page.update()
+
+        def on_error(exc: Exception) -> None:
+            progress.visible = False
+            status.value = f"Error: {exc}"
+            run_btn.disabled = False
+            page.update()
+
+        def do_run(e) -> None:
+            if not selected["file"]:
+                return
+            try:
+                params = CompressParams(target_mb=float(target_field.value))
+            except ValueError:
+                status.value = "Tamaño objetivo inválido"
+                page.update()
+                return
+            run_btn.disabled = True
+            open_btn.visible = False
+            progress.visible = True
+            progress.value = 0
+            page.update()
+            ctx.run_job(
+                work=lambda prog: compress([selected["file"]], params, progress=prog),
+                on_progress=set_progress,
+                on_done=on_done,
+                on_error=on_error,
+            )
+
+        def open_folder(e) -> None:
+            page.launch_url(Path(open_btn.data).as_uri())
+
+        run_btn.on_click = do_run
+        open_btn.on_click = open_folder
+
+        return ft.Column(
+            [
+                ft.Text(self.meta.name, size=24, weight=ft.FontWeight.BOLD),
+                ft.Text(self.meta.description),
+                ft.Divider(),
+                ft.Row([
+                    ft.FilledTonalButton(
+                        "Elegir PDF", icon=ft.icons.UPLOAD_FILE,
+                        on_click=lambda _: picker.pick_files(
+                            allow_multiple=False, allowed_extensions=["pdf"])),
+                    file_label,
+                ]),
+                target_field,
+                ft.Row([run_btn, open_btn]),
+                progress,
+                status,
+            ],
+            spacing=16,
+        )
