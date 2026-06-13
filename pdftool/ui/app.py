@@ -10,7 +10,7 @@ from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import check_for_update
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 
-GITHUB_REPO = "juanmaAV/pdf-tool"  # ajustar al repo real
+GITHUB_REPO = "juanMaAV92/pdf-tool"
 
 
 def build_app(page: ft.Page) -> None:

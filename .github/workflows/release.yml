@@ -1,0 +1,156 @@
+name: Release
+
+# Se dispara al empujar un tag de versión, p.ej.:  git tag v0.2.0 && git push origin v0.2.0
+on:
+  push:
+    tags:
+      - "v*"
+
+# Necesario para que el job de release pueda crear el GitHub Release.
+permissions:
+  contents: write
+
+jobs:
+  # 1) Gate: si los tests fallan, no se construye ni publica nada.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies
+        run: poetry install
+      - name: Run tests
+        run: poetry run pytest -q
+
+  # 2a) Build macOS -> .dmg
+  build-macos:
+    needs: test
+    runs-on: macos-14 # Apple Silicon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Derive version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Stamp version (pyproject + __init__)
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          poetry version "$VERSION"
+          sed -i '' "s/^__version__ = .*/__version__ = \"$VERSION\"/" pdftool/__init__.py
+      - name: Export runtime requirements for the bundle
+        run: |
+          poetry self add poetry-plugin-export
+          poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt
+      - name: Install deps (for flet CLI)
+        run: poetry install
+      - name: Build macOS app
+        run: poetry run flet build macos --build-version "${{ steps.ver.outputs.version }}" --product "pdf-tool" --org "com.juanmaav" -v
+      - name: Package .dmg (drag-to-Applications layout)
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          APP=$(ls -d build/macos/*.app | head -1)
+          echo "App bundle: $APP"
+          mkdir -p dmg_stage
+          cp -R "$APP" dmg_stage/
+          ln -s /Applications dmg_stage/Applications
+          hdiutil create -volname "pdf-tool" -srcfolder dmg_stage -ov -format UDZO "pdf-tool-${VERSION}-macos.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: "pdf-tool-*-macos.dmg"
+
+  # 2b) Build Windows -> instalador Inno Setup
+  build-windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Derive version from tag
+        id: ver
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Stamp version (pyproject + __init__ + Inno AppVersion)
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          poetry version $v
+          (Get-Content pdftool/__init__.py) -replace '^__version__ = .*', "__version__ = `"$v`"" | Set-Content pdftool/__init__.py
+          (Get-Content installer/windows.iss) -replace 'AppVersion=.*', "AppVersion=$v" | Set-Content installer/windows.iss
+      - name: Export runtime requirements for the bundle
+        shell: bash
+        run: |
+          poetry self add poetry-plugin-export
+          poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt
+      - name: Install deps (for flet CLI)
+        run: poetry install
+      - name: Build Windows app
+        run: poetry run flet build windows --build-version "${{ steps.ver.outputs.version }}" --product "pdf-tool" --org "com.juanmaav" -v
+      - name: List build output (debug)
+        shell: bash
+        run: ls -la build/windows
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/windows.iss
+          $v = "${{ steps.ver.outputs.version }}"
+          Move-Item "installer/Output/pdf-tool-setup.exe" "pdf-tool-$v-windows-setup.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup
+          path: "pdf-tool-*-windows-setup.exe"
+
+  # 3) Publica el GitHub Release (en BORRADOR) con ambos instaladores adjuntos.
+  release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: |
+            dist/pdf-tool-*-macos.dmg
+            dist/pdf-tool-*-windows-setup.exe
+          body: |
+            ## Instalación
+
+            ### macOS (`.dmg`)
+            1. Abre el `.dmg` y arrastra **pdf-tool** a la carpeta *Aplicaciones*.
+            2. La primera vez: **clic derecho** sobre la app → **Abrir** → **Abrir**.
+               (La app no está firmada; este paso solo se hace una vez.)
+               Si dice que está "dañada", abre Terminal y ejecuta:
+               `xattr -dr com.apple.quarantine /Applications/pdf-tool.app`
+
+            ### Windows (`-setup.exe`)
+            1. Ejecuta el instalador. Si aparece **SmartScreen**:
+               **Más información** → **Ejecutar de todas formas**.
+            2. El instalador actualiza en sitio sobre versiones previas.
+
+            Tus ajustes (tema, etc.) se conservan al actualizar.

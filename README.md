@@ -17,31 +17,47 @@ poetry run pytest          # corre los tests
 3. En `pdftool/tools/<id>/__init__.py` importa la clase para disparar el registro.
 4. La app la descubre y la muestra automáticamente en la barra lateral.
 
-## Empaquetado
+## Releases (automatizado con GitHub Actions)
 
-### macOS
-
-```bash
-poetry run flet build macos
-# Resultado en build/macos -> crear .dmg arrastrando la .app
-```
-
-El usuario arrastra `pdf-tool.app` a Aplicaciones; al actualizar, Finder reemplaza la versión previa.
-
-### Windows
+No se empaqueta a mano. Para publicar una nueva versión:
 
 ```bash
-poetry run flet build windows
-# Luego compilar installer/windows.iss con Inno Setup -> pdf-tool-setup.exe
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
-El instalador actualiza en sitio (mismo AppId).
+Eso dispara `.github/workflows/release.yml`, que:
 
-## Distribución y actualizaciones
+1. Corre los tests (si fallan, no construye nada).
+2. Construye en paralelo macOS (`.dmg`) y Windows (instalador Inno Setup).
+3. Hornea la versión del tag en el build (`pyproject`, `__version__`, `AppVersion`).
+4. Crea un **GitHub Release en borrador** con ambos instaladores adjuntos.
 
-Publicar `pdf-tool.dmg` (Mac) y `pdf-tool-setup.exe` (Windows) en **GitHub Releases** con tag `vX.Y.Z`. La app consulta el último release al abrir y muestra un banner si hay versión nueva. Los ajustes del usuario viven fuera del binario (`platformdirs`), así que no se pierden al actualizar.
+Revisa el borrador y, cuando estés conforme, publícalo (botón **Publish release**
+o `gh release edit v0.2.0 --draft=false`). Solo al publicarlo las apps instaladas
+detectan la nueva versión y muestran el banner de actualización.
+
+El número de versión es **el tag** — única fuente de verdad; no edites versiones a mano.
+
+### Build local (para depurar el empaquetado)
+
+```bash
+poetry run flet build macos      # -> build/macos/pdf-tool.app
+poetry run flet build windows    # -> build/windows/  (luego compilar installer/windows.iss)
+```
+
+### Cómo abrir la app sin firma
+
+Los instaladores no están firmados (Gatekeeper / SmartScreen avisarán):
+
+- **macOS:** clic derecho sobre la app → **Abrir** → **Abrir** (solo la 1ª vez).
+  Si dice "dañada": `xattr -dr com.apple.quarantine /Applications/pdf-tool.app`.
+- **Windows:** en SmartScreen → **Más información** → **Ejecutar de todas formas**.
+
+Los ajustes del usuario viven fuera del binario (`platformdirs`), así que se conservan al actualizar.
 
 ## Notas
 
-- Ajusta `GITHUB_REPO` en `pdftool/ui/app.py` y `AppVersion` en `installer/windows.iss` al repo/versión reales antes del primer release.
-- La firma/notarización (Gatekeeper en Mac, firma de código en Windows) queda fuera de v1.
+- Antes del primer release, ajusta `GITHUB_REPO` en `pdftool/ui/app.py` al repo real
+  (`juanMaAV92/pdf-tool`) para que el chequeo de actualización apunte bien.
+- CI usa Python 3.12 (más estable para `flet build` que 3.14). La firma/notarización queda fuera de v1.
