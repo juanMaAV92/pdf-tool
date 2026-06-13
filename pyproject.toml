@@ -24,3 +24,14 @@ pdftool = "pdftool.main:main"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+# --- Config de `flet build` (no afecta a poetry/los tests) ---
+# flet arrastra webview_flutter aunque no lo usemos. Sus versiones nuevas exigen
+# Dart >= 3.9, pero el Flutter 3.29 (que requiere flet 0.28) solo llega a Dart 3.7.
+# Pineamos las últimas versiones de webview compatibles con Dart 3.7 para que el
+# build no rompa al compilar el grafo Dart completo.
+[tool.flet.flutter.pubspec.dependency_overrides]
+webview_flutter = "4.13.0"
+webview_flutter_android = "4.10.1"
+webview_flutter_wkwebview = "3.23.0"
+webview_flutter_platform_interface = "2.14.0"
