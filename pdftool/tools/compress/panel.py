@@ -29,7 +29,7 @@ class CompressTool(PdfTool):
         id="compress",
         name="Comprimir PDF",
         description="Reduce el tamaño de un PDF a un objetivo en MB.",
-        icon=ft.icons.COMPRESS,
+        icon=ft.Icons.COMPRESS,
         category="Optimizar",
     )
 
@@ -47,8 +47,8 @@ class CompressTool(PdfTool):
                                      width=200, keyboard_type=ft.KeyboardType.NUMBER)
         progress = ft.ProgressBar(value=0, visible=False)
         status = ft.Text("")
-        run_btn = ft.FilledButton("Comprimir", icon=ft.icons.PLAY_ARROW, disabled=True)
-        open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.icons.FOLDER_OPEN,
+        run_btn = ft.FilledButton("Comprimir", icon=ft.Icons.PLAY_ARROW, disabled=True)
+        open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.Icons.FOLDER_OPEN,
                                      visible=False)
 
         def on_pick(e: ft.FilePickerResultEvent) -> None:
@@ -118,7 +118,7 @@ class CompressTool(PdfTool):
                 ft.Divider(),
                 ft.Row([
                     ft.FilledTonalButton(
-                        "Elegir PDF", icon=ft.icons.UPLOAD_FILE,
+                        "Elegir PDF", icon=ft.Icons.UPLOAD_FILE,
                         on_click=lambda _: picker.pick_files(
                             allow_multiple=False, allowed_extensions=["pdf"])),
                     file_label,

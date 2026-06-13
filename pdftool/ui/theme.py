@@ -6,7 +6,7 @@ SEED_COLOR = "#4F46E5"  # índigo moderno
 
 
 def build_theme() -> ft.Theme:
-    return ft.Theme(color_scheme_seed=SEED_COLOR, use_material3=True)
+    return ft.Theme(color_scheme_seed=SEED_COLOR)
 
 
 def resolve_mode(setting: str) -> ft.ThemeMode:

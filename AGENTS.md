@@ -60,7 +60,7 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 
 - **TDD:** primero el test que falla (sobre la lógica pura), luego la implementación. Los paneles Flet se verifican manualmente.
 - **Tests de lógica pura** viven en `tests/` espejando la estructura. Fixtures de PDFs en `tests/conftest.py`.
-- **Flet 0.24.1:** iconos y colores son **minúsculas** (`ft.icons.*`, `ft.colors.*`), NO `ft.Icons`/`ft.Colors`. Tamaño de ventana: `page.window.width/height`. Abrir banner: `page.open(banner)`.
+- **Flet 0.28.x:** iconos y colores son enums **con mayúscula** (`ft.Icons.*`, `ft.Colors.*`). Tamaño de ventana: `page.window.width/height`. Abrir banner: `page.open(banner)`.
 - Operaciones pesadas **siempre** en segundo plano vía `run_job` para no congelar la UI.
 
 ## Commits
@@ -78,5 +78,5 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 
 ## Notas
 
-- El proyecto corre sobre **Python 3.14** con **Flet 0.24.1**. Si el empaquetado (`flet build`) da problemas, considerar fijar Python a 3.12 o subir Flet.
+- El proyecto usa **Flet 0.28.x**. CI fija **Flutter 3.29.3** (compatible con flet 0.28 y con VS 2022) y **Python 3.12** para `flet build`. flet 0.24.1 quedó obsoleto: no compilaba para Windows en los runners actuales.
 - `docs/superpowers/` (specs y planes de diseño) está en `.gitignore` — es referencia local, no va al repo.

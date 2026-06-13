@@ -51,14 +51,14 @@ def build_app(page: ft.Page) -> None:
     update_banner = ft.Banner(
         content=ft.Text("Hay una nueva versión disponible."),
         actions=[ft.TextButton("Descargar", on_click=lambda e: page.launch_url(e.control.data))],
-        bgcolor=ft.colors.AMBER_100,
-        leading=ft.Icon(ft.icons.SYSTEM_UPDATE),
+        bgcolor=ft.Colors.AMBER_100,
+        leading=ft.Icon(ft.Icons.SYSTEM_UPDATE),
     )
 
     top_bar = ft.Row(
         [
             ft.Text(f"pdf-tool v{__version__}", weight=ft.FontWeight.BOLD),
-            ft.IconButton(ft.icons.BRIGHTNESS_6, tooltip="Cambiar tema",
+            ft.IconButton(ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema",
                           on_click=toggle_theme),
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
