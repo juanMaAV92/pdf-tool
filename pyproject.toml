@@ -8,7 +8,9 @@ packages = [{ include = "pdftool" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-flet = "^0.28.0"
+# 0.28.2 fijo: 0.28.3 tiene una regresión en macOS donde el FilePicker no abre
+# (flet issue #5334). 0.28.2 es la última sana de la serie 0.28.
+flet = "0.28.2"
 pymupdf = "^1.24.0"
 pydantic = "^2.6.0"
 platformdirs = "^4.2.0"

@@ -60,13 +60,13 @@ files = [
 
 [[package]]
 name = "flet"
-version = "0.28.3"
+version = "0.28.2"
 description = "Flet for Python - easily build interactive multi-platform apps in Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "flet-0.28.3-py3-none-any.whl", hash = "sha256:649bfc4af7933956ecf44963df6c0d997bff9ceeaf89d3c86d96803840cab83e"},
+    {file = "flet-0.28.2-py3-none-any.whl", hash = "sha256:599ae936863510e427b03ccc7f84d57eda712080d95e72e2086a2fa8ec5e6661"},
 ]
 
 [package.dependencies]
@@ -75,10 +75,10 @@ oauthlib = {version = ">=3.2.2,<4.0.0", markers = "platform_system != \"Pyodide\
 repath = ">=0.9.0,<0.10.0"
 
 [package.extras]
-all = ["flet-cli (==0.28.3)", "flet-desktop (==0.28.3) ; platform_system == \"Darwin\" or platform_system == \"Windows\"", "flet-desktop-light (==0.28.3) ; platform_system == \"Linux\"", "flet-web (==0.28.3)"]
-cli = ["flet-cli (==0.28.3)"]
-desktop = ["flet-desktop (==0.28.3) ; platform_system == \"Darwin\" or platform_system == \"Windows\"", "flet-desktop-light (==0.28.3) ; platform_system == \"Linux\""]
-web = ["flet-web (==0.28.3)"]
+all = ["flet-cli (==0.28.2)", "flet-desktop (==0.28.2) ; platform_system == \"Darwin\" or platform_system == \"Windows\"", "flet-desktop-light (==0.28.2) ; platform_system == \"Linux\"", "flet-web (==0.28.2)"]
+cli = ["flet-cli (==0.28.2)"]
+desktop = ["flet-desktop (==0.28.2) ; platform_system == \"Darwin\" or platform_system == \"Windows\"", "flet-desktop-light (==0.28.2) ; platform_system == \"Linux\""]
+web = ["flet-web (==0.28.2)"]
 
 [[package]]
 name = "h11"
@@ -496,4 +496,4 @@ typing-extensions = ">=4.12.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "f02be0d32cffb3b89a2b23622836f0c2e9e1aebefa27f3ab6fcb538eb63af934"
+content-hash = "07f258aea60f988352e6a3d210c210ab15d33eb22dc8e5d0f572dde9d2674ee1"
