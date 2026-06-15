@@ -11,6 +11,7 @@ from pdftool.core.updater import check_for_update
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 
 GITHUB_REPO = "juanMaAV92/pdf-tool"
+GITHUB_PROFILE = "https://github.com/juanMaAV92"
 
 
 def build_app(page: ft.Page) -> None:
@@ -57,17 +58,30 @@ def build_app(page: ft.Page) -> None:
 
     top_bar = ft.Row(
         [
-            ft.Text(f"pdf-tool v{__version__}", weight=ft.FontWeight.BOLD),
             ft.IconButton(ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema",
                           on_click=toggle_theme),
         ],
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        alignment=ft.MainAxisAlignment.END,
+    )
+
+    footer = ft.Row(
+        [
+            ft.TextButton(
+                "powered by juanMaAV92",
+                icon=ft.Icons.OPEN_IN_NEW,
+                tooltip="Abrir el perfil de GitHub del autor",
+                on_click=lambda _e: page.launch_url(GITHUB_PROFILE),
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
     )
 
     page.add(
         ft.Column([
             top_bar,
             ft.Row([rail, ft.VerticalDivider(width=1), content], expand=True),
+            ft.Divider(height=1),
+            footer,
         ], expand=True)
     )
     if tools:
