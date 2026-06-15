@@ -58,11 +58,10 @@ def build_app(page: ft.Page) -> None:
 
     top_bar = ft.Row(
         [
-            ft.Text(f"pdf-tool v{__version__}", weight=ft.FontWeight.BOLD),
             ft.IconButton(ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema",
                           on_click=toggle_theme),
         ],
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        alignment=ft.MainAxisAlignment.END,
     )
 
     footer = ft.Row(
