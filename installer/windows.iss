@@ -13,8 +13,8 @@ AppId={{B5E1C0DE-PDF0-4F00-9000-PDFTOOL00001}}
 Source: "..\build\windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
-Name: "{group}\pdf-tool"; Filename: "{app}\pdf-tool.exe"
-Name: "{commondesktop}\pdf-tool"; Filename: "{app}\pdf-tool.exe"
+Name: "{group}\pdf-tool"; Filename: "{app}\pdf_tool.exe"
+Name: "{commondesktop}\pdf-tool"; Filename: "{app}\pdf_tool.exe"
 
 [Run]
-Filename: "{app}\pdf-tool.exe"; Description: "Abrir pdf-tool"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\pdf_tool.exe"; Description: "Abrir pdf-tool"; Flags: nowait postinstall skipifsilent
