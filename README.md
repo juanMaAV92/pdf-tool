@@ -1,63 +1,113 @@
-# pdf-tool
+<div align="center">
 
-App de escritorio para gestionar PDFs (modular). Primera herramienta: **Comprimir PDF**.
+# 📄 PDF Tool
 
-## Desarrollo
+**Una app de escritorio sencilla para trabajar con tus PDFs — sin subir nada a internet.**
 
+Comprime, une, protege y marca tus documentos desde tu propio ordenador.
+Gratis, de código abierto y sin anuncios.
+
+[![Descargar](https://img.shields.io/badge/⬇️_Descargar-última_versión-2ea44f?style=for-the-badge)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
+
+[![CI](https://github.com/juanMaAV92/pdf-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/juanMaAV92/pdf-tool/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/juanMaAV92/pdf-tool?label=versión)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
+[![License: MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](LICENSE)
+![Platform](https://img.shields.io/badge/macOS_·_Windows-lightgrey)
+
+</div>
+
+<!-- 📸 Añade aquí un screenshot o GIF de la app:
+     ![PDF Tool](docs/screenshot.png)
+     Es lo que más convence a quien entra al repo. -->
+
+---
+
+## ✨ Qué puedes hacer
+
+| | Herramienta | Para qué sirve |
+|---|---|---|
+| 🗜️ | **Comprimir PDF** | Reduce el peso de un PDF hasta el tamaño en MB que tú elijas. |
+| 🔗 | **Unir PDFs** | Combina varios documentos en uno solo, en el orden que quieras. |
+| 🔒 | **Proteger PDF** | Añade o quita la contraseña de un documento. |
+| 💧 | **Marca de agua** | Repite un texto en diagonal sobre todas las páginas. |
+
+> 🔐 **Todo ocurre en tu equipo.** Tus archivos nunca salen de tu ordenador.
+
+---
+
+## ⬇️ Descargar e instalar
+
+Ve a la **[página de descargas](https://github.com/juanMaAV92/pdf-tool/releases/latest)** y elige el archivo de tu sistema:
+
+### 🍎 macOS
+1. Descarga el archivo **`.dmg`** y ábrelo.
+2. Arrastra **PDF Tool** a la carpeta *Aplicaciones*.
+3. Ábrela desde *Aplicaciones*. macOS mostrará un aviso y **no** dejará abrirla aún
+   (es normal: la app no está firmada, pero es segura).
+4. Ve a  **Menú Apple () → Ajustes del Sistema → Privacidad y Seguridad**.
+5. Baja hasta la sección **Seguridad**: verás un mensaje que dice que se bloqueó *“PDF Tool”*.
+   Pulsa **Abrir de todas formas** y confirma con tu contraseña o Touch ID.
+   <br><sub>Solo hay que hacerlo la primera vez. A partir de ahí se abre con doble clic como cualquier app.</sub>
+
+### 🪟 Windows
+1. Descarga el **instalador** (`.exe`) y ejecútalo.
+2. Si aparece SmartScreen: **Más información** → **Ejecutar de todas formas**.
+   <br><sub>(El aviso sale porque el instalador no está firmado; es seguro.)</sub>
+
+> ✅ Tus ajustes se guardan fuera de la app, así que se conservan al actualizar. Cuando publique una nueva versión, la app te avisa con un banner.
+
+---
+
+## 🤝 Contribuir
+
+¡Las contribuciones son bienvenidas! Puedes abrir un *issue* con ideas o errores,
+o mandar un *pull request*. La arquitectura es modular: añadir una herramienta nueva
+es crear una carpeta y la app la descubre sola.
+
+<details>
+<summary><b>🛠️ Para desarrolladores (montar el proyecto en local)</b></summary>
+
+### Requisitos
+- Python 3.11+ y [Poetry](https://python-poetry.org/)
+
+### Arrancar
 ```bash
 poetry install
 poetry run pdftool        # abre la app
-poetry run pytest          # corre los tests
+poetry run pytest         # corre los tests
 ```
 
-## Agregar una herramienta nueva
-
+### Añadir una herramienta nueva
 1. Crea `pdftool/tools/<id>/` con `params.py`, `logic.py` (función pura + tests) y `panel.py`.
 2. En `panel.py`, decora la clase con `@register` y define su `meta` (`ToolMeta`).
 3. En `pdftool/tools/<id>/__init__.py` importa la clase para disparar el registro.
 4. La app la descubre y la muestra automáticamente en la barra lateral.
 
-## Releases (automatizado con GitHub Actions)
+La **lógica** (`logic.py`) no importa Flet y se prueba sin UI; la **UI** (`panel.py`)
+solo arma controles. Esa separación mantiene los tests rápidos y la app desacoplada.
 
-No se empaqueta a mano. Para publicar una nueva versión:
-
+### Publicar una versión (automatizado con GitHub Actions)
 ```bash
 git tag v0.2.0
 git push origin v0.2.0
 ```
+Eso dispara `release.yml`, que corre los tests, construye macOS (`.dmg`) y Windows
+(instalador Inno Setup) en paralelo, hornea la versión del tag en el build y crea
+un **GitHub Release en borrador** con ambos instaladores. Revísalo y pulsa
+**Publish release** para que las apps instaladas detecten la actualización.
 
-Eso dispara `.github/workflows/release.yml`, que:
-
-1. Corre los tests (si fallan, no construye nada).
-2. Construye en paralelo macOS (`.dmg`) y Windows (instalador Inno Setup).
-3. Hornea la versión del tag en el build (`pyproject`, `__version__`, `AppVersion`).
-4. Crea un **GitHub Release en borrador** con ambos instaladores adjuntos.
-
-Revisa el borrador y, cuando estés conforme, publícalo (botón **Publish release**
-o `gh release edit v0.2.0 --draft=false`). Solo al publicarlo las apps instaladas
-detectan la nueva versión y muestran el banner de actualización.
-
-El número de versión es **el tag** — única fuente de verdad; no edites versiones a mano.
+El número de versión es **el tag** — única fuente de verdad.
 
 ### Build local (para depurar el empaquetado)
-
 ```bash
 poetry run flet build macos      # -> build/macos/pdf-tool.app
-poetry run flet build windows    # -> build/windows/  (luego compilar installer/windows.iss)
+poetry run flet build windows    # -> build/windows/
 ```
 
-### Cómo abrir la app sin firma
+</details>
 
-Los instaladores no están firmados (Gatekeeper / SmartScreen avisarán):
+---
 
-- **macOS:** clic derecho sobre la app → **Abrir** → **Abrir** (solo la 1ª vez).
-  Si dice "dañada": `xattr -dr com.apple.quarantine /Applications/pdf-tool.app`.
-- **Windows:** en SmartScreen → **Más información** → **Ejecutar de todas formas**.
-
-Los ajustes del usuario viven fuera del binario (`platformdirs`), así que se conservan al actualizar.
-
-## Notas
-
-- Antes del primer release, ajusta `GITHUB_REPO` en `pdftool/ui/app.py` al repo real
-  (`juanMaAV92/pdf-tool`) para que el chequeo de actualización apunte bien.
-- CI usa Python 3.12 (más estable para `flet build` que 3.14). La firma/notarización queda fuera de v1.
+<div align="center">
+<sub>Hecho con 🐍 Python + <a href="https://flet.dev">Flet</a> · Licencia <a href="LICENSE">MIT</a></sub>
+</div>

@@ -2,7 +2,8 @@
 name = "pdf-tool"
 version = "0.1.0"
 description = "App de escritorio para gestionar PDFs (modular)."
-authors = ["juanmaAV <juan.armero@naoweetech.com>"]
+authors = ["Juan Manuel Armero <juanmanuel.armero@gmail.com>"]
+license = "MIT"
 readme = "README.md"
 packages = [{ include = "pdftool" }]
 
