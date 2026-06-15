@@ -4,6 +4,8 @@
 
 **Una app de escritorio sencilla para trabajar con tus PDFs — sin subir nada a internet.**
 
+<img width="980" height="680" alt="Screenshot 2026-06-15 at 6 54 49 PM" src="https://github.com/user-attachments/assets/adf416d8-bb05-478d-8a6d-31a35410af28" />
+
 Comprime, une, protege y marca tus documentos desde tu propio ordenador.
 Gratis, de código abierto y sin anuncios.
 
