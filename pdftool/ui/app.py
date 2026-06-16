@@ -36,22 +36,21 @@ def _tool_card(index, tool, on_open):
 
 
 def _build_home(tools, on_open):
-    groups: dict[str, list] = {}
-    for i, tool in enumerate(tools):
-        groups.setdefault(tool.meta.category, []).append((i, tool))
-
-    sections = [
-        ft.Text("Herramientas PDF", size=28, weight=ft.FontWeight.BOLD),
-        ft.Text("Elige una herramienta para empezar."),
-        ft.Container(height=8),
-    ]
-    for category, items in groups.items():
-        sections.append(ft.Text(category, size=18, weight=ft.FontWeight.BOLD))
-        sections.append(
-            ft.Row([_tool_card(i, t, on_open) for i, t in items],
-                   wrap=True, spacing=12, run_spacing=12)
-        )
-    return ft.Column(sections, spacing=14, scroll=ft.ScrollMode.AUTO, expand=True)
+    # Cuadrícula única que envuelve varias tarjetas por fila (compacta, sin scroll
+    # con pocas herramientas). Cuando haya muchas por categoría, se puede agrupar.
+    cards = ft.Row(
+        [_tool_card(i, t, on_open) for i, t in enumerate(tools)],
+        wrap=True, spacing=16, run_spacing=16,
+    )
+    return ft.Column(
+        [
+            ft.Text("Herramientas PDF", size=28, weight=ft.FontWeight.BOLD),
+            ft.Text("Elige una herramienta para empezar."),
+            ft.Container(height=8),
+            cards,
+        ],
+        spacing=14, scroll=ft.ScrollMode.AUTO, expand=True,
+    )
 
 
 def build_app(page: ft.Page) -> None:
