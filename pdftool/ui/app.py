@@ -14,6 +14,46 @@ GITHUB_REPO = "juanMaAV92/pdf-tool"
 GITHUB_PROFILE = "https://github.com/juanMaAV92"
 
 
+def _tool_card(index, tool, on_open):
+    return ft.Container(
+        content=ft.Column(
+            [
+                ft.Icon(tool.meta.icon, size=30),
+                ft.Text(tool.meta.name, weight=ft.FontWeight.BOLD, size=15),
+                ft.Text(tool.meta.description, size=12,
+                        color=ft.Colors.ON_SURFACE_VARIANT),
+            ],
+            spacing=6,
+        ),
+        width=240,
+        height=140,
+        padding=16,
+        border_radius=14,
+        border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+        ink=True,
+        on_click=lambda _e: on_open(index),
+    )
+
+
+def _build_home(tools, on_open):
+    groups: dict[str, list] = {}
+    for i, tool in enumerate(tools):
+        groups.setdefault(tool.meta.category, []).append((i, tool))
+
+    sections = [
+        ft.Text("Herramientas PDF", size=28, weight=ft.FontWeight.BOLD),
+        ft.Text("Elige una herramienta para empezar."),
+        ft.Container(height=8),
+    ]
+    for category, items in groups.items():
+        sections.append(ft.Text(category, size=18, weight=ft.FontWeight.BOLD))
+        sections.append(
+            ft.Row([_tool_card(i, t, on_open) for i, t in items],
+                   wrap=True, spacing=12, run_spacing=12)
+        )
+    return ft.Column(sections, spacing=14, scroll=ft.ScrollMode.AUTO, expand=True)
+
+
 def build_app(page: ft.Page) -> None:
     registry.discover()
     tools = registry.get_tools()
@@ -28,19 +68,35 @@ def build_app(page: ft.Page) -> None:
     ctx = ToolContext(page=page, run_job=run_job)
     content = ft.Container(expand=True, padding=24)
 
-    def show_tool(index: int) -> None:
+    def open_tool(index: int) -> None:
         content.content = tools[index].build_panel(ctx)
+        rail.selected_index = index + 1
         page.update()
+
+    def open_home() -> None:
+        content.content = _build_home(tools, open_tool)
+        rail.selected_index = 0
+        page.update()
+
+    def on_rail_change(e) -> None:
+        idx = e.control.selected_index
+        if idx == 0:
+            open_home()
+        else:
+            open_tool(idx - 1)
 
     rail = ft.NavigationRail(
         selected_index=0,
         label_type=ft.NavigationRailLabelType.ALL,
         min_width=80,
         destinations=[
-            ft.NavigationRailDestination(icon=t.meta.icon, label=t.meta.name)
-            for t in tools
+            ft.NavigationRailDestination(icon=ft.Icons.GRID_VIEW, label="Inicio"),
+            *[
+                ft.NavigationRailDestination(icon=t.meta.icon, label=t.meta.name)
+                for t in tools
+            ],
         ],
-        on_change=lambda e: show_tool(e.control.selected_index),
+        on_change=on_rail_change,
     )
 
     def toggle_theme(_e) -> None:
@@ -84,8 +140,7 @@ def build_app(page: ft.Page) -> None:
             footer,
         ], expand=True)
     )
-    if tools:
-        show_tool(0)
+    open_home()
 
     # Chequeo de actualización (no bloquea: corre en hilo).
     def _check(_progress=None):
