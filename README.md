@@ -6,8 +6,8 @@
 
 <img width="980" height="680" alt="Screenshot 2026-06-15 at 6 54 49 PM" src="https://github.com/user-attachments/assets/adf416d8-bb05-478d-8a6d-31a35410af28" />
 
-Comprime, une, protege y marca tus documentos desde tu propio ordenador.
-Gratis, de código abierto y sin anuncios.
+Comprime, une, divide, protege y marca tus documentos —y conviértelos desde imágenes—
+desde tu propio ordenador. Gratis, de código abierto y sin anuncios.
 
 [![Descargar](https://img.shields.io/badge/⬇️_Descargar-última_versión-2ea44f?style=for-the-badge)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
 
@@ -30,6 +30,8 @@ Gratis, de código abierto y sin anuncios.
 |---|---|---|
 | 🗜️ | **Comprimir PDF** | Reduce el peso de un PDF hasta el tamaño en MB que tú elijas. |
 | 🔗 | **Unir PDFs** | Combina varios documentos en uno solo, en el orden que quieras. |
+| ✂️ | **Dividir PDF** | Separa un PDF en varios: por rangos de páginas, una página por archivo o cada N páginas. |
+| 🖼️ | **Imágenes a PDF** | Combina varias imágenes (JPG/PNG) en un solo PDF, en el orden que elijas. |
 | 🔒 | **Proteger PDF** | Añade o quita la contraseña de un documento. |
 | 💧 | **Marca de agua** | Repite un texto en diagonal sobre todas las páginas. |
 
