@@ -12,6 +12,7 @@ from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 
 GITHUB_REPO = "juanMaAV92/pdf-tool"
 GITHUB_PROFILE = "https://github.com/juanMaAV92"
+AUTHOR_SITE = "https://juanMaAV92.github.io"
 
 
 def _tool_card(index, tool, on_open):
@@ -124,8 +125,8 @@ def build_app(page: ft.Page) -> None:
             ft.TextButton(
                 "powered by juanMaAV92",
                 icon=ft.Icons.OPEN_IN_NEW,
-                tooltip="Abrir el perfil de GitHub del autor",
-                on_click=lambda _e: page.launch_url(GITHUB_PROFILE),
+                tooltip="Abrir la página personal del autor",
+                on_click=lambda _e: page.launch_url(AUTHOR_SITE),
             ),
         ],
         alignment=ft.MainAxisAlignment.CENTER,
