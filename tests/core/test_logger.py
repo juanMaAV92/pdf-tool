@@ -26,13 +26,45 @@ def _isolated_logging(tmp_path, monkeypatch):
 
 def test_sanitize_redacts_macos_user_paths():
     out = sanitize("FileNotFoundError: /Users/maria/Docs/factura.pdf")
-    assert out == "FileNotFoundError: ~/Docs/factura.pdf"
+    assert "maria" not in out
+    assert "Docs" not in out
+    assert "factura" not in out
 
 
 def test_sanitize_redacts_windows_user_paths():
     out = sanitize(r"no se pudo abrir C:\Users\maria\Desktop\f.pdf")
     assert "maria" not in out
-    assert out.endswith(r"~\Desktop\f.pdf")
+    assert "Desktop" not in out
+
+
+def test_sanitize_redacts_full_path_not_just_user_segment():
+    out = sanitize("No such file or directory: '/Users/maria/Documentos/Nomina-enero.pdf'")
+    assert "Documentos" not in out
+    assert "Nomina-enero" not in out
+
+
+def test_sanitize_redacts_quoted_paths_with_spaces():
+    out = sanitize("cannot open '/Users/maria/Trabajo/contrato secreto.pdf'")
+    assert "contrato" not in out
+    assert "secreto" not in out
+
+
+def test_sanitize_redacts_bare_document_filenames():
+    out = sanitize("Formato no soportado: vacaciones-2025.JPG (usa JPG o PNG)")
+    assert "vacaciones-2025" not in out
+
+
+def test_formatter_traceback_hides_document_name():
+    fmt = _SanitizingFormatter("%(message)s")
+    try:
+        raise FileNotFoundError(2, "No such file or directory",
+                                "/Users/maria/Documentos/Nomina-enero.pdf")
+    except FileNotFoundError:
+        record = logging.LogRecord("pdftool", logging.ERROR, __file__, 1,
+                                   "error", (), sys.exc_info())
+    out = fmt.format(record)
+    assert "Nomina-enero" not in out
+    assert "Documentos" not in out
 
 
 def test_sanitize_redacts_real_home():
@@ -50,7 +82,7 @@ def test_formatter_sanitizes_traceback():
     out = fmt.format(record)
     assert "Traceback" in out
     assert "/Users/maria" not in out
-    assert "~/factura.pdf" in out
+    assert "factura" not in out
 
 
 def test_setup_logging_idempotent_and_writes_file():

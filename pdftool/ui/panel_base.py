@@ -67,6 +67,7 @@ class BaseToolPanel(PdfTool):
         self._error_detail.visible = False
         self._error_detail.value = ""
         self._log_btn.visible = False
+        self._error_actions.visible = False
 
     def _toggle_error_detail(self, _e) -> None:
         self._error_detail.visible = not self._error_detail.visible
@@ -84,6 +85,7 @@ class BaseToolPanel(PdfTool):
             self._error_detail.visible = False  # arranca plegado
             self._error_toggle.visible = True
             self._log_btn.visible = True
+            self._error_actions.visible = True
         else:
             self._clear_error()
         self.run_btn.disabled = not self.can_run()
@@ -102,6 +104,7 @@ class BaseToolPanel(PdfTool):
                                       color=ft.Colors.ON_SURFACE_VARIANT)
         self._log_btn = download_log_button(self._log_picker)
         self._log_btn.visible = False
+        self._error_actions = ft.Row([self._error_toggle, self._log_btn], visible=False)
         self.open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.Icons.FOLDER_OPEN,
                                           visible=False)
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
@@ -168,7 +171,7 @@ class BaseToolPanel(PdfTool):
                 ft.Row([self.run_btn, self.open_btn]),
                 self.progress,
                 self.status,
-                ft.Row([self._error_toggle, self._log_btn]),
+                self._error_actions,
                 self._error_detail,
             ],
             spacing=16,

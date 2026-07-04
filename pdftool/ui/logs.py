@@ -10,10 +10,13 @@ _EMPTY = "(registro vacío)\n"
 
 
 def _log_content() -> str:
-    paths = log_paths()
-    if not paths:
-        return _EMPTY
-    return "".join(p.read_text(encoding="utf-8") for p in paths)
+    chunks: list[str] = []
+    for p in log_paths():
+        try:
+            chunks.append(p.read_text(encoding="utf-8"))
+        except OSError:  # rotación entre exists() y read_text(): archivo ilegible
+            continue
+    return "".join(chunks) if chunks else _EMPTY
 
 
 def make_log_picker() -> ft.FilePicker:

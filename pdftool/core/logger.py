@@ -10,18 +10,41 @@ from pdftool.core.config import data_dir
 _LOGGER_NAME = "pdftool"
 _FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 
-# Rutas personales en cualquier texto (mensajes de excepción incluidos).
-_USER_PATH_PATTERNS = [
-    re.compile(r"/Users/[^/\s]+"),                 # macOS
-    re.compile(r"[A-Za-z]:[\\/]Users[\\/][^\\/\s]+"),  # Windows
+_DOC_EXT = r"pdf|jpe?g|png"
+
+# Redacción por capas, aplicadas EN ORDEN sobre el texto ya formateado
+# (incluye tracebacks). El orden importa:
+#   1) rutas/archivos entre comillas simples primero: los mensajes de
+#      excepción suelen citarlas y las comillas delimitan nombres con
+#      espacios que un patrón sin comillas no podría acotar.
+#   2) rutas sin comillas, consumiendo la ruta COMPLETA (no solo el
+#      segmento de usuario) para no dejar carpetas/nombres de archivo tras
+#      el "~".
+#   3) nombres de archivo de documento sueltos (sin ruta ni comillas),
+#      incluida la cola de un nombre partido por espacios.
+_REDACTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    # 1) rutas o nombres citados
+    (re.compile(r"'[^'\n]*[/\\][^'\n]*'"), "'[ruta]'"),
+    (re.compile(rf"'[^'\n]*\.({_DOC_EXT})'", re.IGNORECASE), "'[archivo]'"),
+    # 2) rutas completas sin comillas
+    (re.compile(re.escape(str(Path.home())) + r"\S*"), "~"),
+    (re.compile(r"/Users/\S+"), "~"),
+    (re.compile(r"[A-Za-z]:[\\/]Users[\\/]\S+"), "~"),
+    # 3) nombres de archivo sueltos (sin ruta)
+    (re.compile(rf"\S+\.({_DOC_EXT})\b", re.IGNORECASE), "[archivo]"),
 ]
 
 
 def sanitize(text: str) -> str:
-    """Redacta rutas personales: home real y /Users|C:\\Users genéricos -> ~."""
-    text = text.replace(str(Path.home()), "~")
-    for pattern in _USER_PATH_PATTERNS:
-        text = pattern.sub("~", text)
+    """Redacta rutas y nombres de documentos personales de cualquier texto.
+
+    Aplica las capas de `_REDACTION_PATTERNS` en orden: primero lo citado
+    entre comillas, luego rutas completas sin comillas, y por último
+    nombres de archivo de documento sueltos. Ninguna capa debe dejar
+    filtrar carpetas ni nombres de archivo del usuario.
+    """
+    for pattern, replacement in _REDACTION_PATTERNS:
+        text = pattern.sub(replacement, text)
     return text
 
 

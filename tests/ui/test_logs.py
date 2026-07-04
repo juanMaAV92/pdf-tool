@@ -45,6 +45,15 @@ def test_save_adds_txt_suffix_and_handles_empty_log(tmp_path, monkeypatch):
     assert "registro vacío" in out.read_text(encoding="utf-8")
 
 
+def test_save_survives_rotation_race(tmp_path, monkeypatch):
+    missing = tmp_path / "pdf-tool.log"  # log_paths lo devuelve pero ya no existe
+    monkeypatch.setattr(logs_mod, "log_paths", lambda: [missing])
+    picker = make_log_picker()
+    target = tmp_path / "salida.txt"
+    picker.on_result(_FakeSaveEvent(str(target)))
+    assert "registro vacío" in target.read_text(encoding="utf-8")
+
+
 def test_cancel_does_nothing(tmp_path, monkeypatch):
     monkeypatch.setattr(logs_mod, "log_paths", lambda: [])
     picker = make_log_picker()

@@ -182,6 +182,17 @@ def test_clear_error_hides_log_button():
     assert tool._log_btn.visible is False
 
 
+def test_error_actions_row_visibility_tracks_error_state():
+    tool = _build(_SingleStub())
+    assert tool._error_actions.visible is False
+
+    tool._on_error(RuntimeError("boom"))
+    assert tool._error_actions.visible is True
+
+    tool._clear_error()
+    assert tool._error_actions.visible is False
+
+
 def test_on_error_logs_with_traceback(caplog):
     tool = _build(_SingleStub())
     with caplog.at_level(logging.ERROR, logger="pdftool.single-stub"):
