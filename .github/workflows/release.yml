@@ -62,7 +62,20 @@ jobs:
       - name: Install deps (for flet CLI)
         run: poetry install
       - name: Build macOS app
-        run: poetry run flet build macos --build-version "${{ steps.ver.outputs.version }}" --product "pdf-tool" --org "com.juanmaav" -v
+        # --arch arm64 x86_64: bundle universal. Sin esto, flet empaqueta el
+        # Python embebido solo para la arch del runner (Apple Silicon), y en un
+        # Mac Intel la ventana abre pero el backend Python no arranca -> pantalla
+        # en blanco. El universal mete ambas arches en el mismo .app/.dmg.
+        run: poetry run flet build macos --arch arm64 x86_64 --build-version "${{ steps.ver.outputs.version }}" --product "pdf-tool" --org "com.juanmaav" -v
+      - name: Verify universal binary (arm64 + x86_64)
+        run: |
+          APP=$(ls -d build/macos/*.app | head -1)
+          BIN="$APP/Contents/MacOS/pdf-tool"
+          echo "Binario: $BIN"
+          ARCHS=$(lipo -archs "$BIN")
+          echo "Arquitecturas: $ARCHS"
+          echo "$ARCHS" | grep -q x86_64 || { echo "::error::falta x86_64 (build no universal)"; exit 1; }
+          echo "$ARCHS" | grep -q arm64 || { echo "::error::falta arm64 (build no universal)"; exit 1; }
       - name: Package .dmg (drag-to-Applications layout)
         run: |
           VERSION="${{ steps.ver.outputs.version }}"
