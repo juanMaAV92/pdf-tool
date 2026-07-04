@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
+import time
 from pathlib import Path
 
 import flet as ft
 
 from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
 from pdftool.ui.errors import humanize_error
+from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.platform import open_folder
 
 _WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
@@ -27,6 +30,7 @@ class BaseToolPanel(PdfTool):
         super().__init__()
         # Un único FilePicker reutilizado entre renders (evita fugas en overlay).
         self._picker = ft.FilePicker()
+        self._log_picker = make_log_picker()  # ídem, para "Descargar log"
 
     # ---- hooks de la herramienta ----
     def extra_controls(self) -> list[ft.Control]:
@@ -48,12 +52,21 @@ class BaseToolPanel(PdfTool):
     def can_run(self) -> bool:
         raise NotImplementedError
 
+    # ---- registro (log de diagnóstico; sin datos del usuario) ----
+    def _logger(self) -> logging.Logger:
+        return logging.getLogger(f"pdftool.{self.meta.id}")
+
+    def _elapsed(self) -> float:
+        started = getattr(self, "_run_started", None)
+        return 0.0 if started is None else time.monotonic() - started
+
     # ---- errores (mensajes para el usuario) ----
     def _clear_error(self) -> None:
         self._error_toggle.visible = False
         self._error_toggle.text = "Ver detalle técnico"
         self._error_detail.visible = False
         self._error_detail.value = ""
+        self._log_btn.visible = False
 
     def _toggle_error_detail(self, _e) -> None:
         self._error_detail.visible = not self._error_detail.visible
@@ -62,6 +75,7 @@ class BaseToolPanel(PdfTool):
         self._page.update()
 
     def _on_error(self, exc: Exception) -> None:
+        self._logger().error("error · %.1fs", self._elapsed(), exc_info=exc)
         self.progress.visible = False
         message, detail = humanize_error(exc)
         self.status.value = message
@@ -69,6 +83,7 @@ class BaseToolPanel(PdfTool):
             self._error_detail.value = detail
             self._error_detail.visible = False  # arranca plegado
             self._error_toggle.visible = True
+            self._log_btn.visible = True
         else:
             self._clear_error()
         self.run_btn.disabled = not self.can_run()
@@ -85,6 +100,8 @@ class BaseToolPanel(PdfTool):
                                             on_click=self._toggle_error_detail)
         self._error_detail = ft.Text("", visible=False, selectable=True, size=12,
                                       color=ft.Colors.ON_SURFACE_VARIANT)
+        self._log_btn = download_log_button(self._log_picker)
+        self._log_btn.visible = False
         self.open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.Icons.FOLDER_OPEN,
                                           visible=False)
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
@@ -95,12 +112,16 @@ class BaseToolPanel(PdfTool):
         if self._picker not in page.overlay:
             page.overlay.append(self._picker)
 
+        if self._log_picker not in page.overlay:
+            page.overlay.append(self._log_picker)
+
         def set_progress(pct: float, msg: str) -> None:
             self.progress.value = pct
             self.status.value = msg
             page.update()
 
         def on_done(result: ToolResult) -> None:
+            self._logger().info("ok · %.1fs", self._elapsed())
             self._clear_error()
             self.progress.visible = False
             self.status.value = result.summary
@@ -125,6 +146,8 @@ class BaseToolPanel(PdfTool):
             self.progress.value = 0
             page.update()
             inputs = self.collect_inputs()
+            self._run_started = time.monotonic()
+            self._logger().info("inicio · %d archivo(s)", len(inputs))
             ctx.run_job(
                 work=lambda prog: self.run_logic(inputs, params, prog),
                 on_progress=set_progress,
@@ -145,7 +168,7 @@ class BaseToolPanel(PdfTool):
                 ft.Row([self.run_btn, self.open_btn]),
                 self.progress,
                 self.status,
-                self._error_toggle,
+                ft.Row([self._error_toggle, self._log_btn]),
                 self._error_detail,
             ],
             spacing=16,

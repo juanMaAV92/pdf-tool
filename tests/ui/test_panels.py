@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import pytest
@@ -159,3 +160,30 @@ def test_multi_pick_after_error_clears_stale_detail():
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
 
     assert tool._error_toggle.visible is False
+
+
+def test_on_error_generic_shows_log_button():
+    tool = _build(_SingleStub())
+    tool._on_error(RuntimeError("boom"))
+    assert tool._log_btn.visible is True
+
+
+def test_on_error_value_error_hides_log_button():
+    tool = _build(_SingleStub())
+    tool._on_error(RuntimeError("boom"))       # deja el botón visible
+    tool._on_error(ValueError("Contraseña incorrecta."))
+    assert tool._log_btn.visible is False
+
+
+def test_clear_error_hides_log_button():
+    tool = _build(_SingleStub())
+    tool._on_error(RuntimeError("boom"))
+    tool._clear_error()
+    assert tool._log_btn.visible is False
+
+
+def test_on_error_logs_with_traceback(caplog):
+    tool = _build(_SingleStub())
+    with caplog.at_level(logging.ERROR, logger="pdftool.single-stub"):
+        tool._on_error(RuntimeError("boom"))
+    assert any(r.exc_info for r in caplog.records)
