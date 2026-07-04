@@ -112,3 +112,28 @@ def test_multi_file_ignores_duplicates():
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))  # misma ruta, no se duplica
 
     assert tool.collect_inputs() == [Path("/tmp/a.pdf")]
+
+
+def test_on_error_generic_shows_folded_detail():
+    tool = _build(_SingleStub())
+    tool._on_error(RuntimeError("boom"))
+    assert tool.status.value == "No se pudo procesar el PDF. Puede estar dañado o protegido."
+    assert tool._error_toggle.visible is True
+    assert tool._error_detail.value == "RuntimeError: boom"
+    assert tool._error_detail.visible is False  # arranca plegado
+
+
+def test_on_error_value_error_has_no_detail_toggle():
+    tool = _build(_SingleStub())
+    tool._on_error(ValueError("Contraseña incorrecta."))
+    assert tool.status.value == "Contraseña incorrecta."
+    assert tool._error_toggle.visible is False
+
+
+def test_toggle_error_detail_reveals_then_hides():
+    tool = _build(_SingleStub())
+    tool._on_error(RuntimeError("boom"))
+    tool._toggle_error_detail(None)
+    assert tool._error_detail.visible is True
+    tool._toggle_error_detail(None)
+    assert tool._error_detail.visible is False
