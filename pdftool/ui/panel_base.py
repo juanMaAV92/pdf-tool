@@ -172,10 +172,12 @@ class SingleFileToolPanel(BaseToolPanel):
             self._file_label.italic = False
             self.open_btn.visible = False
             self.status.value = ""
+            self._clear_error()
             self.run_btn.disabled = False
             self.after_pick(self._file)
         elif e.files:
             self.status.value = _WEB_MODE_MSG
+            self._clear_error()
         self._page.update()
 
     def after_pick(self, path: Path) -> None:
@@ -254,6 +256,7 @@ class MultiFileToolPanel(BaseToolPanel):
         else:
             self.open_btn.visible = False
             self.status.value = ""
+        self._clear_error()
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

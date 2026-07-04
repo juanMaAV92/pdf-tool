@@ -137,3 +137,25 @@ def test_toggle_error_detail_reveals_then_hides():
     assert tool._error_detail.visible is True
     tool._toggle_error_detail(None)
     assert tool._error_detail.visible is False
+
+
+def test_pick_after_error_clears_stale_detail():
+    tool = _build(_SingleStub())
+    tool._on_error(RuntimeError("boom"))
+    assert tool._error_toggle.visible is True
+
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+
+    assert tool._error_toggle.visible is False
+    assert tool._error_detail.visible is False
+    assert tool._error_detail.value == ""
+
+
+def test_multi_pick_after_error_clears_stale_detail():
+    tool = _build(_MultiStub())
+    tool._on_error(RuntimeError("boom"))
+    assert tool._error_toggle.visible is True
+
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+
+    assert tool._error_toggle.visible is False
