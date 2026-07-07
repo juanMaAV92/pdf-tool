@@ -28,7 +28,7 @@ desde tu propio ordenador. Gratis, de código abierto y sin anuncios.
 
 | | Herramienta | Para qué sirve |
 |---|---|---|
-| 🗜️ | **Comprimir PDF** | Reduce el peso de un PDF hasta el tamaño en MB que tú elijas. |
+| 🗜️ | **Comprimir PDF** | Reduce el peso de uno o varios PDFs hasta el tamaño en MB que elijas. |
 | 🔗 | **Unir PDFs** | Combina varios documentos en uno solo, en el orden que quieras. |
 | ✂️ | **Dividir PDF** | Separa un PDF en varios: por rangos de páginas, una página por archivo o cada N páginas. |
 | 🖼️ | **Imágenes a PDF** | Combina varias imágenes (JPG/PNG) en un solo PDF, en el orden que elijas. |

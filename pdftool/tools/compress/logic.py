@@ -68,15 +68,8 @@ def _rerender(src: Path, dst: Path, *, max_dimension: int, jpg_quality: int) -> 
         doc.save(str(dst), garbage=4, deflate=True)
 
 
-def compress(inputs: list[Path], params: CompressParams,
-             progress: Progress = _noop) -> ToolResult:
-    if not inputs:
-        raise ValueError("inputs está vacío")
-    input_path = Path(inputs[0])
-    if not input_path.exists():
-        raise FileNotFoundError(input_path)
-
-    target_mb = params.target_mb
+def _compress_one(input_path: Path, target_mb: float,
+                  progress: Progress) -> tuple[Path, str, float, float]:
     out = output_path_for(input_path, target_mb)
     original = _size_mb(input_path)
     progress(0.0, f"Tamaño original: {original:.2f} MB")
@@ -84,14 +77,14 @@ def compress(inputs: list[Path], params: CompressParams,
     if original <= target_mb:
         shutil.copy2(input_path, out)
         progress(1.0, "Ya está bajo el objetivo")
-        return ToolResult(outputs=[out], summary=f"{original:.2f} MB (sin cambios)")
+        return out, f"{original:.2f} MB (sin cambios)", original, original
 
     _simple_compress(input_path, out)
     current = _size_mb(out)
     progress(0.1, f"Compresión simple: {current:.2f} MB")
     if current <= target_mb:
         progress(1.0, "Listo (compresión simple)")
-        return ToolResult(outputs=[out], summary=f"{original:.2f} MB → {current:.2f} MB")
+        return out, f"{original:.2f} MB → {current:.2f} MB", original, current
 
     n = len(_ATTEMPTS)
     for i, attempt in enumerate(_ATTEMPTS):
@@ -101,10 +94,51 @@ def compress(inputs: list[Path], params: CompressParams,
         current = _size_mb(out)
         if current <= target_mb:
             progress(1.0, f"Listo: {current:.2f} MB")
-            return ToolResult(outputs=[out], summary=f"{original:.2f} MB → {current:.2f} MB")
+            return out, f"{original:.2f} MB → {current:.2f} MB", original, current
 
     progress(1.0, f"Mejor esfuerzo: {current:.2f} MB")
+    return (out, f"{original:.2f} MB → {current:.2f} MB (no se alcanzó el objetivo)",
+            original, current)
+
+
+def compress(inputs: list[Path], params: CompressParams,
+             progress: Progress = _noop) -> ToolResult:
+    if not inputs:
+        raise ValueError("inputs está vacío")
+    paths = [Path(p) for p in inputs]
+    for path in paths:
+        if not path.exists():
+            raise FileNotFoundError(path)
+
+    target_mb = params.target_mb
+    total = len(paths)
+    outputs: list[Path] = []
+    summaries: list[str] = []
+    total_original = 0.0
+    total_final = 0.0
+
+    for index, path in enumerate(paths):
+        def scoped(pct: float, msg: str, _i: int = index, _name: str = path.name) -> None:
+            overall = (_i + pct) / total
+            label = f"[{_i + 1}/{total}] {_name}: {msg}" if total > 1 else msg
+            progress(overall, label)
+
+        out, summary, original, final = _compress_one(path, target_mb, scoped)
+        outputs.append(out)
+        summaries.append(summary)
+        total_original += original
+        total_final += final
+
+    if total == 1:
+        return ToolResult(outputs=outputs, summary=summaries[0])
+
+    saved = total_original - total_final
+    pct = (saved / total_original * 100) if total_original else 0.0
+    tail = f" ({pct:.0f}% menos)" if saved > 0.005 else " (sin cambios)"
+    progress(1.0, f"{total} archivos comprimidos")
     return ToolResult(
-        outputs=[out],
-        summary=f"{original:.2f} MB → {current:.2f} MB (no se alcanzó el objetivo)",
+        outputs=outputs,
+        summary=(f"{total} archivos · "
+                 f"{total_original:.2f} MB → {total_final:.2f} MB{tail}"),
+        details=summaries,
     )

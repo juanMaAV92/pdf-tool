@@ -19,6 +19,9 @@ class ToolMeta:
 class ToolResult:
     outputs: list[Path]
     summary: str
+    # Etiqueta corta por salida (misma longitud/orden que outputs), para mostrar
+    # el resultado junto a cada archivo. None si no aplica (p. ej. 1 archivo).
+    details: list[str] | None = None
 
 
 # Reporta avance: fracción 0..1 y un mensaje de estado.
