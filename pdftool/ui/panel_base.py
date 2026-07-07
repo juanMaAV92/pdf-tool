@@ -179,6 +179,7 @@ class BaseToolPanel(PdfTool):
                 self._error_detail,
             ],
             spacing=16,
+            expand=True,
         )
 
 
@@ -226,7 +227,11 @@ class MultiFileToolPanel(BaseToolPanel):
     def build_input(self, page) -> ft.Control:
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
-        self._file_list = ft.Column(spacing=4)
+        # La lista rellena el espacio disponible y scrollea sola cuando no cabe:
+        # el resto del panel (título, botón, params, ejecutar) queda siempre
+        # visible, con o sin banda de actualización, y nunca pisa el footer.
+        self._file_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO,
+                                    expand=True)
         self._picker.on_result = self._on_pick
         return ft.Column([
             ft.FilledTonalButton(
@@ -234,7 +239,7 @@ class MultiFileToolPanel(BaseToolPanel):
                 on_click=lambda _e: self._picker.pick_files(
                     allow_multiple=True, allowed_extensions=self.allowed_extensions)),
             self._file_list,
-        ], spacing=16)
+        ], spacing=16, expand=True)
 
     def _refresh(self) -> None:
         self._file_list.controls.clear()
