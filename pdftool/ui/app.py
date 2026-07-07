@@ -113,14 +113,6 @@ def build_app(page: ft.Page) -> None:
         leading=ft.Icon(ft.Icons.SYSTEM_UPDATE),
     )
 
-    top_bar = ft.Row(
-        [
-            ft.IconButton(ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema",
-                          on_click=toggle_theme),
-        ],
-        alignment=ft.MainAxisAlignment.END,
-    )
-
     log_picker = make_log_picker()
     page.overlay.append(log_picker)
 
@@ -133,13 +125,14 @@ def build_app(page: ft.Page) -> None:
                 on_click=lambda _e: page.launch_url(AUTHOR_SITE),
             ),
             download_log_button(log_picker),
+            ft.IconButton(ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema",
+                          on_click=toggle_theme),
         ],
         alignment=ft.MainAxisAlignment.CENTER,
     )
 
     page.add(
         ft.Column([
-            top_bar,
             ft.Row([rail, ft.VerticalDivider(width=1), content], expand=True),
             ft.Divider(height=1),
             footer,
