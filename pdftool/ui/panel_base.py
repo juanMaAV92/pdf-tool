@@ -42,6 +42,9 @@ class BaseToolPanel(PdfTool):
     def run_logic(self, inputs: list[Path], params, progress) -> ToolResult:
         raise NotImplementedError
 
+    def on_result(self, result: ToolResult) -> None:
+        """Hook opcional tras un run correcto (p. ej. anotar la lista de archivos)."""
+
     # ---- hooks de la subclase (1 archivo / N archivos) ----
     def build_input(self, page) -> ft.Control:
         raise NotImplementedError
@@ -131,6 +134,7 @@ class BaseToolPanel(PdfTool):
             self.open_btn.visible = True
             self.open_btn.data = result.outputs[0].parent
             self.run_btn.disabled = not self.can_run()
+            self.on_result(result)
             page.update()
 
         def do_run(_e) -> None:
@@ -221,6 +225,7 @@ class MultiFileToolPanel(BaseToolPanel):
 
     def build_input(self, page) -> ft.Control:
         self._files: list[Path] = []
+        self._results: list[str] = []  # etiqueta por archivo tras un run
         self._file_list = ft.Column(spacing=4)
         self._picker.on_result = self._on_pick
         return ft.Column([
@@ -234,12 +239,15 @@ class MultiFileToolPanel(BaseToolPanel):
     def _refresh(self) -> None:
         self._file_list.controls.clear()
         for index, path in enumerate(self._files):
+            result = self._results[index] if index < len(self._results) else None
             self._file_list.controls.append(
                 ft.Row(
                     [
                         ft.Text(f"{index + 1}.", width=28),
                         ft.Text(path.name, expand=True,
                                 overflow=ft.TextOverflow.ELLIPSIS),
+                        ft.Text(result or "", size=12, no_wrap=True,
+                                color=ft.Colors.ON_SURFACE_VARIANT),
                         ft.IconButton(ft.Icons.ARROW_UPWARD, tooltip="Subir",
                                       disabled=index == 0,
                                       on_click=lambda _e, i=index: self._move(i, -1)),
@@ -255,15 +263,20 @@ class MultiFileToolPanel(BaseToolPanel):
         self.run_btn.disabled = not self.can_run()
         self._page.update()
 
+    def _clear_results(self) -> None:
+        self._results = []
+
     def _move(self, index: int, delta: int) -> None:
         new_index = index + delta
         if 0 <= new_index < len(self._files):
             self._files[index], self._files[new_index] = (
                 self._files[new_index], self._files[index])
+            self._clear_results()
             self._refresh()
 
     def _remove(self, index: int) -> None:
         self._files.pop(index)
+        self._clear_results()
         self._refresh()
 
     def _on_pick(self, e) -> None:
@@ -283,6 +296,11 @@ class MultiFileToolPanel(BaseToolPanel):
             self.open_btn.visible = False
             self.status.value = ""
         self._clear_error()
+        self._clear_results()
+        self._refresh()
+
+    def on_result(self, result: ToolResult) -> None:
+        self._results = list(result.details or [])
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:
