@@ -8,6 +8,7 @@ from pdftool.core.config import load_settings, save_settings
 from pdftool.core.jobs import run_job
 from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import check_for_update
+from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 
 GITHUB_REPO = "juanMaAV92/pdf-tool"
@@ -112,13 +113,8 @@ def build_app(page: ft.Page) -> None:
         leading=ft.Icon(ft.Icons.SYSTEM_UPDATE),
     )
 
-    top_bar = ft.Row(
-        [
-            ft.IconButton(ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema",
-                          on_click=toggle_theme),
-        ],
-        alignment=ft.MainAxisAlignment.END,
-    )
+    log_picker = make_log_picker()
+    page.overlay.append(log_picker)
 
     footer = ft.Row(
         [
@@ -128,13 +124,15 @@ def build_app(page: ft.Page) -> None:
                 tooltip="Abrir la página personal del autor",
                 on_click=lambda _e: page.launch_url(AUTHOR_SITE),
             ),
+            download_log_button(log_picker),
+            ft.IconButton(ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema",
+                          on_click=toggle_theme),
         ],
         alignment=ft.MainAxisAlignment.CENTER,
     )
 
     page.add(
         ft.Column([
-            top_bar,
             ft.Row([rail, ft.VerticalDivider(width=1), content], expand=True),
             ft.Divider(height=1),
             footer,
