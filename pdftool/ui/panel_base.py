@@ -5,6 +5,7 @@ from pathlib import Path
 import flet as ft
 
 from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
+from pdftool.ui.errors import humanize_error
 from pdftool.ui.platform import open_folder
 
 _WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
@@ -47,6 +48,32 @@ class BaseToolPanel(PdfTool):
     def can_run(self) -> bool:
         raise NotImplementedError
 
+    # ---- errores (mensajes para el usuario) ----
+    def _clear_error(self) -> None:
+        self._error_toggle.visible = False
+        self._error_toggle.text = "Ver detalle técnico"
+        self._error_detail.visible = False
+        self._error_detail.value = ""
+
+    def _toggle_error_detail(self, _e) -> None:
+        self._error_detail.visible = not self._error_detail.visible
+        self._error_toggle.text = ("Ocultar detalle" if self._error_detail.visible
+                                   else "Ver detalle técnico")
+        self._page.update()
+
+    def _on_error(self, exc: Exception) -> None:
+        self.progress.visible = False
+        message, detail = humanize_error(exc)
+        self.status.value = message
+        if detail:
+            self._error_detail.value = detail
+            self._error_detail.visible = False  # arranca plegado
+            self._error_toggle.visible = True
+        else:
+            self._clear_error()
+        self.run_btn.disabled = not self.can_run()
+        self._page.update()
+
     # ---- común ----
     def build_panel(self, ctx: ToolContext) -> ft.Control:
         page = ctx.page
@@ -54,6 +81,10 @@ class BaseToolPanel(PdfTool):
 
         self.progress = ft.ProgressBar(value=0, visible=False)
         self.status = ft.Text("")
+        self._error_toggle = ft.TextButton("Ver detalle técnico", visible=False,
+                                            on_click=self._toggle_error_detail)
+        self._error_detail = ft.Text("", visible=False, selectable=True, size=12,
+                                      color=ft.Colors.ON_SURFACE_VARIANT)
         self.open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.Icons.FOLDER_OPEN,
                                           visible=False)
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
@@ -70,6 +101,7 @@ class BaseToolPanel(PdfTool):
             page.update()
 
         def on_done(result: ToolResult) -> None:
+            self._clear_error()
             self.progress.visible = False
             self.status.value = result.summary
             self.open_btn.visible = True
@@ -77,15 +109,10 @@ class BaseToolPanel(PdfTool):
             self.run_btn.disabled = not self.can_run()
             page.update()
 
-        def on_error(exc: Exception) -> None:
-            self.progress.visible = False
-            self.status.value = f"Error: {exc}"
-            self.run_btn.disabled = not self.can_run()
-            page.update()
-
         def do_run(_e) -> None:
             if not self.can_run():
                 return
+            self._clear_error()
             try:
                 params = self.make_params()
             except InvalidParams as exc:
@@ -102,7 +129,7 @@ class BaseToolPanel(PdfTool):
                 work=lambda prog: self.run_logic(inputs, params, prog),
                 on_progress=set_progress,
                 on_done=on_done,
-                on_error=on_error,
+                on_error=self._on_error,
             )
 
         self.run_btn.on_click = do_run
@@ -118,6 +145,8 @@ class BaseToolPanel(PdfTool):
                 ft.Row([self.run_btn, self.open_btn]),
                 self.progress,
                 self.status,
+                self._error_toggle,
+                self._error_detail,
             ],
             spacing=16,
         )
@@ -143,10 +172,12 @@ class SingleFileToolPanel(BaseToolPanel):
             self._file_label.italic = False
             self.open_btn.visible = False
             self.status.value = ""
+            self._clear_error()
             self.run_btn.disabled = False
             self.after_pick(self._file)
         elif e.files:
             self.status.value = _WEB_MODE_MSG
+            self._clear_error()
         self._page.update()
 
     def after_pick(self, path: Path) -> None:
@@ -225,6 +256,7 @@ class MultiFileToolPanel(BaseToolPanel):
         else:
             self.open_btn.visible = False
             self.status.value = ""
+        self._clear_error()
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

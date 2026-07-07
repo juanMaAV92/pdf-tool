@@ -1,16 +1,26 @@
 from __future__ import annotations
 
 import json
+import re
 import urllib.request
 from typing import Callable, Optional
 
 
 def _parse(version: str) -> tuple[int, ...]:
-    return tuple(int(part) for part in version.lstrip("vV").split("."))
+    # Toma los dígitos iniciales de cada segmento e ignora sufijos (p.ej.
+    # "0-beta" -> 0), para no reventar con tags de preversión.
+    parts = version.lstrip("vV").split(".")
+    return tuple((int(m.group()) if (m := re.match(r"\d+", part)) else 0)
+                 for part in parts)
 
 
 def is_newer(latest: str, current: str) -> bool:
-    return _parse(latest) > _parse(current)
+    a, b = _parse(latest), _parse(current)
+    # Rellena con ceros para comparar "1.2" y "1.2.0" como iguales.
+    n = max(len(a), len(b))
+    a += (0,) * (n - len(a))
+    b += (0,) * (n - len(b))
+    return a > b
 
 
 def _default_get(url: str) -> dict:

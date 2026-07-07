@@ -32,3 +32,23 @@ def test_check_for_update_swallows_errors():
         raise OSError("offline")
 
     assert check_for_update(current="0.1.0", repo="me/pdf-tool", http_get=boom) is None
+
+
+def test_is_newer_handles_prerelease_suffix():
+    # Un tag con sufijo (p.ej. una preversión) no debe reventar el parseo.
+    assert is_newer("v1.2.0-beta", "1.1.0")
+    assert not is_newer("v1.2.0-beta", "1.2.0")
+
+
+def test_is_newer_normalizes_differing_lengths():
+    assert not is_newer("1.2.0", "1.2")
+    assert is_newer("1.2.1", "1.2")
+
+
+def test_check_for_update_survives_prerelease_tag():
+    # Antes: _parse reventaba y check_for_update devolvía None en silencio,
+    # dejando de avisar de nuevas versiones. Ahora debe detectar la novedad.
+    fake = {"tag_name": "v1.2.0-beta.1", "html_url": "https://example/release"}
+    url = check_for_update(current="1.1.0", repo="me/pdf-tool",
+                           http_get=lambda _u: fake)
+    assert url == "https://example/release"
