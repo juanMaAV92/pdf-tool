@@ -88,3 +88,23 @@ def test_progress_reaches_one(tmp_path):
     seen = []
     images_to_pdf([a, b], ImagesToPdfParams(), progress=lambda p, m: seen.append(p))
     assert seen and seen[-1] == 1.0
+
+
+def test_output_uses_custom_name(tmp_path):
+    a = _img(tmp_path / "a.png", 100, 100)
+    out = output_path_for_images([a], name="álbum")
+    assert out == tmp_path / "álbum.pdf"
+
+
+def test_custom_name_avoids_existing_pdf(tmp_path):
+    a = _img(tmp_path / "a.png", 100, 100)
+    (tmp_path / "álbum.pdf").write_bytes(b"ya existe")
+    out = output_path_for_images([a], name="álbum")
+    assert out == tmp_path / "álbum_1.pdf"
+
+
+def test_images_to_pdf_with_custom_name(tmp_path):
+    a = _img(tmp_path / "a.png", 100, 100)
+    result = images_to_pdf([a], ImagesToPdfParams(output_name="álbum"))
+    assert result.outputs[0].name == "álbum.pdf"
+    assert result.outputs[0].exists()
