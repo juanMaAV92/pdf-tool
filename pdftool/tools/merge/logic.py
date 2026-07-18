@@ -12,14 +12,16 @@ def _noop(_p: float, _m: str) -> None:
     pass
 
 
-def output_path_for_merge(inputs: list[Path]) -> Path:
-    """Salida junto al primer PDF, `<primero>_merged.pdf`, sin colisionar con ninguna entrada."""
+def output_path_for_merge(inputs: list[Path], name: str | None = None) -> Path:
+    """Salida junto al primer PDF; `name` custom o `<primero>_merged`, sin
+    colisionar con ninguna entrada."""
     first = Path(inputs[0])
     inputs_set = {Path(p) for p in inputs}
-    candidate = first.parent / f"{first.stem}_merged.pdf"
+    base = name or f"{first.stem}_merged"
+    candidate = first.parent / f"{base}.pdf"
     n = 1
     while candidate in inputs_set:
-        candidate = first.parent / f"{first.stem}_merged_{n}.pdf"
+        candidate = first.parent / f"{base}_{n}.pdf"
         n += 1
     return candidate
 
@@ -34,7 +36,7 @@ def merge(inputs: list[Path], params: MergeParams,
         if not p.exists():
             raise FileNotFoundError(p)
 
-    out = output_path_for_merge(paths)
+    out = output_path_for_merge(paths, params.output_name)
     total = len(paths)
     progress(0.0, f"Uniendo {total} PDFs…")
 
