@@ -8,7 +8,8 @@ from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.images2pdf.logic import images_to_pdf
 from pdftool.tools.images2pdf.params import ImagesToPdfParams
-from pdftool.ui.panel_base import MultiFileToolPanel
+from pdftool.ui.panel_base import (MultiFileToolPanel, output_name_field,
+                                   parse_output_name)
 
 
 @register
@@ -27,8 +28,13 @@ class ImagesToPdfTool(MultiFileToolPanel):
     allowed_extensions = ["jpg", "jpeg", "png"]
     min_files = 1
 
+    def extra_controls(self) -> list[ft.Control]:
+        self._name_field = output_name_field()
+        return [self._name_field]
+
     def make_params(self):
-        return ImagesToPdfParams()
+        return ImagesToPdfParams(
+            output_name=parse_output_name(self._name_field.value))
 
     def run_logic(self, inputs: list[Path], params, progress):
         return images_to_pdf(inputs, params, progress=progress)

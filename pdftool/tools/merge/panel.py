@@ -8,7 +8,8 @@ from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.merge.logic import merge
 from pdftool.tools.merge.params import MergeParams
-from pdftool.ui.panel_base import MultiFileToolPanel
+from pdftool.ui.panel_base import (MultiFileToolPanel, output_name_field,
+                                   parse_output_name)
 
 
 @register
@@ -27,8 +28,12 @@ class MergeTool(MultiFileToolPanel):
     allowed_extensions = ["pdf"]
     min_files = 2
 
+    def extra_controls(self) -> list[ft.Control]:
+        self._name_field = output_name_field()
+        return [self._name_field]
+
     def make_params(self):
-        return MergeParams()
+        return MergeParams(output_name=parse_output_name(self._name_field.value))
 
     def run_logic(self, inputs: list[Path], params, progress):
         return merge(inputs, params, progress=progress)

@@ -32,3 +32,45 @@ def test_field_has_hint_and_bounded_width():
     field = output_name_field()
     assert field.hint_text == "Nombre de salida (opcional)"
     assert field.width == 280
+
+
+from pdftool.core.plugin import ToolContext
+from pdftool.tools.images2pdf.panel import ImagesToPdfTool
+from pdftool.tools.merge.panel import MergeTool
+
+
+class _FakePage:
+    def __init__(self) -> None:
+        self.overlay = []
+
+    def update(self) -> None:
+        pass
+
+
+def _build(tool):
+    tool.build_panel(ToolContext(page=_FakePage(), run_job=lambda **kwargs: None))
+    return tool
+
+
+def test_merge_panel_passes_sanitized_name():
+    tool = _build(MergeTool())
+    tool._name_field.value = "  informe.pdf "
+    assert tool.make_params().output_name == "informe"
+
+
+def test_merge_panel_empty_name_gives_default():
+    tool = _build(MergeTool())
+    assert tool.make_params().output_name is None
+
+
+def test_merge_panel_invalid_name_raises():
+    tool = _build(MergeTool())
+    tool._name_field.value = "a/b"
+    with pytest.raises(InvalidParams):
+        tool.make_params()
+
+
+def test_images_panel_passes_sanitized_name():
+    tool = _build(ImagesToPdfTool())
+    tool._name_field.value = "álbum"
+    assert tool.make_params().output_name == "álbum"
