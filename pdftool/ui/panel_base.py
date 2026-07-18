@@ -269,11 +269,15 @@ class MultiFileToolPanel(BaseToolPanel):
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
         self._picker.on_result = self._on_pick
+        self._clear_btn = ft.OutlinedButton(
+            "Limpiar lista", icon=ft.Icons.CLEAR_ALL, disabled=True,
+            on_click=self._clear_all)
         return ft.Row([
             ft.FilledTonalButton(
                 self.pick_label, icon=self.pick_icon,
                 on_click=lambda _e: self._picker.pick_files(
                     allow_multiple=True, allowed_extensions=self.allowed_extensions)),
+            self._clear_btn,
         ])
 
     def build_body(self) -> ft.Control:
@@ -308,6 +312,7 @@ class MultiFileToolPanel(BaseToolPanel):
                 )
             )
         self.run_btn.disabled = not self.can_run()
+        self._clear_btn.disabled = not self._files
         n = len(self._files)
         self._counter.value = ("" if n == 0
                                else "1 archivo" if n == 1
@@ -328,6 +333,14 @@ class MultiFileToolPanel(BaseToolPanel):
     def _remove(self, index: int) -> None:
         self._files.pop(index)
         self._clear_results()
+        self._refresh()
+
+    def _clear_all(self, _e) -> None:
+        self._files = []
+        self._clear_results()
+        self._clear_error()
+        self.status.value = ""
+        self.open_btn.visible = False
         self._refresh()
 
     def _on_pick(self, e) -> None:
