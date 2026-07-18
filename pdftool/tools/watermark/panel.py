@@ -36,7 +36,7 @@ class WatermarkTool(SingleFileToolPanel):
         self._text_field = ft.TextField(label="Texto de la marca", value="CONFIDENCIAL",
                                          width=320)
         self._opacity = ft.Slider(min=0.05, max=0.6, value=0.15, divisions=11,
-                                  label="{value}", width=320)
+                                  label="{value}", round=2, width=320)
         self._color_dd = ft.Dropdown(
             label="Color", width=160, value="Gris",
             options=[ft.dropdown.Option(name) for name in _COLORS],
