@@ -9,21 +9,22 @@ from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.protect.logic import protect
 from pdftool.tools.protect.params import ProtectParams
-from pdftool.ui.panel_base import InvalidParams, SingleFileToolPanel
+from pdftool.ui.panel_base import InvalidParams, MultiFileToolPanel
 
 
 @register
-class ProtectTool(SingleFileToolPanel):
+class ProtectTool(MultiFileToolPanel):
     meta = ToolMeta(
         id="protect",
         name="Proteger PDF",
-        description="Añade o quita la contraseña de un PDF.",
+        description="Añade o quita la contraseña de uno o varios PDFs.",
         icon=ft.Icons.LOCK,
         category="Seguridad",
     )
     run_label = "Aplicar"
     run_icon = ft.Icons.LOCK
-    pick_label = "Elegir PDF"
+    pick_label = "Añadir PDFs"
+    min_files = 1
 
     def extra_controls(self) -> list[ft.Control]:
         self._mode_dd = ft.Dropdown(

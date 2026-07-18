@@ -1,5 +1,6 @@
 # Superpowers design/plan docs (kept local, not in repo)
 docs/superpowers/
+.superpowers/
 
 # Python
 __pycache__/

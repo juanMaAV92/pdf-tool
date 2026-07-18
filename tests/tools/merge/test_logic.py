@@ -65,3 +65,24 @@ def test_progress_reaches_one(tmp_path):
     seen = []
     merge([a, b], MergeParams(), progress=lambda p, m: seen.append(p))
     assert seen and seen[-1] == 1.0
+
+
+def test_output_uses_custom_name(tmp_path):
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    out = output_path_for_merge([a], name="informe 2024")
+    assert out == tmp_path / "informe 2024.pdf"
+
+
+def test_custom_name_never_equals_an_input(tmp_path):
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    out = output_path_for_merge([a], name="a")
+    assert out == tmp_path / "a_1.pdf"
+
+
+def test_merge_with_custom_name(tmp_path):
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    b = _pdf(tmp_path / "b.pdf", 1, "B")
+    result = merge([a, b], MergeParams(output_name="junto"))
+    assert result.outputs[0].name == "junto.pdf"
+    assert result.outputs[0].exists()
+    assert "junto.pdf" in result.summary

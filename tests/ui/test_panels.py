@@ -200,6 +200,47 @@ def test_on_error_logs_with_traceback(caplog):
     assert any(r.exc_info for r in caplog.records)
 
 
+def test_multi_counter_tracks_files():
+    tool = _build(_MultiStub())
+    assert tool._counter.value == ""
+
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    assert tool._counter.value == "1 archivo"
+
+    tool._on_pick(_FakeEvent(["/tmp/b.pdf"]))
+    assert tool._counter.value == "2 archivos"
+
+    tool._remove(0)
+    tool._remove(0)
+    assert tool._counter.value == ""
+
+
+def test_clear_list_disabled_without_files():
+    tool = _build(_MultiStub())
+    assert tool._clear_btn.disabled is True
+
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    assert tool._clear_btn.disabled is False
+
+
+def test_clear_list_resets_state():
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+    tool._on_error(RuntimeError("boom"))
+    tool.open_btn.visible = True
+
+    tool._clear_all(None)
+
+    assert tool.collect_inputs() == []
+    assert tool.can_run() is False
+    assert tool.run_btn.disabled is True
+    assert tool._clear_btn.disabled is True
+    assert tool.status.value == ""
+    assert tool._error_toggle.visible is False
+    assert tool.open_btn.visible is False
+    assert tool._counter.value == ""
+
+
 def test_watermark_opacity_label_shows_decimals():
     # Regresión: con round=0 (default de Flet) el label "{value}" muestra
     # 0 en todo el rango 0.05–0.6 (y 1 en el tope).
