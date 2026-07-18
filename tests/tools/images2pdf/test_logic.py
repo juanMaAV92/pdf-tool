@@ -111,3 +111,21 @@ def test_extension_case_insensitive(tmp_path):
     b = _img(tmp_path / "b.JPEG", 100, 100)
     res = images_to_pdf([a, b], ImagesToPdfParams())
     assert len(res.outputs) == 2
+
+
+def test_corrupt_image_with_valid_extension_continues(tmp_path):
+    ok = _img(tmp_path / "ok.png", 100, 100)
+    bad = tmp_path / "bad.png"
+    bad.write_bytes(b"no soy un png")
+    res = images_to_pdf([ok, bad], ImagesToPdfParams())
+    assert [o.name for o in res.outputs] == ["ok.pdf"]
+    assert res.summary == "1 de 2 imágenes convertidas"
+    assert res.details[1] and not res.details[1].startswith("→")
+
+
+def test_same_stem_in_one_batch_does_not_clobber(tmp_path):
+    a_png = _img(tmp_path / "a.png", 100, 100)
+    a_jpg = _img(tmp_path / "a.jpg", 100, 100)
+    res = images_to_pdf([a_png, a_jpg], ImagesToPdfParams())
+    assert [o.name for o in res.outputs] == ["a.pdf", "a_1.pdf"]
+    assert all(o.exists() for o in res.outputs)
