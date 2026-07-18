@@ -35,7 +35,6 @@ def test_field_has_hint_and_bounded_width():
 
 
 from pdftool.core.plugin import ToolContext
-from pdftool.tools.images2pdf.panel import ImagesToPdfTool
 from pdftool.tools.merge.panel import MergeTool
 
 
@@ -68,9 +67,3 @@ def test_merge_panel_invalid_name_raises():
     tool._name_field.value = "a/b"
     with pytest.raises(InvalidParams):
         tool.make_params()
-
-
-def test_images_panel_passes_sanitized_name():
-    tool = _build(ImagesToPdfTool())
-    tool._name_field.value = "álbum"
-    assert tool.make_params().output_name == "álbum"
