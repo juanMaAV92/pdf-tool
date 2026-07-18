@@ -198,3 +198,12 @@ def test_on_error_logs_with_traceback(caplog):
     with caplog.at_level(logging.ERROR, logger="pdftool.single-stub"):
         tool._on_error(RuntimeError("boom"))
     assert any(r.exc_info for r in caplog.records)
+
+
+def test_watermark_opacity_label_shows_decimals():
+    # Regresión: con round=0 (default de Flet) el label "{value}" muestra
+    # 0 en todo el rango 0.05–0.6 (y 1 en el tope).
+    from pdftool.tools.watermark.panel import WatermarkTool
+
+    tool = _build(WatermarkTool())
+    assert tool._opacity.round == 2
