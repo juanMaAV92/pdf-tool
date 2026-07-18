@@ -198,3 +198,18 @@ def test_on_error_logs_with_traceback(caplog):
     with caplog.at_level(logging.ERROR, logger="pdftool.single-stub"):
         tool._on_error(RuntimeError("boom"))
     assert any(r.exc_info for r in caplog.records)
+
+
+def test_multi_counter_tracks_files():
+    tool = _build(_MultiStub())
+    assert tool._counter.value == ""
+
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    assert tool._counter.value == "1 archivo"
+
+    tool._on_pick(_FakeEvent(["/tmp/b.pdf"]))
+    assert tool._counter.value == "2 archivos"
+
+    tool._remove(0)
+    tool._remove(0)
+    assert tool._counter.value == ""

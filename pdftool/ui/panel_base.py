@@ -72,6 +72,11 @@ class BaseToolPanel(PdfTool):
 
     # ---- hooks de la subclase (1 archivo / N archivos) ----
     def build_input(self, page) -> ft.Control:
+        """Barra de entrada de la zona superior (botones de elegir/limpiar)."""
+        raise NotImplementedError
+
+    def build_body(self) -> ft.Control:
+        """Zona flexible del medio; el único control con expand=True."""
         raise NotImplementedError
 
     def collect_inputs(self) -> list[Path]:
@@ -126,6 +131,7 @@ class BaseToolPanel(PdfTool):
 
         self.progress = ft.ProgressBar(value=0, visible=False)
         self.status = ft.Text("")
+        self._counter = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
         self._error_toggle = ft.TextButton("Ver detalle técnico", visible=False,
                                             on_click=self._toggle_error_detail)
         self._error_detail = ft.Text("", visible=False, selectable=True, size=12,
@@ -138,7 +144,8 @@ class BaseToolPanel(PdfTool):
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
                                        disabled=True)
 
-        input_control = self.build_input(page)  # subclase; fija self._picker.on_result
+        input_bar = self.build_input(page)  # subclase; fija self._picker.on_result
+        body = self.build_body()
 
         if self._picker not in page.overlay:
             page.overlay.append(self._picker)
@@ -190,14 +197,20 @@ class BaseToolPanel(PdfTool):
         self.run_btn.on_click = do_run
         self.open_btn.on_click = lambda _e: open_folder(Path(self.open_btn.data))
 
+        # Tres zonas: superior fija · cuerpo flexible · footer anclado.
+        # `body` es el único hijo con expand=True: todo lo posterior queda
+        # pegado al fondo sin importar cuántos archivos haya en la lista.
         return ft.Column(
             [
                 ft.Text(self.meta.name, size=24, weight=ft.FontWeight.BOLD),
                 ft.Text(self.meta.description),
                 ft.Divider(),
-                input_control,
+                input_bar,
                 *self.extra_controls(),
-                ft.Row([self.run_btn, self.open_btn]),
+                body,
+                ft.Divider(),
+                ft.Row([self.run_btn, self.open_btn,
+                        ft.Container(expand=True), self._counter]),
                 self.progress,
                 self.status,
                 self._error_actions,
@@ -220,6 +233,9 @@ class SingleFileToolPanel(BaseToolPanel):
                     allow_multiple=False, allowed_extensions=self.allowed_extensions)),
             self._file_label,
         ])
+
+    def build_body(self) -> ft.Control:
+        return ft.Container(expand=True)  # empuja el footer al fondo
 
     def _on_pick(self, e) -> None:
         if e.files and e.files[0].path:
@@ -252,19 +268,20 @@ class MultiFileToolPanel(BaseToolPanel):
     def build_input(self, page) -> ft.Control:
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
-        # La lista rellena el espacio disponible y scrollea sola cuando no cabe:
-        # el resto del panel (título, botón, params, ejecutar) queda siempre
-        # visible, con o sin banda de actualización, y nunca pisa el footer.
-        self._file_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO,
-                                    expand=True)
         self._picker.on_result = self._on_pick
-        return ft.Column([
+        return ft.Row([
             ft.FilledTonalButton(
                 self.pick_label, icon=self.pick_icon,
                 on_click=lambda _e: self._picker.pick_files(
                     allow_multiple=True, allowed_extensions=self.allowed_extensions)),
-            self._file_list,
-        ], spacing=16, expand=True)
+        ])
+
+    def build_body(self) -> ft.Control:
+        # La lista rellena el cuerpo y scrollea sola cuando no cabe; el footer
+        # (ejecutar, progreso, status) queda siempre visible.
+        self._file_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO,
+                                    expand=True)
+        return self._file_list
 
     def _refresh(self) -> None:
         self._file_list.controls.clear()
@@ -291,6 +308,10 @@ class MultiFileToolPanel(BaseToolPanel):
                 )
             )
         self.run_btn.disabled = not self.can_run()
+        n = len(self._files)
+        self._counter.value = ("" if n == 0
+                               else "1 archivo" if n == 1
+                               else f"{n} archivos")
         self._page.update()
 
     def _clear_results(self) -> None:
