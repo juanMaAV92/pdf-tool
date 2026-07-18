@@ -14,13 +14,15 @@ def _noop(_p: float, _m: str) -> None:
     pass
 
 
-def output_path_for_images(inputs: list[Path]) -> Path:
-    """`<primera imagen>.pdf` junto al original, sin pisar un PDF existente."""
+def output_path_for_images(inputs: list[Path], name: str | None = None) -> Path:
+    """`name` custom o `<primera imagen>`, junto al original, sin pisar un PDF
+    existente."""
     first = Path(inputs[0])
-    candidate = first.parent / f"{first.stem}.pdf"
+    base = name or first.stem
+    candidate = first.parent / f"{base}.pdf"
     n = 1
     while candidate.exists():
-        candidate = first.parent / f"{first.stem}_{n}.pdf"
+        candidate = first.parent / f"{base}_{n}.pdf"
         n += 1
     return candidate
 
@@ -37,7 +39,7 @@ def images_to_pdf(inputs: list[Path], params: ImagesToPdfParams,
         if p.suffix.lower() not in ALLOWED_SUFFIXES:
             raise ValueError(f"Formato no soportado: {p.name} (usa JPG o PNG)")
 
-    out = output_path_for_images(paths)
+    out = output_path_for_images(paths, params.output_name)
     total = len(paths)
     progress(0.0, f"Convirtiendo {total} imágenes…")
 
