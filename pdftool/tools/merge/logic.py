@@ -20,6 +20,9 @@ def output_path_for_merge(inputs: list[Path], name: str | None = None) -> Path:
     base = name or f"{first.stem}_merged"
     candidate = first.parent / f"{base}.pdf"
     n = 1
+    # Deliberado: solo se evita pisar las ENTRADAS (estilo "Guardar como…");
+    # un nombre custom repetido sobreescribe la salida anterior. images2pdf
+    # en cambio evita cualquier archivo existente.
     while candidate in inputs_set:
         candidate = first.parent / f"{base}_{n}.pdf"
         n += 1
