@@ -18,6 +18,31 @@ class InvalidParams(Exception):
     """Params inválidos; el panel muestra str(exc) en el status."""
 
 
+_FORBIDDEN_NAME_CHARS = set("/\\:\x00")
+
+
+def parse_output_name(value: str | None) -> str | None:
+    """Sanitiza el nombre de salida escrito por el usuario.
+
+    None si quedó vacío (→ nombre default); sin extensión .pdf (se añade sola
+    en la lógica). Lanza InvalidParams si trae separadores de ruta.
+    """
+    name = (value or "").strip()
+    if name.lower().endswith(".pdf"):
+        name = name[:-4].strip()
+    if not name:
+        return None
+    if any(c in _FORBIDDEN_NAME_CHARS for c in name):
+        raise InvalidParams("Nombre de salida inválido: no puede contener / \\ :")
+    return name
+
+
+def output_name_field() -> ft.TextField:
+    """Campo compacto y opcional para la base del archivo de salida."""
+    return ft.TextField(hint_text="Nombre de salida (opcional)", width=280,
+                        dense=True)
+
+
 class BaseToolPanel(PdfTool):
     # Rellenados por cada herramienta:
     run_label: str = "Aplicar"
