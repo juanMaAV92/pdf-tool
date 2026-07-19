@@ -39,6 +39,10 @@ def load_async(paths: list[Path],
 
     `is_current` es el token de generación del panel: si devuelve False la lista
     cambió y el hilo termina sin notificar (lo ya renderizado queda en caché).
+
+    Dos hilos concurrentes pueden renderizar el mismo path si se cruzan antes de
+    que el primero escriba en caché: CPU desperdiciada, nunca corrupción
+    (`_store` es idempotente y con lock).
     """
     def _target() -> None:
         for path in paths:

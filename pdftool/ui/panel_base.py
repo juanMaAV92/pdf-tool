@@ -320,12 +320,15 @@ class MultiFileToolPanel(BaseToolPanel):
                                     expand=True)
         return self._file_list
 
+    @staticmethod
+    def _thumb_image(png: bytes) -> ft.Image:
+        return ft.Image(src_base64=base64.b64encode(png).decode(),
+                        height=THUMBNAIL_HEIGHT_PX, fit=ft.ImageFit.CONTAIN)
+
     def _thumb_control(self, path: Path) -> ft.Container:
         cached = get_cached(path)
         if cached is not MISSING and cached is not None:
-            content: ft.Control = ft.Image(
-                src_base64=base64.b64encode(cached).decode(),
-                height=THUMBNAIL_HEIGHT_PX, fit=ft.ImageFit.CONTAIN)
+            content: ft.Control = self._thumb_image(cached)
         else:
             icon = (ft.Icons.PICTURE_AS_PDF if path.suffix.lower() == ".pdf"
                     else ft.Icons.IMAGE)
@@ -341,8 +344,7 @@ class MultiFileToolPanel(BaseToolPanel):
         box = self._thumb_boxes.get(str(path))
         if box is None or png is None:
             return
-        box.content = ft.Image(src_base64=base64.b64encode(png).decode(),
-                               height=THUMBNAIL_HEIGHT_PX, fit=ft.ImageFit.CONTAIN)
+        box.content = self._thumb_image(png)
         self._page.update()
 
     def _refresh(self) -> None:
