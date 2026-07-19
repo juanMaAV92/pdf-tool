@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+import flet as ft
 import pytest
 
 from pdftool.core import registry
@@ -313,3 +314,62 @@ def test_multi_row_paths_positional_when_no_failures():
         details=["1.23 MB → 0.45 MB", "2.10 MB → 1.80 MB (no se alcanzó el objetivo)"]))
 
     assert tool._row_paths == [Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")]
+
+
+class _ThumbStub(MultiFileToolPanel):
+    meta = ToolMeta(id="thumb-stub", name="T", description="d", icon="", category="c")
+    show_thumbnails = True
+
+    def make_params(self):
+        return None
+
+    def run_logic(self, inputs, params, progress):
+        return ToolResult(outputs=[], summary="")
+
+
+def test_no_thumbnails_by_default(monkeypatch):
+    launched = []
+    monkeypatch.setattr("pdftool.ui.panel_base.load_async",
+                        lambda paths, on_ready, is_current: launched.append(paths))
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+
+    assert tool._thumb_boxes == {}
+    assert launched == []
+
+
+def test_thumbnails_flag_creates_placeholders_and_loads(monkeypatch):
+    launched = []
+    monkeypatch.setattr("pdftool.ui.panel_base.load_async",
+                        lambda paths, on_ready, is_current: launched.append(list(paths)))
+    tool = _build(_ThumbStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.png"]))
+
+    assert set(tool._thumb_boxes) == {"/tmp/a.pdf", "/tmp/b.png"}
+    assert launched[-1] == [Path("/tmp/a.pdf"), Path("/tmp/b.png")]
+
+
+def test_thumb_ready_swaps_placeholder_for_image(monkeypatch):
+    monkeypatch.setattr("pdftool.ui.panel_base.load_async",
+                        lambda paths, on_ready, is_current: None)
+    tool = _build(_ThumbStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    box = tool._thumb_boxes["/tmp/a.pdf"]
+    assert isinstance(box.content, ft.Icon)  # placeholder
+
+    tool._on_thumb_ready(Path("/tmp/a.pdf"), b"png-falso")
+
+    assert isinstance(box.content, ft.Image)
+
+
+def test_thumb_ready_none_keeps_icon_and_gone_row_is_noop(monkeypatch):
+    monkeypatch.setattr("pdftool.ui.panel_base.load_async",
+                        lambda paths, on_ready, is_current: None)
+    tool = _build(_ThumbStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    box = tool._thumb_boxes["/tmp/a.pdf"]
+
+    tool._on_thumb_ready(Path("/tmp/a.pdf"), None)      # no renderizable
+    assert isinstance(box.content, ft.Icon)             # el icono se queda
+
+    tool._on_thumb_ready(Path("/tmp/zzz.pdf"), b"x")    # fila inexistente: no lanza

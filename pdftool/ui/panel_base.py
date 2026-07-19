@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import logging
 import time
 from pathlib import Path
@@ -7,9 +8,11 @@ from pathlib import Path
 import flet as ft
 
 from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
+from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.platform import open_file, open_folder
+from pdftool.ui.thumbnails import MISSING, get_cached, load_async
 
 _WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
 
@@ -290,11 +293,14 @@ class SingleFileToolPanel(BaseToolPanel):
 
 class MultiFileToolPanel(BaseToolPanel):
     min_files: int = 1
+    show_thumbnails: bool = False  # solo tools donde el orden/identidad importa
 
     def build_input(self, page) -> ft.Control:
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
         self._row_paths: list[Path | None] = []  # ruta por fila exitosa tras un run
+        self._thumb_boxes: dict[str, ft.Container] = {}
+        self._thumb_generation = 0
         self._picker.on_result = self._on_pick
         self._clear_btn = ft.OutlinedButton(
             "Limpiar lista", icon=ft.Icons.CLEAR_ALL, disabled=True,
@@ -314,35 +320,69 @@ class MultiFileToolPanel(BaseToolPanel):
                                     expand=True)
         return self._file_list
 
+    @staticmethod
+    def _thumb_image(png: bytes) -> ft.Image:
+        return ft.Image(src_base64=base64.b64encode(png).decode(),
+                        height=THUMBNAIL_HEIGHT_PX, fit=ft.ImageFit.CONTAIN)
+
+    def _thumb_control(self, path: Path) -> ft.Container:
+        cached = get_cached(path)
+        if cached is not MISSING and cached is not None:
+            content: ft.Control = self._thumb_image(cached)
+        else:
+            icon = (ft.Icons.PICTURE_AS_PDF if path.suffix.lower() == ".pdf"
+                    else ft.Icons.IMAGE)
+            content = ft.Icon(icon, size=28, color=ft.Colors.ON_SURFACE_VARIANT)
+        box = ft.Container(content=content, height=THUMBNAIL_HEIGHT_PX, width=44,
+                           alignment=ft.alignment.center)
+        self._thumb_boxes[str(path)] = box
+        return box
+
+    def _on_thumb_ready(self, path: Path, png: bytes | None) -> None:
+        # Llega desde el hilo del loader; si la fila ya no existe o el render
+        # falló (None), el placeholder/icono se queda como está.
+        box = self._thumb_boxes.get(str(path))
+        if box is None or png is None:
+            return
+        box.content = self._thumb_image(png)
+        self._page.update()
+
     def _refresh(self) -> None:
+        self._thumb_generation += 1
+        generation = self._thumb_generation
+        self._thumb_boxes = {}
         self._file_list.controls.clear()
         for index, path in enumerate(self._files):
             result = self._results[index] if index < len(self._results) else None
             row_path = (self._row_paths[index]
                         if index < len(self._row_paths) else None)
+            controls: list[ft.Control] = [ft.Text(f"{index + 1}.", width=28)]
+            if self.show_thumbnails:
+                controls.append(self._thumb_control(path))
+            controls += [
+                ft.Text(path.name, expand=True,
+                        overflow=ft.TextOverflow.ELLIPSIS),
+                ft.Text(result or "", size=12, no_wrap=True,
+                        color=ft.Colors.ON_SURFACE_VARIANT),
+                ft.IconButton(ft.Icons.OPEN_IN_NEW, tooltip="Abrir",
+                              visible=row_path is not None,
+                              on_click=lambda _e, p=row_path: open_file(p)),
+                ft.IconButton(ft.Icons.ARROW_UPWARD, tooltip="Subir",
+                              disabled=index == 0,
+                              on_click=lambda _e, i=index: self._move(i, -1)),
+                ft.IconButton(ft.Icons.ARROW_DOWNWARD, tooltip="Bajar",
+                              disabled=index == len(self._files) - 1,
+                              on_click=lambda _e, i=index: self._move(i, 1)),
+                ft.IconButton(ft.Icons.CLOSE, tooltip="Quitar",
+                              on_click=lambda _e, i=index: self._remove(i)),
+            ]
             self._file_list.controls.append(
-                ft.Row(
-                    [
-                        ft.Text(f"{index + 1}.", width=28),
-                        ft.Text(path.name, expand=True,
-                                overflow=ft.TextOverflow.ELLIPSIS),
-                        ft.Text(result or "", size=12, no_wrap=True,
-                                color=ft.Colors.ON_SURFACE_VARIANT),
-                        ft.IconButton(ft.Icons.OPEN_IN_NEW, tooltip="Abrir",
-                                      visible=row_path is not None,
-                                      on_click=lambda _e, p=row_path: open_file(p)),
-                        ft.IconButton(ft.Icons.ARROW_UPWARD, tooltip="Subir",
-                                      disabled=index == 0,
-                                      on_click=lambda _e, i=index: self._move(i, -1)),
-                        ft.IconButton(ft.Icons.ARROW_DOWNWARD, tooltip="Bajar",
-                                      disabled=index == len(self._files) - 1,
-                                      on_click=lambda _e, i=index: self._move(i, 1)),
-                        ft.IconButton(ft.Icons.CLOSE, tooltip="Quitar",
-                                      on_click=lambda _e, i=index: self._remove(i)),
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                )
-            )
+                ft.Row(controls, alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
+        if self.show_thumbnails:
+            pending = [p for p in self._files if get_cached(p) is MISSING]
+            if pending:
+                load_async(pending, self._on_thumb_ready,
+                           is_current=lambda: self._thumb_generation == generation)
         self.run_btn.disabled = not self.can_run()
         self._clear_btn.disabled = not self._files
         n = len(self._files)

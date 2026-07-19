@@ -7,9 +7,10 @@ panel + tests (ver AGENTS.md).
 
 ## Próximo — alto valor
 
-1. **Vista previa (thumbnails).** Miniatura de la primera página en cada fila de las
-   listas multi-archivo (PyMuPDF renderiza a pixmap). Hoy se ordena "a ciegas" por
-   nombre; esto hace confiables Unir y Dividir. La feature más visible de la lista.
+1. ~~**Vista previa (thumbnails).**~~ ✅ Hecho en #23 (inline 56px en Unir e
+   Imágenes a PDF; el motor \`core/thumbnails.py\` acepta \`page_index\` — es la
+   base para las futuras vistas de páginas: rotar, extraer/reordenar, Dividir
+   visual).
 2. ~~**Botón "Abrir archivo".**~~ ✅ Hecho en #22 (botón con salida única + icono
    por fila exitosa en lotes).
 3. ~~**Sanitización de nombres para Windows.**~~ ✅ Hecho en #22 (caracteres

@@ -27,6 +27,7 @@ class MergeTool(MultiFileToolPanel):
     pick_icon = ft.Icons.UPLOAD_FILE
     allowed_extensions = ["pdf"]
     min_files = 2
+    show_thumbnails = True
 
     def extra_controls(self) -> list[ft.Control]:
         self._name_field = output_name_field()
