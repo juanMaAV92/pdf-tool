@@ -221,7 +221,7 @@ class BaseToolPanel(PdfTool):
         self.run_btn.on_click = do_run
         self.open_btn.on_click = lambda _e: open_folder(Path(self.open_btn.data))
         self.open_file_btn.on_click = (
-            lambda _e: open_file(Path(self.open_file_btn.data)))
+            lambda _e: open_file(self.open_file_btn.data))
 
         # Tres zonas: superior fija · cuerpo flexible · footer anclado.
         # `body` es el único hijo con expand=True: todo lo posterior queda
@@ -398,15 +398,20 @@ class MultiFileToolPanel(BaseToolPanel):
 
     def on_result(self, result: ToolResult) -> None:
         self._results = list(result.details or [])
-        # Contrato: la i-ésima etiqueta de éxito ("→ …") corresponde a outputs[i].
-        self._row_paths = []
-        success = 0
-        for label in self._results:
-            if label.startswith("→"):
-                self._row_paths.append(result.outputs[success])
-                success += 1
-            else:
-                self._row_paths.append(None)
+        # Mapear filas a salidas: sin fallos la correspondencia es 1:1 (compress
+        # no prefija sus éxitos con "→"); con fallos, la i-ésima etiqueta de
+        # éxito ("→ …") corresponde a outputs[i] (protect, images2pdf).
+        if self._results and len(self._results) == len(result.outputs):
+            self._row_paths = list(result.outputs)
+        else:
+            self._row_paths = []
+            success = 0
+            for label in self._results:
+                if label.startswith("→") and success < len(result.outputs):
+                    self._row_paths.append(result.outputs[success])
+                    success += 1
+                else:
+                    self._row_paths.append(None)
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

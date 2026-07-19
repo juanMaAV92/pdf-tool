@@ -300,3 +300,16 @@ def test_multi_row_paths_cleared_with_results():
     tool._clear_all(None)
 
     assert tool._row_paths == []
+
+
+def test_multi_row_paths_positional_when_no_failures():
+    # compress no prefija sus éxitos con "→": sin fallos el mapeo es 1:1.
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+
+    tool.on_result(ToolResult(
+        outputs=[Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")],
+        summary="2 PDFs comprimidos",
+        details=["1.23 MB → 0.45 MB", "2.10 MB → 1.80 MB (no se alcanzó el objetivo)"]))
+
+    assert tool._row_paths == [Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")]

@@ -70,7 +70,9 @@ def test_merge_panel_invalid_name_raises():
         tool.make_params()
 
 
-@pytest.mark.parametrize("reserved", ["con", "CON", "Con.pdf", "aux", "lpt9", "com1"])
+@pytest.mark.parametrize("reserved", ["con", "CON", "Con.pdf", "PRN", "AUX", "NUL"]
+                         + [f"COM{i}" for i in range(1, 10)]
+                         + [f"LPT{i}" for i in range(1, 10)])
 def test_windows_reserved_names_raise_invalid_params(reserved):
     with pytest.raises(InvalidParams, match="reservado por Windows"):
         parse_output_name(reserved)
