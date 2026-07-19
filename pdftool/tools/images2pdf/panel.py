@@ -26,6 +26,7 @@ class ImagesToPdfTool(MultiFileToolPanel):
     pick_icon = ft.Icons.ADD_PHOTO_ALTERNATE
     allowed_extensions = ["jpg", "jpeg", "png"]
     min_files = 1
+    show_thumbnails = True
 
     def make_params(self):
         return ImagesToPdfParams()
