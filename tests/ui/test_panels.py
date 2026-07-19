@@ -241,6 +241,33 @@ def test_clear_list_resets_state():
     assert tool._counter.value == ""
 
 
+def test_open_file_button_visible_only_for_single_output():
+    tool = _build(_SingleStub())
+    assert tool.open_file_btn.visible is False
+
+    tool._show_result_actions(
+        ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
+    assert tool.open_file_btn.visible is True
+    assert tool.open_file_btn.data == Path("/tmp/a.pdf")
+    assert tool.open_btn.visible is True
+
+    tool._show_result_actions(
+        ToolResult(outputs=[Path("/tmp/a.pdf"), Path("/tmp/b.pdf")], summary="ok"))
+    assert tool.open_file_btn.visible is False
+    assert tool.open_btn.visible is True
+
+
+def test_open_file_button_hides_on_new_pick():
+    tool = _build(_SingleStub())
+    tool._show_result_actions(
+        ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
+
+    tool._on_pick(_FakeEvent(["/tmp/b.pdf"]))
+
+    assert tool.open_file_btn.visible is False
+    assert tool.open_btn.visible is False
+
+
 def test_watermark_opacity_label_shows_decimals():
     # Regresión: con round=0 (default de Flet) el label "{value}" muestra
     # 0 en todo el rango 0.05–0.6 (y 1 en el tope).

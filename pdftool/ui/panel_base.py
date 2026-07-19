@@ -9,7 +9,7 @@ import flet as ft
 from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
-from pdftool.ui.platform import open_folder
+from pdftool.ui.platform import open_file, open_folder
 
 _WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
 
@@ -104,6 +104,17 @@ class BaseToolPanel(PdfTool):
         started = getattr(self, "_run_started", None)
         return 0.0 if started is None else time.monotonic() - started
 
+    # ---- acciones post-run (footer) ----
+    def _show_result_actions(self, result: ToolResult) -> None:
+        self.open_btn.visible = True
+        self.open_btn.data = result.outputs[0].parent
+        self.open_file_btn.visible = len(result.outputs) == 1
+        self.open_file_btn.data = result.outputs[0]
+
+    def _hide_result_actions(self) -> None:
+        self.open_btn.visible = False
+        self.open_file_btn.visible = False
+
     # ---- errores (mensajes para el usuario) ----
     def _clear_error(self) -> None:
         self._error_toggle.visible = False
@@ -152,6 +163,9 @@ class BaseToolPanel(PdfTool):
         self._error_actions = ft.Row([self._error_toggle, self._log_btn], visible=False)
         self.open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.Icons.FOLDER_OPEN,
                                           visible=False)
+        self.open_file_btn = ft.OutlinedButton("Abrir archivo",
+                                               icon=ft.Icons.OPEN_IN_NEW,
+                                               visible=False)
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
                                        disabled=True)
 
@@ -174,8 +188,7 @@ class BaseToolPanel(PdfTool):
             self._clear_error()
             self.progress.visible = False
             self.status.value = result.summary
-            self.open_btn.visible = True
-            self.open_btn.data = result.outputs[0].parent
+            self._show_result_actions(result)
             self.run_btn.disabled = not self.can_run()
             self.on_result(result)
             page.update()
@@ -191,7 +204,7 @@ class BaseToolPanel(PdfTool):
                 page.update()
                 return
             self.run_btn.disabled = True
-            self.open_btn.visible = False
+            self._hide_result_actions()
             self.progress.visible = True
             self.progress.value = 0
             page.update()
@@ -207,6 +220,8 @@ class BaseToolPanel(PdfTool):
 
         self.run_btn.on_click = do_run
         self.open_btn.on_click = lambda _e: open_folder(Path(self.open_btn.data))
+        self.open_file_btn.on_click = (
+            lambda _e: open_file(Path(self.open_file_btn.data)))
 
         # Tres zonas: superior fija · cuerpo flexible · footer anclado.
         # `body` es el único hijo con expand=True: todo lo posterior queda
@@ -220,7 +235,7 @@ class BaseToolPanel(PdfTool):
                 *self.extra_controls(),
                 body,
                 ft.Divider(),
-                ft.Row([self.run_btn, self.open_btn,
+                ft.Row([self.run_btn, self.open_file_btn, self.open_btn,
                         ft.Container(expand=True), self._counter]),
                 self.progress,
                 self.status,
@@ -253,7 +268,7 @@ class SingleFileToolPanel(BaseToolPanel):
             self._file = Path(e.files[0].path)
             self._file_label.value = self._file.name
             self._file_label.italic = False
-            self.open_btn.visible = False
+            self._hide_result_actions()
             self.status.value = ""
             self._clear_error()
             self.run_btn.disabled = False
@@ -351,7 +366,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._clear_results()
         self._clear_error()
         self.status.value = ""
-        self.open_btn.visible = False
+        self._hide_result_actions()
         self._refresh()
 
     def _on_pick(self, e) -> None:
@@ -368,7 +383,7 @@ class MultiFileToolPanel(BaseToolPanel):
         if added == 0 and e.files:
             self.status.value = _WEB_MODE_MSG
         else:
-            self.open_btn.visible = False
+            self._hide_result_actions()
             self.status.value = ""
         self._clear_error()
         self._clear_results()
