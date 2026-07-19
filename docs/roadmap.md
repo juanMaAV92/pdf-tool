@@ -10,12 +10,10 @@ panel + tests (ver AGENTS.md).
 1. **Vista previa (thumbnails).** Miniatura de la primera página en cada fila de las
    listas multi-archivo (PyMuPDF renderiza a pixmap). Hoy se ordena "a ciegas" por
    nombre; esto hace confiables Unir y Dividir. La feature más visible de la lista.
-2. **Botón "Abrir archivo".** Junto a "Abrir carpeta": tras convertir/unir casi
-   siempre quieres ver el resultado, no la carpeta.
-3. **Sanitización de nombres para Windows.** `parse_output_name` solo bloquea
-   `/ \ :`, pero Windows es plataforma soportada (installer/windows.iss): faltan
-   `? | < > * "` y nombres reservados (`CON`, `PRN`, …). Cambio pequeño, evita un
-   fallo feo al guardar. (Señalado en el review de #17.)
+2. ~~**Botón "Abrir archivo".**~~ ✅ Hecho en #22 (botón con salida única + icono
+   por fila exitosa en lotes).
+3. ~~**Sanitización de nombres para Windows.**~~ ✅ Hecho en #22 (caracteres
+   `? | < > * "` + nombres reservados, validación igual en todas las plataformas).
 
 ## Después
 
