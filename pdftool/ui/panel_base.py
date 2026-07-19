@@ -18,7 +18,14 @@ class InvalidParams(Exception):
     """Params inválidos; el panel muestra str(exc) en el status."""
 
 
-_FORBIDDEN_NAME_CHARS = set("/\\:\x00")
+_FORBIDDEN_NAME_CHARS = set('/\\:?|<>*"\x00')
+
+# Nombres que Windows no permite como archivo, con o sin extensión.
+_WINDOWS_RESERVED_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{i}" for i in range(1, 10)}
+    | {f"LPT{i}" for i in range(1, 10)}
+)
 
 
 def parse_output_name(value: str | None) -> str | None:
@@ -33,7 +40,11 @@ def parse_output_name(value: str | None) -> str | None:
     if not name:
         return None
     if any(c in _FORBIDDEN_NAME_CHARS for c in name):
-        raise InvalidParams("Nombre de salida inválido: no puede contener / \\ :")
+        raise InvalidParams(
+            'Nombre de salida inválido: no puede contener / \\ : ? | < > * "')
+    if name.upper() in _WINDOWS_RESERVED_NAMES:
+        raise InvalidParams(
+            f"Nombre de salida inválido: {name!r} está reservado por Windows.")
     return name
 
 
