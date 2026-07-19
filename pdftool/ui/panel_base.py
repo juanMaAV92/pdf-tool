@@ -294,6 +294,7 @@ class MultiFileToolPanel(BaseToolPanel):
     def build_input(self, page) -> ft.Control:
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
+        self._row_paths: list[Path | None] = []  # ruta por fila exitosa tras un run
         self._picker.on_result = self._on_pick
         self._clear_btn = ft.OutlinedButton(
             "Limpiar lista", icon=ft.Icons.CLEAR_ALL, disabled=True,
@@ -317,6 +318,8 @@ class MultiFileToolPanel(BaseToolPanel):
         self._file_list.controls.clear()
         for index, path in enumerate(self._files):
             result = self._results[index] if index < len(self._results) else None
+            row_path = (self._row_paths[index]
+                        if index < len(self._row_paths) else None)
             self._file_list.controls.append(
                 ft.Row(
                     [
@@ -325,6 +328,9 @@ class MultiFileToolPanel(BaseToolPanel):
                                 overflow=ft.TextOverflow.ELLIPSIS),
                         ft.Text(result or "", size=12, no_wrap=True,
                                 color=ft.Colors.ON_SURFACE_VARIANT),
+                        ft.IconButton(ft.Icons.OPEN_IN_NEW, tooltip="Abrir",
+                                      visible=row_path is not None,
+                                      on_click=lambda _e, p=row_path: open_file(p)),
                         ft.IconButton(ft.Icons.ARROW_UPWARD, tooltip="Subir",
                                       disabled=index == 0,
                                       on_click=lambda _e, i=index: self._move(i, -1)),
@@ -347,6 +353,7 @@ class MultiFileToolPanel(BaseToolPanel):
 
     def _clear_results(self) -> None:
         self._results = []
+        self._row_paths = []
 
     def _move(self, index: int, delta: int) -> None:
         new_index = index + delta
@@ -391,6 +398,15 @@ class MultiFileToolPanel(BaseToolPanel):
 
     def on_result(self, result: ToolResult) -> None:
         self._results = list(result.details or [])
+        # Contrato: la i-ésima etiqueta de éxito ("→ …") corresponde a outputs[i].
+        self._row_paths = []
+        success = 0
+        for label in self._results:
+            if label.startswith("→"):
+                self._row_paths.append(result.outputs[success])
+                success += 1
+            else:
+                self._row_paths.append(None)
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

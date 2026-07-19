@@ -275,3 +275,28 @@ def test_watermark_opacity_label_shows_decimals():
 
     tool = _build(WatermarkTool())
     assert tool._opacity.round == 2
+
+
+def test_multi_row_paths_map_successes_to_outputs():
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf", "/tmp/c.pdf"]))
+
+    tool.on_result(ToolResult(
+        outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/c_x.pdf")],
+        summary="2 de 3 PDFs procesados",
+        details=["→ a_x.pdf", "Contraseña incorrecta.", "→ c_x.pdf"]))
+
+    assert tool._row_paths == [Path("/tmp/a_x.pdf"), None, Path("/tmp/c_x.pdf")]
+
+
+def test_multi_row_paths_cleared_with_results():
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+    tool.on_result(ToolResult(
+        outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/b_x.pdf")],
+        summary="2 PDFs", details=["→ a_x.pdf", "→ b_x.pdf"]))
+    assert tool._row_paths != []
+
+    tool._clear_all(None)
+
+    assert tool._row_paths == []
