@@ -22,7 +22,8 @@ def test_only_extension_gives_none():
     assert parse_output_name(".pdf") is None
 
 
-@pytest.mark.parametrize("bad", ["a/b", "a\\b", "a:b", "a\x00b"])
+@pytest.mark.parametrize("bad", ["a/b", "a\\b", "a:b", "a\x00b",
+                                 "a?b", "a|b", "a<b", "a>b", "a*b", 'a"b'])
 def test_path_characters_raise_invalid_params(bad):
     with pytest.raises(InvalidParams):
         parse_output_name(bad)
@@ -67,3 +68,16 @@ def test_merge_panel_invalid_name_raises():
     tool._name_field.value = "a/b"
     with pytest.raises(InvalidParams):
         tool.make_params()
+
+
+@pytest.mark.parametrize("reserved", ["con", "CON", "Con.pdf", "PRN", "AUX", "NUL"]
+                         + [f"COM{i}" for i in range(1, 10)]
+                         + [f"LPT{i}" for i in range(1, 10)])
+def test_windows_reserved_names_raise_invalid_params(reserved):
+    with pytest.raises(InvalidParams, match="reservado por Windows"):
+        parse_output_name(reserved)
+
+
+@pytest.mark.parametrize("ok", ["CONFIDENCIAL", "consejo", "com10", "lpt0", "aux2"])
+def test_names_that_merely_start_with_reserved_pass(ok):
+    assert parse_output_name(ok) == ok

@@ -241,6 +241,33 @@ def test_clear_list_resets_state():
     assert tool._counter.value == ""
 
 
+def test_open_file_button_visible_only_for_single_output():
+    tool = _build(_SingleStub())
+    assert tool.open_file_btn.visible is False
+
+    tool._show_result_actions(
+        ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
+    assert tool.open_file_btn.visible is True
+    assert tool.open_file_btn.data == Path("/tmp/a.pdf")
+    assert tool.open_btn.visible is True
+
+    tool._show_result_actions(
+        ToolResult(outputs=[Path("/tmp/a.pdf"), Path("/tmp/b.pdf")], summary="ok"))
+    assert tool.open_file_btn.visible is False
+    assert tool.open_btn.visible is True
+
+
+def test_open_file_button_hides_on_new_pick():
+    tool = _build(_SingleStub())
+    tool._show_result_actions(
+        ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
+
+    tool._on_pick(_FakeEvent(["/tmp/b.pdf"]))
+
+    assert tool.open_file_btn.visible is False
+    assert tool.open_btn.visible is False
+
+
 def test_watermark_opacity_label_shows_decimals():
     # Regresión: con round=0 (default de Flet) el label "{value}" muestra
     # 0 en todo el rango 0.05–0.6 (y 1 en el tope).
@@ -248,3 +275,41 @@ def test_watermark_opacity_label_shows_decimals():
 
     tool = _build(WatermarkTool())
     assert tool._opacity.round == 2
+
+
+def test_multi_row_paths_map_successes_to_outputs():
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf", "/tmp/c.pdf"]))
+
+    tool.on_result(ToolResult(
+        outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/c_x.pdf")],
+        summary="2 de 3 PDFs procesados",
+        details=["→ a_x.pdf", "Contraseña incorrecta.", "→ c_x.pdf"]))
+
+    assert tool._row_paths == [Path("/tmp/a_x.pdf"), None, Path("/tmp/c_x.pdf")]
+
+
+def test_multi_row_paths_cleared_with_results():
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+    tool.on_result(ToolResult(
+        outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/b_x.pdf")],
+        summary="2 PDFs", details=["→ a_x.pdf", "→ b_x.pdf"]))
+    assert tool._row_paths != []
+
+    tool._clear_all(None)
+
+    assert tool._row_paths == []
+
+
+def test_multi_row_paths_positional_when_no_failures():
+    # compress no prefija sus éxitos con "→": sin fallos el mapeo es 1:1.
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+
+    tool.on_result(ToolResult(
+        outputs=[Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")],
+        summary="2 PDFs comprimidos",
+        details=["1.23 MB → 0.45 MB", "2.10 MB → 1.80 MB (no se alcanzó el objetivo)"]))
+
+    assert tool._row_paths == [Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")]

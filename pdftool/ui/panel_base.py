@@ -9,7 +9,7 @@ import flet as ft
 from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
-from pdftool.ui.platform import open_folder
+from pdftool.ui.platform import open_file, open_folder
 
 _WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
 
@@ -18,7 +18,14 @@ class InvalidParams(Exception):
     """Params inválidos; el panel muestra str(exc) en el status."""
 
 
-_FORBIDDEN_NAME_CHARS = set("/\\:\x00")
+_FORBIDDEN_NAME_CHARS = set('/\\:?|<>*"\x00')
+
+# Nombres que Windows no permite como archivo, con o sin extensión.
+_WINDOWS_RESERVED_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{i}" for i in range(1, 10)}
+    | {f"LPT{i}" for i in range(1, 10)}
+)
 
 
 def parse_output_name(value: str | None) -> str | None:
@@ -33,7 +40,11 @@ def parse_output_name(value: str | None) -> str | None:
     if not name:
         return None
     if any(c in _FORBIDDEN_NAME_CHARS for c in name):
-        raise InvalidParams("Nombre de salida inválido: no puede contener / \\ :")
+        raise InvalidParams(
+            'Nombre de salida inválido: no puede contener / \\ : ? | < > * "')
+    if name.upper() in _WINDOWS_RESERVED_NAMES:
+        raise InvalidParams(
+            f"Nombre de salida inválido: {name!r} está reservado por Windows.")
     return name
 
 
@@ -93,6 +104,17 @@ class BaseToolPanel(PdfTool):
         started = getattr(self, "_run_started", None)
         return 0.0 if started is None else time.monotonic() - started
 
+    # ---- acciones post-run (footer) ----
+    def _show_result_actions(self, result: ToolResult) -> None:
+        self.open_btn.visible = True
+        self.open_btn.data = result.outputs[0].parent
+        self.open_file_btn.visible = len(result.outputs) == 1
+        self.open_file_btn.data = result.outputs[0]
+
+    def _hide_result_actions(self) -> None:
+        self.open_btn.visible = False
+        self.open_file_btn.visible = False
+
     # ---- errores (mensajes para el usuario) ----
     def _clear_error(self) -> None:
         self._error_toggle.visible = False
@@ -141,6 +163,9 @@ class BaseToolPanel(PdfTool):
         self._error_actions = ft.Row([self._error_toggle, self._log_btn], visible=False)
         self.open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.Icons.FOLDER_OPEN,
                                           visible=False)
+        self.open_file_btn = ft.OutlinedButton("Abrir archivo",
+                                               icon=ft.Icons.OPEN_IN_NEW,
+                                               visible=False)
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
                                        disabled=True)
 
@@ -163,8 +188,7 @@ class BaseToolPanel(PdfTool):
             self._clear_error()
             self.progress.visible = False
             self.status.value = result.summary
-            self.open_btn.visible = True
-            self.open_btn.data = result.outputs[0].parent
+            self._show_result_actions(result)
             self.run_btn.disabled = not self.can_run()
             self.on_result(result)
             page.update()
@@ -180,7 +204,7 @@ class BaseToolPanel(PdfTool):
                 page.update()
                 return
             self.run_btn.disabled = True
-            self.open_btn.visible = False
+            self._hide_result_actions()
             self.progress.visible = True
             self.progress.value = 0
             page.update()
@@ -196,6 +220,8 @@ class BaseToolPanel(PdfTool):
 
         self.run_btn.on_click = do_run
         self.open_btn.on_click = lambda _e: open_folder(Path(self.open_btn.data))
+        self.open_file_btn.on_click = (
+            lambda _e: open_file(self.open_file_btn.data))
 
         # Tres zonas: superior fija · cuerpo flexible · footer anclado.
         # `body` es el único hijo con expand=True: todo lo posterior queda
@@ -209,7 +235,7 @@ class BaseToolPanel(PdfTool):
                 *self.extra_controls(),
                 body,
                 ft.Divider(),
-                ft.Row([self.run_btn, self.open_btn,
+                ft.Row([self.run_btn, self.open_file_btn, self.open_btn,
                         ft.Container(expand=True), self._counter]),
                 self.progress,
                 self.status,
@@ -242,7 +268,7 @@ class SingleFileToolPanel(BaseToolPanel):
             self._file = Path(e.files[0].path)
             self._file_label.value = self._file.name
             self._file_label.italic = False
-            self.open_btn.visible = False
+            self._hide_result_actions()
             self.status.value = ""
             self._clear_error()
             self.run_btn.disabled = False
@@ -268,6 +294,7 @@ class MultiFileToolPanel(BaseToolPanel):
     def build_input(self, page) -> ft.Control:
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
+        self._row_paths: list[Path | None] = []  # ruta por fila exitosa tras un run
         self._picker.on_result = self._on_pick
         self._clear_btn = ft.OutlinedButton(
             "Limpiar lista", icon=ft.Icons.CLEAR_ALL, disabled=True,
@@ -291,6 +318,8 @@ class MultiFileToolPanel(BaseToolPanel):
         self._file_list.controls.clear()
         for index, path in enumerate(self._files):
             result = self._results[index] if index < len(self._results) else None
+            row_path = (self._row_paths[index]
+                        if index < len(self._row_paths) else None)
             self._file_list.controls.append(
                 ft.Row(
                     [
@@ -299,6 +328,9 @@ class MultiFileToolPanel(BaseToolPanel):
                                 overflow=ft.TextOverflow.ELLIPSIS),
                         ft.Text(result or "", size=12, no_wrap=True,
                                 color=ft.Colors.ON_SURFACE_VARIANT),
+                        ft.IconButton(ft.Icons.OPEN_IN_NEW, tooltip="Abrir",
+                                      visible=row_path is not None,
+                                      on_click=lambda _e, p=row_path: open_file(p)),
                         ft.IconButton(ft.Icons.ARROW_UPWARD, tooltip="Subir",
                                       disabled=index == 0,
                                       on_click=lambda _e, i=index: self._move(i, -1)),
@@ -321,6 +353,7 @@ class MultiFileToolPanel(BaseToolPanel):
 
     def _clear_results(self) -> None:
         self._results = []
+        self._row_paths = []
 
     def _move(self, index: int, delta: int) -> None:
         new_index = index + delta
@@ -340,7 +373,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._clear_results()
         self._clear_error()
         self.status.value = ""
-        self.open_btn.visible = False
+        self._hide_result_actions()
         self._refresh()
 
     def _on_pick(self, e) -> None:
@@ -357,7 +390,7 @@ class MultiFileToolPanel(BaseToolPanel):
         if added == 0 and e.files:
             self.status.value = _WEB_MODE_MSG
         else:
-            self.open_btn.visible = False
+            self._hide_result_actions()
             self.status.value = ""
         self._clear_error()
         self._clear_results()
@@ -365,6 +398,20 @@ class MultiFileToolPanel(BaseToolPanel):
 
     def on_result(self, result: ToolResult) -> None:
         self._results = list(result.details or [])
+        # Mapear filas a salidas: sin fallos la correspondencia es 1:1 (compress
+        # no prefija sus éxitos con "→"); con fallos, la i-ésima etiqueta de
+        # éxito ("→ …") corresponde a outputs[i] (protect, images2pdf).
+        if self._results and len(self._results) == len(result.outputs):
+            self._row_paths = list(result.outputs)
+        else:
+            self._row_paths = []
+            success = 0
+            for label in self._results:
+                if label.startswith("→") and success < len(result.outputs):
+                    self._row_paths.append(result.outputs[success])
+                    success += 1
+                else:
+                    self._row_paths.append(None)
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:
