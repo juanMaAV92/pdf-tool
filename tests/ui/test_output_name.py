@@ -1,6 +1,11 @@
+from pathlib import Path
+
 import pytest
 
-from pdftool.ui.panel_base import InvalidParams, parse_output_name
+from pdftool.core.naming import unique_path
+from pdftool.core.plugin import ToolContext
+from pdftool.tools.merge.panel import MergeTool
+from pdftool.ui.panel_base import InvalidParams, OutputNameField, parse_output_name
 
 
 def test_none_and_empty_and_blank_give_none():
@@ -33,10 +38,6 @@ def test_field_has_hint_and_bounded_width():
     field = OutputNameField(resolve=lambda _base: None)
     assert field.hint_text == "Nombre de salida (opcional)"
     assert field.width == 280
-
-
-from pdftool.core.plugin import ToolContext
-from pdftool.tools.merge.panel import MergeTool
 
 
 class _FakePage:
@@ -83,15 +84,8 @@ def test_names_that_merely_start_with_reserved_pass(ok):
     assert parse_output_name(ok) == ok
 
 
-from pathlib import Path
-
-from pdftool.ui.panel_base import OutputNameField
-
-
 def _field_over(tmp_path, existing=(), files=(Path("x.pdf"),)):
     """Campo cuyo `resolve` imita a output_path_for_merge sobre tmp_path."""
-    from pdftool.core.naming import unique_path
-
     for name in existing:
         (tmp_path / name).write_bytes(b"x")
 
@@ -107,14 +101,14 @@ def test_helper_empty_when_no_name(tmp_path):
     field = _field_over(tmp_path)
     field.value = ""
     field.refresh()
-    assert field.helper_text is None
+    assert not field.helper_text
 
 
 def test_helper_empty_when_no_files(tmp_path):
     field = _field_over(tmp_path, files=())
     field.value = "2022"
     field.refresh()
-    assert field.helper_text is None
+    assert not field.helper_text
 
 
 def test_helper_shows_final_name_when_free(tmp_path):
@@ -135,7 +129,29 @@ def test_helper_empty_when_name_is_invalid(tmp_path):
     field = _field_over(tmp_path)
     field.value = "a/b"
     field.refresh()
-    assert field.helper_text is None
+    assert not field.helper_text
+
+
+def test_helper_clears_after_warning_when_files_are_removed(tmp_path):
+    """Verifica la transición aviso -> vacío: el helper_text de Flet 0.28.2
+    coacciona None a '' en el setter, así que `is None` no detecta este caso
+    (ver reporte de hallazgos)."""
+    files: list[Path] = [Path("x.pdf")]
+    (tmp_path / "2022.pdf").write_bytes(b"x")
+
+    def resolve(base):
+        if not files or base is None:
+            return None
+        return unique_path(tmp_path / f"{base}.pdf")
+
+    field = OutputNameField(resolve=resolve)
+    field.value = "2022"
+    field.refresh()
+    assert field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
+
+    files.clear()
+    field.refresh()
+    assert not field.helper_text
 
 
 def test_warning_and_normal_helpers_use_different_colors(tmp_path):
@@ -165,4 +181,20 @@ def test_merge_panel_helper_is_empty_without_files():
     tool = _build(MergeTool())
     tool._name_field.value = "2022"
     tool._name_field.refresh()
-    assert tool._name_field.helper_text is None
+    assert not tool._name_field.helper_text
+
+
+def test_merge_panel_refresh_updates_helper_from_file_list(tmp_path):
+    """El wiring real: `_refresh()` (cambio de lista de archivos) debe llegar
+    al helper del campo de nombre vía `on_inputs_changed`, no solo
+    `field.refresh()` llamado a mano."""
+    (tmp_path / "2022.pdf").write_bytes(b"previo")
+    entrada = tmp_path / "a.pdf"
+    entrada.write_bytes(b"x")
+
+    tool = _build(MergeTool())
+    tool._files = [entrada]
+    tool._name_field.value = "2022"
+    tool._refresh()
+
+    assert tool._name_field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
