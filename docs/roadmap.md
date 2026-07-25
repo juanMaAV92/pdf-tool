@@ -15,6 +15,10 @@ panel + tests (ver AGENTS.md).
    por fila exitosa en lotes).
 3. ~~**Sanitización de nombres para Windows.**~~ ✅ Hecho en #22 (caracteres
    `? | < > * "` + nombres reservados, validación igual en todas las plataformas).
+4. ~~**No sobrescribir la salida.**~~ ✅ Hecho (`core/naming.py::unique_path`):
+   ninguna herramienta pisa un archivo existente, sufijo unificado ` (n)`, y el
+   campo de nombre de Unir avisa en vivo del nombre final. Pendiente de alinear:
+   Comprimir y Marca de agua siguen usando el formato `_1`.
 
 ## Después
 
