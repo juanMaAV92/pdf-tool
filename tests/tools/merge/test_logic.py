@@ -26,7 +26,8 @@ def test_output_next_to_first_input(tmp_path):
 def test_output_never_equals_an_input(tmp_path):
     a = _pdf(tmp_path / "a_merged.pdf", 1, "A")
     out = output_path_for_merge([a])
-    assert out == tmp_path / "a_merged (1).pdf"
+    assert out == tmp_path / "a_merged_merged.pdf"
+    assert out != a
 
 
 def test_empty_inputs_raises():

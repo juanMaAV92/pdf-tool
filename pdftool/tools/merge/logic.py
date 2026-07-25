@@ -21,14 +21,7 @@ def output_path_for_merge(inputs: list[Path], name: str | None = None) -> Path:
     misma función para avisar del nombre final antes de ejecutar.
     """
     first = Path(inputs[0])
-    if name:
-        base = name
-    elif first.stem.endswith("_merged"):
-        # Si el archivo de entrada ya acaba en _merged, usar el stem tal cual
-        # para evitar duplicar el sufijo (a_merged.pdf → a_merged (1).pdf, no a_merged_merged.pdf)
-        base = first.stem
-    else:
-        base = f"{first.stem}_merged"
+    base = name or f"{first.stem}_merged"
     return unique_path(first.parent / f"{base}.pdf", taken=inputs)
 
 
