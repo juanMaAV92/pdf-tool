@@ -26,6 +26,7 @@ def test_output_next_to_first_input(tmp_path):
 def test_output_never_equals_an_input(tmp_path):
     a = _pdf(tmp_path / "a_merged.pdf", 1, "A")
     out = output_path_for_merge([a])
+    assert out == tmp_path / "a_merged_merged.pdf"
     assert out != a
 
 
@@ -76,7 +77,7 @@ def test_output_uses_custom_name(tmp_path):
 def test_custom_name_never_equals_an_input(tmp_path):
     a = _pdf(tmp_path / "a.pdf", 1, "A")
     out = output_path_for_merge([a], name="a")
-    assert out == tmp_path / "a_1.pdf"
+    assert out == tmp_path / "a (1).pdf"
 
 
 def test_merge_with_custom_name(tmp_path):
@@ -86,3 +87,27 @@ def test_merge_with_custom_name(tmp_path):
     assert result.outputs[0].name == "junto.pdf"
     assert result.outputs[0].exists()
     assert "junto.pdf" in result.summary
+
+
+def test_custom_name_does_not_overwrite_existing_output(tmp_path):
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    (tmp_path / "2022.pdf").write_bytes(b"previo")
+    out = output_path_for_merge([a], name="2022")
+    assert out == tmp_path / "2022 (1).pdf"
+
+
+def test_two_runs_with_same_custom_name_keep_both(tmp_path):
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    b = _pdf(tmp_path / "b.pdf", 1, "B")
+    c = _pdf(tmp_path / "c.pdf", 3, "C")
+
+    first = merge([a, b], MergeParams(output_name="2022"))
+    second = merge([a, c], MergeParams(output_name="2022"))
+
+    assert first.outputs[0] == tmp_path / "2022.pdf"
+    assert second.outputs[0] == tmp_path / "2022 (1).pdf"
+    # El primero conserva su contenido original: 1 + 1 páginas.
+    with fitz.open(str(first.outputs[0])) as doc:
+        assert doc.page_count == 2
+    with fitz.open(str(second.outputs[0])) as doc:
+        assert doc.page_count == 4

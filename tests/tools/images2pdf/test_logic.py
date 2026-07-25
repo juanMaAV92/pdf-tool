@@ -33,7 +33,7 @@ def test_output_next_to_image(tmp_path):
 def test_output_avoids_existing_pdf(tmp_path):
     (tmp_path / "a.pdf").write_bytes(b"ya existe")
     out = output_path_for_images(tmp_path / "a.png")
-    assert out == tmp_path / "a_1.pdf"
+    assert out == tmp_path / "a (1).pdf"
 
 
 def test_one_pdf_per_image(tmp_path):
@@ -127,5 +127,5 @@ def test_same_stem_in_one_batch_does_not_clobber(tmp_path):
     a_png = _img(tmp_path / "a.png", 100, 100)
     a_jpg = _img(tmp_path / "a.jpg", 100, 100)
     res = images_to_pdf([a_png, a_jpg], ImagesToPdfParams())
-    assert [o.name for o in res.outputs] == ["a.pdf", "a_1.pdf"]
+    assert [o.name for o in res.outputs] == ["a.pdf", "a (1).pdf"]
     assert all(o.exists() for o in res.outputs)

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.naming import unique_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.images2pdf.params import ImagesToPdfParams
 
@@ -17,12 +18,7 @@ def _noop(_p: float, _m: str) -> None:
 def output_path_for_images(input_path: Path) -> Path:
     """`<imagen>.pdf` junto al original, sin pisar un archivo existente."""
     p = Path(input_path)
-    candidate = p.parent / f"{p.stem}.pdf"
-    n = 1
-    while candidate.exists():
-        candidate = p.parent / f"{p.stem}_{n}.pdf"
-        n += 1
-    return candidate
+    return unique_path(p.parent / f"{p.stem}.pdf")
 
 
 def _convert_one(input_path: Path, progress: Progress) -> tuple[Path | None, str]:

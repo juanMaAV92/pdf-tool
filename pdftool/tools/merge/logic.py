@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.naming import unique_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.merge.params import MergeParams
 
@@ -13,20 +14,15 @@ def _noop(_p: float, _m: str) -> None:
 
 
 def output_path_for_merge(inputs: list[Path], name: str | None = None) -> Path:
-    """Salida junto al primer PDF; `name` custom o `<primero>_merged`, sin
-    colisionar con ninguna entrada."""
+    """Salida junto al primer PDF; `name` custom o `<primero>_merged`.
+
+    Nunca pisa un archivo existente ni una de las entradas: si el nombre está
+    ocupado, se usa «nombre (1).pdf», «nombre (2).pdf»… La UI consulta esta
+    misma función para avisar del nombre final antes de ejecutar.
+    """
     first = Path(inputs[0])
-    inputs_set = {Path(p) for p in inputs}
     base = name or f"{first.stem}_merged"
-    candidate = first.parent / f"{base}.pdf"
-    n = 1
-    # Deliberado: solo se evita pisar las ENTRADAS (estilo "Guardar como…");
-    # un nombre custom repetido sobreescribe la salida anterior. images2pdf
-    # en cambio evita cualquier archivo existente.
-    while candidate in inputs_set:
-        candidate = first.parent / f"{base}_{n}.pdf"
-        n += 1
-    return candidate
+    return unique_path(first.parent / f"{base}.pdf", taken=inputs)
 
 
 def merge(inputs: list[Path], params: MergeParams,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import logging
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import flet as ft
@@ -51,10 +52,44 @@ def parse_output_name(value: str | None) -> str | None:
     return name
 
 
-def output_name_field() -> ft.TextField:
-    """Campo compacto y opcional para la base del archivo de salida."""
-    return ft.TextField(hint_text="Nombre de salida (opcional)", width=280,
-                        dense=True)
+_HELPER_OK_COLOR = ft.Colors.ON_SURFACE_VARIANT
+_HELPER_WARN_COLOR = ft.Colors.AMBER
+
+
+class OutputNameField(ft.TextField):
+    """Campo opcional para la base del archivo de salida.
+
+    Muestra en vivo el nombre final que se usará. `resolve` devuelve la ruta
+    que la herramienta escribiría para esa base, o None si aún no hay archivos;
+    así la UI no reimplementa la regla de colisión, la consulta.
+    """
+
+    def __init__(self, resolve: Callable[[str | None], Path | None]) -> None:
+        super().__init__(hint_text="Nombre de salida (opcional)", width=280,
+                         dense=True)
+        self._resolve = resolve
+        self.on_change = lambda _e: self.refresh(update=True)
+
+    def refresh(self, update: bool = False) -> None:
+        text, color = self._helper()
+        self.helper_text = text
+        self.helper_style = ft.TextStyle(size=11, color=color) if text else None
+        if update and self.page:
+            self.update()
+
+    def _helper(self) -> tuple[str | None, str | None]:
+        try:
+            base = parse_output_name(self.value)
+        except InvalidParams:
+            return None, None
+        if base is None:
+            return None, None
+        out = self._resolve(base)
+        if out is None:
+            return None, None
+        if out.name == f"{base}.pdf":
+            return f"Se guardará como «{out.name}»", _HELPER_OK_COLOR
+        return f"Ya existe — se guardará como «{out.name}»", _HELPER_WARN_COLOR
 
 
 class BaseToolPanel(PdfTool):
@@ -74,6 +109,10 @@ class BaseToolPanel(PdfTool):
     # ---- hooks de la herramienta ----
     def extra_controls(self) -> list[ft.Control]:
         return []
+
+    def on_inputs_changed(self) -> None:
+        """Hook: la lista de archivos cambió. Los paneles con campos que
+        dependen de las entradas lo sobrescriben."""
 
     def make_params(self):
         raise NotImplementedError
@@ -383,6 +422,7 @@ class MultiFileToolPanel(BaseToolPanel):
             if pending:
                 load_async(pending, self._on_thumb_ready,
                            is_current=lambda: self._thumb_generation == generation)
+        self.on_inputs_changed()
         self.run_btn.disabled = not self.can_run()
         self._clear_btn.disabled = not self._files
         n = len(self._files)
