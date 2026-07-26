@@ -12,6 +12,10 @@ def test_abbreviate_home_leaves_other_paths_alone():
     assert abbreviate_home(Path("/tmp/x")) == "/tmp/x"
 
 
+def test_abbreviate_home_renders_the_home_directory_as_tilde():
+    assert abbreviate_home(Path.home()) == "~"
+
+
 def test_default_is_next_to_the_original():
     field = OutputDirField(Settings())
     assert field.value is None

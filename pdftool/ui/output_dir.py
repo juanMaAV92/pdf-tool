@@ -13,9 +13,10 @@ _DEFAULT_LABEL = "Junto al original"
 def abbreviate_home(path: Path) -> str:
     """Ruta legible: «~/Desktop» en vez de «/Users/quien/Desktop»."""
     try:
-        return f"~/{path.relative_to(Path.home())}"
+        rel = path.relative_to(Path.home())
     except ValueError:
         return str(path)
+    return "~" if rel == Path(".") else f"~/{rel}"
 
 
 class OutputDirField(ft.Row):
