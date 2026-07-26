@@ -44,7 +44,18 @@ panel + tests (ver AGENTS.md).
 - **OCR.** El salto de valor más grande (buscar texto en escaneos), pero arrastra
   Tesseract como dependencia pesada de sistema. Reevaluar si aparece una necesidad
   real.
-- **Drag & drop de archivos del SO.** Flet 0.28 no soporta soltar archivos desde el
-  sistema en la ventana (solo drag interno). Reevaluar con versiones futuras de Flet.
+- **Drag & drop de archivos del SO.** Flet no lo soporta en **ninguna** versión: el
+  issue de 2022 ([#112](https://github.com/flet-dev/flet/issues/112)) y sus tres
+  duplicados se cerraron redirigiendo a extensiones de terceros, y el PR que traía
+  un DropZone nativo ([#4441](https://github.com/flet-dev/flet/pull/4441)) se cerró
+  sin merge. La vía real es la extensión
+  [`flet-dropzone`](https://github.com/shiena/flet-dropzone) (envuelve el paquete
+  Flutter `desktop_drop`): su 0.2.0 acepta `flet>=0.27` y sería compatible con
+  nuestro pin, pero lleva sin tocarse desde marzo 2025; la mantenida (0.3.x) exige
+  `flet>=0.80` y por tanto la migración (deuda técnica #5). El código propio sería
+  trivial —un `Dropzone` alrededor de `MultiFileToolPanel` reusando `_on_pick`, y
+  las 6 herramientas lo heredan—; el riesgo está en que `flet build` tenga que
+  compilar el paquete Flutter. Reevaluar cuando se pague la deuda #5, o con un
+  spike de una hora si sube la prioridad antes.
 - **Sufijo custom en herramientas de lote.** El nombre de salida aplica solo a
   herramientas de salida única (Unir); decidido en la spec de layout 2026-07-18.
