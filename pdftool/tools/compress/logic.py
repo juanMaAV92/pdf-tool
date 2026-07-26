@@ -6,6 +6,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.compress.params import CompressParams
 
@@ -34,17 +35,22 @@ def _target_label(target_mb: float) -> str:
     return f"{target_mb:g}MB".replace(".", "_")
 
 
+_STEM_NOISE = re.compile(r"(_compressed|_\d+(?:_\d+)?MB)+( \(\d+\))?$")
+
+
+def _clean_stem(stem: str) -> str:
+    """Quita sufijos de compresiones previas para que no se acumulen.
+
+    Absorbe también un « (n)» final, para que recomprimir una salida ya
+    desambiguada no produzca «doc_5MB (1)_2MB.pdf».
+    """
+    return _STEM_NOISE.sub("", stem)
+
+
 def output_path_for(input_path: Path, target_mb: float) -> Path:
-    stem = re.sub(r"(_compressed|_\d+(?:_\d+)?MB)+$", "", input_path.stem)
-    candidate = input_path.parent / f"{stem}_{_target_label(target_mb)}.pdf"
-    if candidate == input_path:
-        counter = 1
-        while True:
-            candidate = input_path.parent / f"{stem}_{_target_label(target_mb)}_{counter}.pdf"
-            if candidate != input_path:
-                break
-            counter += 1
-    return candidate
+    """Política de nombre de Comprimir; la colisión la resuelve el helper."""
+    p = Path(input_path)
+    return output_path(p, _target_label(target_mb), stem=_clean_stem(p.stem))
 
 
 def _simple_compress(src: Path, dst: Path) -> None:

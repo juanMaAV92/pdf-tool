@@ -69,13 +69,11 @@ def test_best_effort_branch(big_pdf):
 # ---------------------------------------------------------------------------
 
 def test_output_path_never_equals_input():
-    """When input encodes the target size, output must not collide with input."""
+    """Comprimir a un tamaño que ya está en el nombre no puede devolver la entrada."""
     input_path = Path("/x/report_5MB.pdf")
     result = output_path_for(input_path, 5.0)
-    assert result != input_path, "output_path_for must not return the input path itself"
-    assert result.name == "report_5MB_1.pdf", (
-        f"expected 'report_5MB_1.pdf', got '{result.name}'"
-    )
+    assert result != input_path
+    assert result.name == "report_5MB (1).pdf"
 
 
 def test_compress_multiple_files(tmp_path, big_pdf):
@@ -151,3 +149,28 @@ def test_compress_no_self_overwrite(tmp_path, big_pdf):
     out = result.outputs[0]
     assert out != src, "Output path must differ from input path"
     assert out.exists(), "Output file must exist"
+
+
+def test_output_avoids_an_existing_file(tmp_path):
+    (tmp_path / "doc_2MB.pdf").write_bytes(b"previo")
+    out = output_path_for(tmp_path / "doc.pdf", 2.0)
+    assert out == tmp_path / "doc_2MB (1).pdf"
+
+
+def test_stem_cleanup_absorbs_a_duplicate_suffix():
+    """Recomprimir una salida ya desambiguada no arrastra el « (n)» al nombre."""
+    out = output_path_for(Path("/x/doc_5MB (1).pdf"), 2.0)
+    assert out.name == "doc_2MB.pdf"
+
+
+def test_compress_does_not_overwrite_a_previous_output(tmp_path, big_pdf):
+    import shutil
+
+    src = tmp_path / "doc.pdf"
+    shutil.copy2(big_pdf, src)
+    (tmp_path / "doc_1MB.pdf").write_bytes(b"previo")
+
+    result = compress([src], CompressParams(target_mb=1.0))
+
+    assert result.outputs[0] == tmp_path / "doc_1MB (1).pdf"
+    assert (tmp_path / "doc_1MB.pdf").read_bytes() == b"previo"
