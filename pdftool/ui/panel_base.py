@@ -217,8 +217,12 @@ class BaseToolPanel(PdfTool):
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
                                        disabled=True)
 
-        self._out_dir = OutputDirField(ctx.settings or Settings(),
-                                       on_change=self.on_output_dir_changed)
+        # Una única instancia reutilizada entre renders: `build_panel` corre en
+        # cada navegación y cada OutputDirField trae su propio FilePicker, que
+        # se quedaría en page.overlay. Mismo motivo que self._picker.
+        if not hasattr(self, "_out_dir"):
+            self._out_dir = OutputDirField(ctx.settings or Settings(),
+                                           on_change=self.on_output_dir_changed)
         self._out_dir.attach(page)
 
         input_bar = self.build_input(page)  # subclase; fija self._picker.on_result

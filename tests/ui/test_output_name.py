@@ -260,3 +260,19 @@ def test_changing_the_destination_refreshes_the_helper(tmp_path):
 
     assert tool._name_field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
     tool._out_dir.set_dir(None)
+
+
+def test_rebuilding_a_panel_does_not_leak_pickers_in_the_overlay():
+    """Navegar a una herramienta y volver no debe acumular FilePickers."""
+    page = _FakePage()
+    ctx = ToolContext(page=page, run_job=lambda **kwargs: None)
+    tool = MergeTool()
+
+    tool.build_panel(ctx)
+    primero = tool._out_dir
+    tras_el_primero = len(page.overlay)
+
+    tool.build_panel(ctx)
+
+    assert tool._out_dir is primero
+    assert len(page.overlay) == tras_el_primero
