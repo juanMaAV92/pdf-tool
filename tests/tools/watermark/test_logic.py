@@ -78,3 +78,14 @@ def test_watermark_does_not_overwrite_a_previous_output(tmp_path):
 
     assert res.outputs[0] == tmp_path / "doc_marca (1).pdf"
     assert (tmp_path / "doc_marca.pdf").read_bytes() == b"previo"
+
+
+def test_watermark_writes_to_output_dir(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    a = _pdf(tmp_path / "doc.pdf")
+
+    res = watermark([a], WatermarkParams(text="BORRADOR", output_dir=destino))
+
+    assert res.outputs[0] == destino / "doc_marca.pdf"
+    assert res.outputs[0].exists()
