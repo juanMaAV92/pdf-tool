@@ -59,6 +59,34 @@ Origen: evaluación de arquitectura del 2026-07-18, tras los PRs #16-#23.
   test E2E que arranque la app y recorra un flujo (unir 2 PDFs) antes de aceptar
   el upgrade.
 
+### 5. Pin de Flet en 0.28.2 mientras la serie actual va por 0.86.x
+
+- **Qué:** Flet 1.0 (0.70 alpha → 0.80 beta → 0.86 hoy) es una reescritura del
+  framework, no un upgrade: los propios docs dicen que no es drop-in y recomiendan
+  pinear 0.28.3 a quien no migre. Coste estimado de migrar: ~2-4 sesiones sobre
+  las ~1.200 líneas de `ui/` y `tools/*/panel.py`. **La lógica PDF no se toca** —
+  `core/` no importa Flet y cada herramienta separa `logic.py` de `panel.py`, así
+  que 132 de los 243 tests son inmunes.
+- **Dónde duele:** `FilePicker` dejó de ser un control y pasó a ser un *servicio*
+  registrado en `page.services`, con métodos async que devuelven el resultado
+  directamente — **`on_result` desaparece**. Eso es el patrón central de
+  `panel_base.py` (picker reutilizado en `page.overlay`), `logs.py` y `app.py`, y
+  toca todos los paneles. El resto es mecánico: `ft.app` → `ft.run`, `ft.ImageFit`
+  → `ft.BoxFit`, `ft.alignment.center` → `ft.Alignment.CENTER`, `text=` → `label=`
+  en ~14 botones, y `ft.dropdown` en minúscula.
+- **Por qué se acepta:** el pin existe por el bug de file picker en macOS
+  ([#5334](https://github.com/flet-dev/flet/issues/5334)) y la app funciona. Lo
+  único que la migración desbloquea hoy es el drag & drop desde el SO, el ítem de
+  menor prioridad del roadmap. Además hay bugs de `FilePicker` como servicio
+  reportados en 0.80/0.81 ([#6040](https://github.com/flet-dev/flet/issues/6040),
+  [#6251](https://github.com/flet-dev/flet/issues/6251)): antes de comprometerse
+  hay que verificar que 0.86 abre diálogos limpio en macOS y Windows.
+- **Disparador:** que un feature del roadmap necesite algo que 0.28 no da, que
+  aparezca un bug de Flet sin workaround, o que el pin cumpla dos años (julio
+  2027) — lo que ocurra primero. **Pago mínimo previo:** el smoke test E2E de la
+  deuda #4. Los 111 tests que tocan UI usan `_FakePage` y stubs, así que pasarían
+  verdes con la app visualmente rota; durante la migración la suite no protege.
+
 ## Aceptada — sin acción prevista
 
 Registrado para que nadie lo "redescubra" como bug:
