@@ -161,3 +161,41 @@ def test_progress_reaches_one(tmp_path):
     seen = []
     split([src], SplitParams(mode="single"), progress=lambda p, m: seen.append(p))
     assert seen and seen[-1] == 1.0
+
+
+def test_split_only_disambiguates_the_range_that_is_taken(tmp_path):
+    """Solo el rango ocupado lleva « (1)»; los demás conservan su nombre limpio."""
+    src = _pdf(tmp_path / "doc.pdf", 4)
+    (tmp_path / "doc_p1.pdf").write_bytes(b"previo")
+
+    result = split([src], SplitParams(mode="single"))
+
+    assert [o.name for o in result.outputs] == [
+        "doc_p1 (1).pdf", "doc_p2.pdf", "doc_p3.pdf", "doc_p4.pdf",
+    ]
+    assert (tmp_path / "doc_p1.pdf").read_bytes() == b"previo"
+    assert all(o.exists() for o in result.outputs)
+
+
+def test_split_twice_keeps_both_batches(tmp_path):
+    """Repetir la división no pisa ninguna salida de la primera."""
+    src = _pdf(tmp_path / "doc.pdf", 4)
+    first = split([src], SplitParams(mode="single")).outputs
+    second = split([src], SplitParams(mode="single")).outputs
+
+    assert [o.name for o in second] == [
+        "doc_p1 (1).pdf", "doc_p2 (1).pdf", "doc_p3 (1).pdf", "doc_p4 (1).pdf",
+    ]
+    assert all(o.exists() for o in first + second)
+
+
+def test_split_batch_does_not_collide_with_itself(tmp_path):
+    """Los N archivos de un mismo lote tienen rutas distintas y todos existen.
+
+    Guarda de regresión: si alguien precalculara las N rutas antes de escribir,
+    unique_path no vería los archivos del propio lote y dos rangos chocarían.
+    """
+    src = _pdf(tmp_path / "doc.pdf", 4)
+    result = split([src], SplitParams(mode="single"))
+    assert len(set(result.outputs)) == len(result.outputs)
+    assert all(o.exists() for o in result.outputs)

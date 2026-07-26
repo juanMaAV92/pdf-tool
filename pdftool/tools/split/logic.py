@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.split.params import SplitParams
 
@@ -117,7 +118,7 @@ def split(inputs: list[Path], params: SplitParams,
         progress(0.0, f"Dividiendo en {total} archivos…")
 
         for i, (start, end) in enumerate(ranges):
-            out = src_path.parent / f"{src_path.stem}_{_label(start, end, width)}.pdf"
+            out = output_path(src_path, _label(start, end, width))
             with fitz.open() as dst:
                 dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)
                 dst.save(str(out), garbage=4, deflate=True)
