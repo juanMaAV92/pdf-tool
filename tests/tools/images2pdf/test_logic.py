@@ -129,3 +129,23 @@ def test_same_stem_in_one_batch_does_not_clobber(tmp_path):
     res = images_to_pdf([a_png, a_jpg], ImagesToPdfParams())
     assert [o.name for o in res.outputs] == ["a.pdf", "a (1).pdf"]
     assert all(o.exists() for o in res.outputs)
+
+
+def test_output_uses_out_dir_when_given(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    out = output_path_for_images(tmp_path / "a.png", destino)
+    assert out == destino / "a.pdf"
+
+
+def test_images_to_pdf_writes_to_output_dir(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    a = _img(tmp_path / "a.png", 100, 100)
+    b = _img(tmp_path / "b.png", 100, 100)
+
+    res = images_to_pdf([a, b], ImagesToPdfParams(output_dir=destino))
+
+    assert [o.name for o in res.outputs] == ["a.pdf", "b.pdf"]
+    assert all(o.parent == destino for o in res.outputs)
+    assert all(o.exists() for o in res.outputs)

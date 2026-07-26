@@ -13,16 +13,20 @@ def _noop(_p: float, _m: str) -> None:
     pass
 
 
-def output_path_for_merge(inputs: list[Path], name: str | None = None) -> Path:
-    """Salida junto al primer PDF; `name` custom o `<primero>_merged`.
+def output_path_for_merge(inputs: list[Path], name: str | None = None,
+                          out_dir: Path | None = None) -> Path:
+    """Salida junto al primer PDF (o en el destino); `name` custom o `<primero>_merged`.
 
     Nunca pisa un archivo existente ni una de las entradas: si el nombre está
     ocupado, se usa «nombre (1).pdf», «nombre (2).pdf»… La UI consulta esta
     misma función para avisar del nombre final antes de ejecutar.
+
+    Si `out_dir` es None, la salida va junto al primer PDF.
     """
     first = Path(inputs[0])
     base = name or f"{first.stem}_merged"
-    return unique_path(first.parent / f"{base}.pdf", taken=inputs)
+    carpeta = Path(out_dir) if out_dir is not None else first.parent
+    return unique_path(carpeta / f"{base}.pdf", taken=inputs)
 
 
 def merge(inputs: list[Path], params: MergeParams,
@@ -35,7 +39,7 @@ def merge(inputs: list[Path], params: MergeParams,
         if not p.exists():
             raise FileNotFoundError(p)
 
-    out = output_path_for_merge(paths, params.output_name)
+    out = output_path_for_merge(paths, params.output_name, params.output_dir)
     total = len(paths)
     progress(0.0, f"Uniendo {total} PDFs…")
 
