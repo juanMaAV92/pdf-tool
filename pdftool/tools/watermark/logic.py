@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.watermark.params import WatermarkParams
 
@@ -15,11 +16,8 @@ def _noop(_p: float, _m: str) -> None:
 
 
 def output_path_for_watermark(input_path: Path) -> Path:
-    p = Path(input_path)
-    candidate = p.parent / f"{p.stem}_marca.pdf"
-    if candidate == p:  # por si el original ya se llamara así
-        candidate = p.parent / f"{p.stem}_marca_1.pdf"
-    return candidate
+    """Política de nombre de Marca de agua; la colisión la resuelve el helper."""
+    return output_path(input_path, "marca")
 
 
 def watermark(inputs: list[Path], params: WatermarkParams,
