@@ -35,6 +35,12 @@ def _target_label(target_mb: float) -> str:
     return f"{target_mb:g}MB".replace(".", "_")
 
 
+# También absorbe un « (n)» final (ver _clean_stem). Esto puede recortar de
+# más un nombre de usuario legítimo que combine un token «_NMB» con un « (n)»
+# final (p. ej. «presupuesto_2MB (1).pdf» -> «presupuesto»), pero nunca causa
+# pérdida de archivos: `output_path` pasa `taken=(p,)`, así que el nombre
+# limpio jamás puede resolver de vuelta a la propia entrada. Como mucho el
+# resultado es un nombre cosméticamente raro.
 _STEM_NOISE = re.compile(r"(_compressed|_\d+(?:_\d+)?MB)+( \(\d+\))?$")
 
 

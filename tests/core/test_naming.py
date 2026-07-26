@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pdftool.core.naming import unique_path
+from pdftool.core.naming import output_path, unique_path
 
 
 def test_free_candidate_is_returned_unchanged(tmp_path):
@@ -40,9 +40,6 @@ def test_stem_with_spaces_and_dots(tmp_path):
             == tmp_path / "informe v1.2 (1).pdf")
 
 
-from pdftool.core.naming import output_path
-
-
 def test_output_path_composes_stem_and_suffix(tmp_path):
     assert output_path(tmp_path / "doc.pdf", "marca") == tmp_path / "doc_marca.pdf"
 
@@ -73,3 +70,10 @@ def test_output_path_chains_when_several_are_taken(tmp_path):
     for name in ("doc_marca.pdf", "doc_marca (1).pdf"):
         (tmp_path / name).write_bytes(b"x")
     assert output_path(tmp_path / "doc.pdf", "marca") == tmp_path / "doc_marca (2).pdf"
+
+
+def test_output_path_empty_stem_is_honoured_not_ignored(tmp_path):
+    # stem="" es un valor válido (distinto de None) y debe respetarse,
+    # no caer de vuelta al stem del archivo de entrada.
+    out = output_path(tmp_path / "doc.pdf", "marca", stem="")
+    assert out == tmp_path / "_marca.pdf"

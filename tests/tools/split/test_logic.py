@@ -189,6 +189,19 @@ def test_split_twice_keeps_both_batches(tmp_path):
     assert all(o.exists() for o in first + second)
 
 
+def test_split_ranges_with_duplicate_range_disambiguates_the_repeat(tmp_path):
+    """Un rango repetido en la especificación no debe pisar la primera salida."""
+    src = _pdf(tmp_path / "doc.pdf", 3)
+
+    result = split([src], SplitParams(mode="ranges", ranges="1-2,1-2,3"))
+
+    assert [o.name for o in result.outputs] == [
+        "doc_p1-2.pdf", "doc_p1-2 (1).pdf", "doc_p3.pdf",
+    ]
+    assert len(set(result.outputs)) == 3
+    assert all(o.exists() for o in result.outputs)
+
+
 def test_split_batch_does_not_collide_with_itself(tmp_path):
     """Los N archivos de un mismo lote tienen rutas distintas y todos existen.
 
