@@ -45,12 +45,25 @@ pdftool/
 
 No se toca el host. Crea `pdftool/tools/<id>/` con:
 
-1. `params.py` — un `BaseModel` de pydantic con los parámetros.
+1. `params.py` — hereda de `BaseParams` (`pdftool/core/plugin.py`), no de
+   `BaseModel` a secas: `BaseParams` aporta `output_dir`, y una herramienta que
+   no lo herede ignorará en silencio la carpeta de salida que elija el usuario.
 2. `logic.py` — función pura con la firma uniforme:
    ```python
    def run(inputs: list[Path], params: <Params>, progress: Progress = _noop) -> ToolResult: ...
    ```
-   `inputs` es **siempre** `list[Path]` (1→1, N→1, 1→N). La salida va **junto al archivo original**.
+   `inputs` es **siempre** `list[Path]` (1→1, N→1, 1→N). La ruta de salida **no
+   se compone a mano**: se pide a `pdftool/core/naming.py`, que resuelve destino
+   y colisiones en un solo sitio.
+   ```python
+   # nombre automático «<stem>_<sufijo>.pdf»
+   out = output_path(input_path, "marca", out_dir=params.output_dir)
+   # nombre libre (Unir, Imágenes a PDF)
+   out = unique_path((params.output_dir or input_path.parent) / f"{base}.pdf")
+   ```
+   Con `output_dir=None` la salida va junto al original, que es el default.
+   Ninguna herramienta debe sobrescribir un archivo existente: `unique_path`
+   añade « (1)», « (2)»… y es la única fuente de esa regla.
 3. `panel.py` — clase que hereda `PdfTool`, decorada con `@register`, define `meta: ToolMeta` y `build_panel(ctx)`. Usa `ctx.run_job(...)` para correr la lógica en segundo plano.
 4. `__init__.py` — `from pdftool.tools.<id>.panel import <Tool>  # noqa: F401` para disparar el registro.
 
