@@ -27,17 +27,22 @@ class OutputDirField(ft.Row):
     carpeta borrada), se vuelve al default en silencio.
     """
 
-    def __init__(self, settings: Settings,
+    def __init__(self, settings: Settings | None,
                  on_change: Callable[[], None] | None = None,
                  settings_path: Path | None = None) -> None:
-        self._settings = settings
+        # Sin Settings real (p. ej. tests que no pasan ctx.settings), el
+        # widget usa una privada solo para no romper pero nunca persiste:
+        # de lo contrario `set_dir` escribiría en el settings.json real.
+        self._persist = settings is not None
+        self._settings = settings if settings is not None else Settings()
         self._on_change = on_change
         # Público a propósito: los tests lo redirigen a un tmp_path para no
         # escribir en el settings.json real del usuario. None → el de la app.
         self.settings_path = settings_path
         self._dir = self._restore()
 
-        self.label = ft.Text(_DEFAULT_LABEL)
+        self.label = ft.Text(_DEFAULT_LABEL, max_lines=1,
+                            overflow=ft.TextOverflow.ELLIPSIS, expand=True)
         self.change_btn = ft.TextButton("Cambiar…", icon=ft.Icons.FOLDER_OPEN,
                                         on_click=self._pick)
         self.reset_btn = ft.IconButton(ft.Icons.UNDO,
@@ -58,7 +63,8 @@ class OutputDirField(ft.Row):
         """Fija el destino, lo persiste y avisa al panel."""
         self._dir = path
         self._settings.output_dir = str(path) if path is not None else None
-        save_settings(self._settings, self.settings_path)
+        if self._persist:
+            save_settings(self._settings, self.settings_path)
         self._render()
         if self.page:
             self.update()
@@ -70,6 +76,19 @@ class OutputDirField(ft.Row):
         if self._picker not in page.overlay:
             page.overlay.append(self._picker)
 
+    def sync(self) -> None:
+        """Re-lee el destino de `Settings`. Lo llama el panel en cada render,
+        porque el widget sobrevive entre navegaciones y otro panel puede haber
+        cambiado el destino mientras tanto."""
+        self._dir = self._restore()
+        self._render()
+        if self.page:
+            self.update()
+
+    def destination_missing(self) -> bool:
+        """True si hay un destino elegido y ya no es una carpeta accesible."""
+        return self._dir is not None and not self._dir.is_dir()
+
     # ---- interno ----
     def _restore(self) -> Path | None:
         guardado = self._settings.output_dir
@@ -80,7 +99,8 @@ class OutputDirField(ft.Row):
             return path
         # La carpeta ya no está: al default, sin molestar al usuario.
         self._settings.output_dir = None
-        save_settings(self._settings, self.settings_path)
+        if self._persist:
+            save_settings(self._settings, self.settings_path)
         return None
 
     def _render(self) -> None:

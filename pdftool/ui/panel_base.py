@@ -8,7 +8,6 @@ from pathlib import Path
 
 import flet as ft
 
-from pdftool.core.config import Settings
 from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.errors import humanize_error
@@ -221,9 +220,13 @@ class BaseToolPanel(PdfTool):
         # cada navegación y cada OutputDirField trae su propio FilePicker, que
         # se quedaría en page.overlay. Mismo motivo que self._picker.
         if not hasattr(self, "_out_dir"):
-            self._out_dir = OutputDirField(ctx.settings or Settings(),
+            self._out_dir = OutputDirField(ctx.settings,
                                            on_change=self.on_output_dir_changed)
         self._out_dir.attach(page)
+        # El destino es global (vive en Settings) y el widget sobrevive entre
+        # navegaciones: sin este re-sync, otra herramienta pudo cambiarlo
+        # mientras esta seguía cacheada con el valor viejo.
+        self._out_dir.sync()
 
         input_bar = self.build_input(page)  # subclase; fija self._picker.on_result
         body = self.build_body()
@@ -253,6 +256,12 @@ class BaseToolPanel(PdfTool):
             if not self.can_run():
                 return
             self._clear_error()
+            if self._out_dir.destination_missing():
+                self.status.value = (
+                    "La carpeta de destino ya no está disponible. Elige otra "
+                    "o vuelve a «junto al original».")
+                page.update()
+                return
             try:
                 params = self.make_params().model_copy(
                     update={"output_dir": self._out_dir.value})

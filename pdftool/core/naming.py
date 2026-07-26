@@ -28,7 +28,7 @@ def unique_path(candidate: Path, taken: Iterable[Path] = ()) -> Path:
 
 def output_path(input_path: Path, suffix: str, *,
                 stem: str | None = None, out_dir: Path | None = None) -> Path:
-    """`<stem>_<suffix>.pdf` junto al original, sin pisar nada.
+    """`<stem>_<suffix>.pdf` en `out_dir` si se indica, o junto al original; sin pisar nada.
 
     `stem` sobrescribe el del archivo de entrada (Comprimir lo usa para no
     acumular sufijos al reprocesar); `None` significa "usa el del archivo de
