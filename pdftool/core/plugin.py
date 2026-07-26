@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from pydantic import BaseModel
+
 
 @dataclass(frozen=True)
 class ToolMeta:
@@ -22,6 +24,16 @@ class ToolResult:
     # Etiqueta corta por salida (misma longitud/orden que outputs), para mostrar
     # el resultado junto a cada archivo. None si no aplica (p. ej. 1 archivo).
     details: list[str] | None = None
+
+
+class BaseParams(BaseModel):
+    """Campos comunes a toda ejecución.
+
+    `output_dir` None → la salida va junto al archivo de entrada (el default de
+    siempre); una ruta → todas las salidas van a esa carpeta.
+    """
+
+    output_dir: Path | None = None
 
 
 # Reporta avance: fracción 0..1 y un mensaje de estado.

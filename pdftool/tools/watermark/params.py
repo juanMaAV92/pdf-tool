@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from pdftool.core.plugin import BaseParams
 
 
-class WatermarkParams(BaseModel):
+class WatermarkParams(BaseParams):
     text: str = Field(min_length=1)
     opacity: float = Field(default=0.15, gt=0, le=1)
     font_size: int = Field(default=40, gt=0)

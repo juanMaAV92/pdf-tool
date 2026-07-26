@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from pdftool.core.plugin import BaseParams
 
 
-class SplitParams(BaseModel):
+class SplitParams(BaseParams):
     """Cómo dividir el PDF.
 
     - ``ranges``: un PDF por cada rango de ``ranges`` (ej. "1-3, 5, 8-").
