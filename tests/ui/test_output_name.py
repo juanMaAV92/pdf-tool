@@ -198,3 +198,65 @@ def test_merge_panel_refresh_updates_helper_from_file_list(tmp_path):
     tool._refresh()
 
     assert tool._name_field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
+
+
+from pdftool.core.config import Settings
+
+
+def test_merge_panel_predicts_over_the_chosen_folder(tmp_path):
+    """Con destino fijo, el aviso mira la carpeta destino, no la del original."""
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    (destino / "2022.pdf").write_bytes(b"previo")
+    entrada = tmp_path / "a.pdf"
+    entrada.write_bytes(b"x")
+
+    tool = _build(MergeTool())
+    tool._out_dir.settings_path = tmp_path / "settings.json"
+    tool._out_dir.set_dir(destino)
+    tool._files = [entrada]
+    tool._name_field.value = "2022"
+    tool._name_field.refresh()
+
+    assert tool._name_field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
+    tool._out_dir.set_dir(None)
+
+
+def test_merge_panel_helper_is_clean_when_only_the_origin_is_taken(tmp_path):
+    """El mismo nombre ocupado en la carpeta del original no debe avisar."""
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    (tmp_path / "2022.pdf").write_bytes(b"previo")
+    entrada = tmp_path / "a.pdf"
+    entrada.write_bytes(b"x")
+
+    tool = _build(MergeTool())
+    tool._out_dir.settings_path = tmp_path / "settings.json"
+    tool._out_dir.set_dir(destino)
+    tool._files = [entrada]
+    tool._name_field.value = "2022"
+    tool._name_field.refresh()
+
+    assert tool._name_field.helper_text == "Se guardará como «2022.pdf»"
+    tool._out_dir.set_dir(None)
+
+
+def test_changing_the_destination_refreshes_the_helper(tmp_path):
+    """El callback on_change del widget re-predice sin tocar el campo."""
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    (destino / "2022.pdf").write_bytes(b"previo")
+    entrada = tmp_path / "a.pdf"
+    entrada.write_bytes(b"x")
+
+    tool = _build(MergeTool())
+    tool._out_dir.settings_path = tmp_path / "settings.json"
+    tool._files = [entrada]
+    tool._name_field.value = "2022"
+    tool._name_field.refresh()
+    assert tool._name_field.helper_text == "Se guardará como «2022.pdf»"
+
+    tool._out_dir.set_dir(destino)
+
+    assert tool._name_field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
+    tool._out_dir.set_dir(None)

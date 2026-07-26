@@ -8,10 +8,12 @@ from pathlib import Path
 
 import flet as ft
 
+from pdftool.core.config import Settings
 from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
+from pdftool.ui.output_dir import OutputDirField
 from pdftool.ui.platform import open_file, open_folder
 from pdftool.ui.thumbnails import MISSING, get_cached, load_async
 
@@ -114,6 +116,10 @@ class BaseToolPanel(PdfTool):
         """Hook: la lista de archivos cambió. Los paneles con campos que
         dependen de las entradas lo sobrescriben."""
 
+    def on_output_dir_changed(self) -> None:
+        """Hook: cambió la carpeta de salida. Los paneles que predicen el
+        nombre final lo sobrescriben."""
+
     def make_params(self):
         raise NotImplementedError
 
@@ -211,6 +217,10 @@ class BaseToolPanel(PdfTool):
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
                                        disabled=True)
 
+        self._out_dir = OutputDirField(ctx.settings or Settings(),
+                                       on_change=self.on_output_dir_changed)
+        self._out_dir.attach(page)
+
         input_bar = self.build_input(page)  # subclase; fija self._picker.on_result
         body = self.build_body()
 
@@ -240,7 +250,8 @@ class BaseToolPanel(PdfTool):
                 return
             self._clear_error()
             try:
-                params = self.make_params()
+                params = self.make_params().model_copy(
+                    update={"output_dir": self._out_dir.value})
             except InvalidParams as exc:
                 self.status.value = str(exc)
                 page.update()
@@ -277,6 +288,7 @@ class BaseToolPanel(PdfTool):
                 *self.extra_controls(),
                 body,
                 ft.Divider(),
+                self._out_dir,
                 ft.Row([self.run_btn, self.open_file_btn, self.open_btn,
                         ft.Container(expand=True), self._counter]),
                 self.progress,
