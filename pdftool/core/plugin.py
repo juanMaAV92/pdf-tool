@@ -7,6 +7,8 @@ from typing import Callable
 
 from pydantic import BaseModel
 
+from pdftool.core.config import Settings
+
 
 @dataclass(frozen=True)
 class ToolMeta:
@@ -45,6 +47,7 @@ class ToolContext:
     """Lo que el host presta a cada panel."""
     page: object  # ft.Page (evitamos importar flet en el core)
     run_job: Callable  # (work, on_progress, on_done, on_error) -> None
+    settings: Settings | None = None
 
 
 class PdfTool(ABC):
