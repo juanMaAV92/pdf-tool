@@ -15,9 +15,10 @@ def _noop(_p: float, _m: str) -> None:
     pass
 
 
-def output_path_for_watermark(input_path: Path) -> Path:
+def output_path_for_watermark(input_path: Path,
+                              out_dir: Path | None = None) -> Path:
     """Política de nombre de Marca de agua; la colisión la resuelve el helper."""
-    return output_path(input_path, "marca")
+    return output_path(input_path, "marca", out_dir=out_dir)
 
 
 def watermark(inputs: list[Path], params: WatermarkParams,
@@ -28,7 +29,7 @@ def watermark(inputs: list[Path], params: WatermarkParams,
     if not input_path.exists():
         raise FileNotFoundError(input_path)
 
-    out = output_path_for_watermark(input_path)
+    out = output_path_for_watermark(input_path, params.output_dir)
     text = params.text
     rot = fitz.Matrix(_ANGLE)
     text_w = fitz.get_text_length(text, fontsize=params.font_size)

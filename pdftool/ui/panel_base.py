@@ -12,6 +12,7 @@ from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
+from pdftool.ui.output_dir import OutputDirField
 from pdftool.ui.platform import open_file, open_folder
 from pdftool.ui.thumbnails import MISSING, get_cached, load_async
 
@@ -114,6 +115,10 @@ class BaseToolPanel(PdfTool):
         """Hook: la lista de archivos cambió. Los paneles con campos que
         dependen de las entradas lo sobrescriben."""
 
+    def on_output_dir_changed(self) -> None:
+        """Hook: cambió la carpeta de salida. Los paneles que predicen el
+        nombre final lo sobrescriben."""
+
     def make_params(self):
         raise NotImplementedError
 
@@ -211,6 +216,18 @@ class BaseToolPanel(PdfTool):
         self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
                                        disabled=True)
 
+        # Una única instancia reutilizada entre renders: `build_panel` corre en
+        # cada navegación y cada OutputDirField trae su propio FilePicker, que
+        # se quedaría en page.overlay. Mismo motivo que self._picker.
+        if not hasattr(self, "_out_dir"):
+            self._out_dir = OutputDirField(ctx.settings,
+                                           on_change=self.on_output_dir_changed)
+        self._out_dir.attach(page)
+        # El destino es global (vive en Settings) y el widget sobrevive entre
+        # navegaciones: sin este re-sync, otra herramienta pudo cambiarlo
+        # mientras esta seguía cacheada con el valor viejo.
+        self._out_dir.sync()
+
         input_bar = self.build_input(page)  # subclase; fija self._picker.on_result
         body = self.build_body()
 
@@ -239,8 +256,15 @@ class BaseToolPanel(PdfTool):
             if not self.can_run():
                 return
             self._clear_error()
+            if self._out_dir.destination_missing():
+                self.status.value = (
+                    "La carpeta de destino ya no está disponible. Elige otra "
+                    "o vuelve a «junto al original».")
+                page.update()
+                return
             try:
-                params = self.make_params()
+                params = self.make_params().model_copy(
+                    update={"output_dir": self._out_dir.value})
             except InvalidParams as exc:
                 self.status.value = str(exc)
                 page.update()
@@ -277,6 +301,7 @@ class BaseToolPanel(PdfTool):
                 *self.extra_controls(),
                 body,
                 ft.Divider(),
+                self._out_dir,
                 ft.Row([self.run_btn, self.open_file_btn, self.open_btn,
                         ft.Container(expand=True), self._counter]),
                 self.progress,

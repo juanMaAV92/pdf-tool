@@ -53,10 +53,12 @@ def _clean_stem(stem: str) -> str:
     return _STEM_NOISE.sub("", stem)
 
 
-def output_path_for(input_path: Path, target_mb: float) -> Path:
+def output_path_for(input_path: Path, target_mb: float,
+                    out_dir: Path | None = None) -> Path:
     """Política de nombre de Comprimir; la colisión la resuelve el helper."""
     p = Path(input_path)
-    return output_path(p, _target_label(target_mb), stem=_clean_stem(p.stem))
+    return output_path(p, _target_label(target_mb), stem=_clean_stem(p.stem),
+                       out_dir=out_dir)
 
 
 def _simple_compress(src: Path, dst: Path) -> None:
@@ -80,9 +82,9 @@ def _rerender(src: Path, dst: Path, *, max_dimension: int, jpg_quality: int) -> 
         doc.save(str(dst), garbage=4, deflate=True)
 
 
-def _compress_one(input_path: Path, target_mb: float,
-                  progress: Progress) -> tuple[Path, str, float, float]:
-    out = output_path_for(input_path, target_mb)
+def _compress_one(input_path: Path, target_mb: float, progress: Progress,
+                  out_dir: Path | None = None) -> tuple[Path, str, float, float]:
+    out = output_path_for(input_path, target_mb, out_dir)
     original = _size_mb(input_path)
     progress(0.0, f"Tamaño original: {original:.2f} MB")
 
@@ -135,7 +137,8 @@ def compress(inputs: list[Path], params: CompressParams,
             label = f"[{_i + 1}/{total}] {_name}: {msg}" if total > 1 else msg
             progress(overall, label)
 
-        out, summary, original, final = _compress_one(path, target_mb, scoped)
+        out, summary, original, final = _compress_one(
+            path, target_mb, scoped, params.output_dir)
         outputs.append(out)
         summaries.append(summary)
         total_original += original

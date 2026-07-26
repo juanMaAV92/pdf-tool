@@ -118,7 +118,8 @@ def split(inputs: list[Path], params: SplitParams,
         progress(0.0, f"Dividiendo en {total} archivos…")
 
         for i, (start, end) in enumerate(ranges):
-            out = output_path(src_path, _label(start, end, width))
+            out = output_path(src_path, _label(start, end, width),
+                              out_dir=params.output_dir)
             with fitz.open() as dst:
                 dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)
                 dst.save(str(out), garbage=4, deflate=True)

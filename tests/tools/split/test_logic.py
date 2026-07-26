@@ -212,3 +212,17 @@ def test_split_batch_does_not_collide_with_itself(tmp_path):
     result = split([src], SplitParams(mode="single"))
     assert len(set(result.outputs)) == len(result.outputs)
     assert all(o.exists() for o in result.outputs)
+
+
+def test_split_writes_every_range_to_output_dir(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    src = _pdf(tmp_path / "doc.pdf", 4)
+
+    res = split([src], SplitParams(mode="single", output_dir=destino))
+
+    assert [o.name for o in res.outputs] == [
+        "doc_p1.pdf", "doc_p2.pdf", "doc_p3.pdf", "doc_p4.pdf",
+    ]
+    assert all(o.parent == destino for o in res.outputs)
+    assert all(o.exists() for o in res.outputs)

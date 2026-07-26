@@ -24,9 +24,12 @@ panel + tests (ver AGENTS.md).
 
 ## Después
 
-4. **Carpeta de salida opcional.** "Guardar en…" con default junto al original.
-   Quedó fuera de alcance en las specs de 2026-07-18; sigue siendo la limitación
-   más citada en apps de este tipo.
+4. ~~**Carpeta de salida opcional.**~~ ✅ Hecho: "Guardar en…" en las 6
+   herramientas, con "junto al original" como default. El destino es global y
+   persistente (`Settings.output_dir`), viaja por `BaseParams.output_dir` y se
+   elige desde cualquier panel, encima del botón de ejecutar. El aviso de nombre
+   de Unir predice sobre el destino elegido. Una carpeta guardada que ya no
+   existe vuelve al default en silencio.
 5. **PDF → imágenes.** El inverso de Imágenes a PDF; simétrico y barato con PyMuPDF.
 6. **Rotar páginas.** Por rangos, reusando `parse_ranges` de Dividir. El caso típico:
    escaneos torcidos.

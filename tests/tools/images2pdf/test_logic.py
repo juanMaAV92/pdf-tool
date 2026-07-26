@@ -129,3 +129,41 @@ def test_same_stem_in_one_batch_does_not_clobber(tmp_path):
     res = images_to_pdf([a_png, a_jpg], ImagesToPdfParams())
     assert [o.name for o in res.outputs] == ["a.pdf", "a (1).pdf"]
     assert all(o.exists() for o in res.outputs)
+
+
+def test_output_uses_out_dir_when_given(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    out = output_path_for_images(tmp_path / "a.png", destino)
+    assert out == destino / "a.pdf"
+
+
+def test_images_to_pdf_writes_to_output_dir(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    a = _img(tmp_path / "a.png", 100, 100)
+    b = _img(tmp_path / "b.png", 100, 100)
+
+    res = images_to_pdf([a, b], ImagesToPdfParams(output_dir=destino))
+
+    assert [o.name for o in res.outputs] == ["a.pdf", "b.pdf"]
+    assert all(o.parent == destino for o in res.outputs)
+    assert all(o.exists() for o in res.outputs)
+
+
+def test_same_stem_from_different_folders_with_shared_output_dir(tmp_path):
+    """Dos imágenes con el mismo stem en carpetas distintas, mismo destino:
+    la colisión se resuelve igual que dentro de un solo lote."""
+    origen1 = tmp_path / "origen1"
+    origen2 = tmp_path / "origen2"
+    origen1.mkdir()
+    origen2.mkdir()
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    a1 = _img(origen1 / "a.png", 100, 100)
+    a2 = _img(origen2 / "a.jpg", 100, 100)
+
+    res = images_to_pdf([a1, a2], ImagesToPdfParams(output_dir=destino))
+
+    assert [o.name for o in res.outputs] == ["a.pdf", "a (1).pdf"]
+    assert all(o.exists() for o in res.outputs)

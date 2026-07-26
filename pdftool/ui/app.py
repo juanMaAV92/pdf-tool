@@ -66,7 +66,7 @@ def build_app(page: ft.Page) -> None:
     page.window.width = 980
     page.window.height = 680
 
-    ctx = ToolContext(page=page, run_job=run_job)
+    ctx = ToolContext(page=page, run_job=run_job, settings=settings)
     content = ft.Container(expand=True, padding=24)
 
     def open_tool(index: int) -> None:

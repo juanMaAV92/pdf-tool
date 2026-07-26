@@ -168,3 +168,15 @@ def test_remove_password_does_not_overwrite_a_previous_output(tmp_path):
 
     assert res.outputs[0] == tmp_path / "a_protegido_sin_clave (1).pdf"
     assert (tmp_path / "a_protegido_sin_clave.pdf").read_bytes() == b"previo"
+
+
+def test_protect_writes_to_output_dir(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    a = _pdf(tmp_path / "a.pdf")
+
+    res = protect([a], ProtectParams(mode="protect", password="clave",
+                                     output_dir=destino))
+
+    assert res.outputs[0] == destino / "a_protegido.pdf"
+    assert res.outputs[0].exists()

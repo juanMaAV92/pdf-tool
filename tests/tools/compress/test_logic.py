@@ -174,3 +174,17 @@ def test_compress_does_not_overwrite_a_previous_output(tmp_path, big_pdf):
 
     assert result.outputs[0] == tmp_path / "doc_1MB (1).pdf"
     assert (tmp_path / "doc_1MB.pdf").read_bytes() == b"previo"
+
+
+def test_compress_writes_to_output_dir(tmp_path, big_pdf):
+    import shutil
+
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    src = tmp_path / "doc.pdf"
+    shutil.copy2(big_pdf, src)
+
+    res = compress([src], CompressParams(target_mb=1.0, output_dir=destino))
+
+    assert res.outputs[0].parent == destino
+    assert res.outputs[0].exists()

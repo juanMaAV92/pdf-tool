@@ -9,13 +9,16 @@ Origen: evaluación de arquitectura del 2026-07-18, tras los PRs #16-#23.
 
 ## Activa — con disparador
 
-### 1. `panel_base.py` es el hotspot universal (~460 líneas)
+### 1. `panel_base.py` es el hotspot universal (~526 líneas)
 
 - **Qué:** acumula manejo de errores, acciones del footer, sanitización de nombres,
   `SingleFileToolPanel`, `MultiFileToolPanel` y el wiring de miniaturas. Empezó el
   2026-07-18 en ~315 líneas; cada feature de UI pasa por él.
 - **Por qué se acepta:** sigue siendo legible y cohesivo; partirlo hoy sería
-  refactor especulativo.
+  refactor especulativo. La carpeta de salida (2026-07-26) se contuvo a propósito:
+  el selector nació en `ui/output_dir.py` y `panel_base` solo lo instancia,
+  sincroniza e inyecta en `do_run` — 9 líneas en vez de un widget entero. **Quedan
+  ~24 líneas de margen**, así que la siguiente feature de UI paga la deuda.
 - **Disparador:** ANTES de construir la cuadrícula de páginas (rotar/extraer/
   Dividir visual, ítems 6-7 del roadmap), o si supera ~550 líneas — lo que ocurra
   primero. Pago: extraer `MultiFileToolPanel` (o los widgets de fila) a su propio

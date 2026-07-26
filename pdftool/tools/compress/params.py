@@ -1,5 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from pdftool.core.plugin import BaseParams
 
 
-class CompressParams(BaseModel):
+class CompressParams(BaseParams):
     target_mb: float = Field(default=5.0, gt=0)

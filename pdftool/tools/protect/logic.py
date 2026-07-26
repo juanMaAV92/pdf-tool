@@ -13,9 +13,9 @@ def _noop(_p: float, _m: str) -> None:
     pass
 
 
-def _output(input_path: Path, suffix: str) -> Path:
+def _output(input_path: Path, suffix: str, out_dir: Path | None = None) -> Path:
     """Política de nombre de Proteger; la colisión la resuelve el helper."""
-    return output_path(input_path, suffix)
+    return output_path(input_path, suffix, out_dir=out_dir)
 
 
 def _protect_one(input_path: Path, params: ProtectParams,
@@ -24,7 +24,7 @@ def _protect_one(input_path: Path, params: ProtectParams,
     try:
         if params.mode == "protect":
             progress(0.0, "Protegiendo PDF…")
-            out = _output(input_path, "protegido")
+            out = _output(input_path, "protegido", params.output_dir)
             with fitz.open(str(input_path)) as doc:
                 if doc.needs_pass:
                     raise ValueError(
@@ -36,7 +36,7 @@ def _protect_one(input_path: Path, params: ProtectParams,
 
         # mode == "remove"
         progress(0.0, "Quitando contraseña…")
-        out = _output(input_path, "sin_clave")
+        out = _output(input_path, "sin_clave", params.output_dir)
         with fitz.open(str(input_path)) as doc:
             if doc.needs_pass and not doc.authenticate(params.password):
                 raise ValueError("Contraseña incorrecta.")

@@ -2,9 +2,11 @@ from pathlib import Path
 
 import pytest
 
+from pdftool.core.config import Settings
 from pdftool.core.naming import unique_path
 from pdftool.core.plugin import ToolContext
 from pdftool.tools.merge.panel import MergeTool
+from pdftool.ui.output_dir import OutputDirField, abbreviate_home
 from pdftool.ui.panel_base import InvalidParams, OutputNameField, parse_output_name
 
 
@@ -198,3 +200,156 @@ def test_merge_panel_refresh_updates_helper_from_file_list(tmp_path):
     tool._refresh()
 
     assert tool._name_field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
+
+
+def test_merge_panel_predicts_over_the_chosen_folder(tmp_path):
+    """Con destino fijo, el aviso mira la carpeta destino, no la del original."""
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    (destino / "2022.pdf").write_bytes(b"previo")
+    entrada = tmp_path / "a.pdf"
+    entrada.write_bytes(b"x")
+
+    tool = _build(MergeTool())
+    tool._out_dir.settings_path = tmp_path / "settings.json"
+    tool._out_dir.set_dir(destino)
+    tool._files = [entrada]
+    tool._name_field.value = "2022"
+    tool._name_field.refresh()
+
+    assert tool._name_field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
+    tool._out_dir.set_dir(None)
+
+
+def test_merge_panel_helper_is_clean_when_only_the_origin_is_taken(tmp_path):
+    """El mismo nombre ocupado en la carpeta del original no debe avisar."""
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    (tmp_path / "2022.pdf").write_bytes(b"previo")
+    entrada = tmp_path / "a.pdf"
+    entrada.write_bytes(b"x")
+
+    tool = _build(MergeTool())
+    tool._out_dir.settings_path = tmp_path / "settings.json"
+    tool._out_dir.set_dir(destino)
+    tool._files = [entrada]
+    tool._name_field.value = "2022"
+    tool._name_field.refresh()
+
+    assert tool._name_field.helper_text == "Se guardará como «2022.pdf»"
+    tool._out_dir.set_dir(None)
+
+
+def test_changing_the_destination_refreshes_the_helper(tmp_path):
+    """El callback on_change del widget re-predice sin tocar el campo."""
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    (destino / "2022.pdf").write_bytes(b"previo")
+    entrada = tmp_path / "a.pdf"
+    entrada.write_bytes(b"x")
+
+    tool = _build(MergeTool())
+    tool._out_dir.settings_path = tmp_path / "settings.json"
+    tool._files = [entrada]
+    tool._name_field.value = "2022"
+    tool._name_field.refresh()
+    assert tool._name_field.helper_text == "Se guardará como «2022.pdf»"
+
+    tool._out_dir.set_dir(destino)
+
+    assert tool._name_field.helper_text == "Ya existe — se guardará como «2022 (1).pdf»"
+    tool._out_dir.set_dir(None)
+
+
+def test_destination_is_global_across_tool_panels(tmp_path):
+    """Cambiar el destino en una herramienta lo cambia en todas: el widget de
+    cada panel se cachea, pero debe re-sincronizarse desde Settings en cada
+    `build_panel` (Fix 1), no solo en la construcción inicial."""
+    from pdftool.tools.compress.panel import CompressTool
+
+    settings = Settings()
+    settings_path = tmp_path / "settings.json"
+    page = _FakePage()
+    ctx = ToolContext(page=page, run_job=lambda **kwargs: None, settings=settings)
+
+    tool_a = CompressTool()
+    tool_a.build_panel(ctx)
+    tool_a._out_dir.settings_path = settings_path
+
+    tool_b = MergeTool()
+    tool_b.build_panel(ctx)
+    tool_b._out_dir.settings_path = settings_path
+
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    tool_b._out_dir.set_dir(destino)
+
+    tool_a.build_panel(ctx)
+
+    assert tool_a._out_dir.value == destino
+    assert tool_a._out_dir.label.value == abbreviate_home(destino)
+    assert tool_a._out_dir.label.value != "Junto al original"
+
+    tool_b._out_dir.set_dir(None)
+
+
+def test_missing_destination_stops_the_run_with_an_accurate_message(tmp_path):
+    """Fix 2: si la carpeta de destino ya no existe al ejecutar, el panel debe
+    detenerse con un mensaje correcto y no llegar a lanzar el job."""
+    calls = []
+
+    def run_job(**kwargs):
+        calls.append(kwargs)
+
+    settings = Settings()
+    ctx = ToolContext(page=_FakePage(), run_job=run_job, settings=settings)
+    tool = MergeTool()
+    tool.build_panel(ctx)
+    tool._out_dir.settings_path = tmp_path / "settings.json"
+
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    tool._out_dir.set_dir(destino)
+    destino.rmdir()
+
+    entrada_a = tmp_path / "a.pdf"
+    entrada_b = tmp_path / "b.pdf"
+    entrada_a.write_bytes(b"x")
+    entrada_b.write_bytes(b"y")
+    tool._files = [entrada_a, entrada_b]
+    tool.run_btn.disabled = False
+
+    tool.run_btn.on_click(None)
+
+    assert calls == []
+    assert tool.status.value == (
+        "La carpeta de destino ya no está disponible. Elige otra "
+        "o vuelve a «junto al original».")
+
+
+def test_output_dir_field_without_settings_never_writes_a_file(tmp_path):
+    """Fix 3: sin un Settings real, `set_dir` no debe persistir nada, ni
+    siquiera al settings_path del test — el widget no tiene dónde escribir
+    porque justamente no se le confió un Settings."""
+    field = OutputDirField(None)
+    field.settings_path = tmp_path / "settings.json"
+
+    field.set_dir(tmp_path)
+
+    assert not field.settings_path.exists()
+
+
+def test_rebuilding_a_panel_does_not_leak_pickers_in_the_overlay():
+    """Navegar a una herramienta y volver no debe acumular FilePickers."""
+    page = _FakePage()
+    ctx = ToolContext(page=page, run_job=lambda **kwargs: None)
+    tool = MergeTool()
+
+    tool.build_panel(ctx)
+    primero = tool._out_dir
+    tras_el_primero = len(page.overlay)
+
+    tool.build_panel(ctx)
+
+    assert tool._out_dir is primero
+    assert len(page.overlay) == tras_el_primero
