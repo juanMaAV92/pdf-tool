@@ -24,3 +24,16 @@ def unique_path(candidate: Path, taken: Iterable[Path] = ()) -> Path:
         if is_free(alt):
             return alt
         n += 1
+
+
+def output_path(input_path: Path, suffix: str, *,
+                stem: str | None = None) -> Path:
+    """`<stem>_<suffix>.pdf` junto al original, sin pisar nada.
+
+    `stem` sobrescribe el del archivo de entrada (Comprimir lo usa para no
+    acumular sufijos al reprocesar). Es el único punto donde se decide dónde va
+    una salida de nombre automático; `taken` garantiza que nunca sea la entrada,
+    con independencia de lo que haya en disco.
+    """
+    p = Path(input_path)
+    return unique_path(p.parent / f"{stem or p.stem}_{suffix}.pdf", taken=(p,))
