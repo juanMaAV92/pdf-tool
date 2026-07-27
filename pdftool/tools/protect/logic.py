@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.protect.params import ProtectParams
 
@@ -13,8 +14,8 @@ def _noop(_p: float, _m: str) -> None:
 
 
 def _output(input_path: Path, suffix: str) -> Path:
-    p = Path(input_path)
-    return p.parent / f"{p.stem}_{suffix}.pdf"
+    """Política de nombre de Proteger; la colisión la resuelve el helper."""
+    return output_path(input_path, suffix)
 
 
 def _protect_one(input_path: Path, params: ProtectParams,

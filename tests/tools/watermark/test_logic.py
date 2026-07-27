@@ -62,3 +62,19 @@ def test_progress_reaches_one(tmp_path):
     seen = []
     watermark([a], WatermarkParams(text="X"), progress=lambda p, m: seen.append(p))
     assert seen and seen[-1] == 1.0
+
+
+def test_output_avoids_an_existing_file(tmp_path):
+    a = _pdf(tmp_path / "doc.pdf")
+    (tmp_path / "doc_marca.pdf").write_bytes(b"previo")
+    assert output_path_for_watermark(a) == tmp_path / "doc_marca (1).pdf"
+
+
+def test_watermark_does_not_overwrite_a_previous_output(tmp_path):
+    a = _pdf(tmp_path / "doc.pdf")
+    (tmp_path / "doc_marca.pdf").write_bytes(b"previo")
+
+    res = watermark([a], WatermarkParams(text="BORRADOR"))
+
+    assert res.outputs[0] == tmp_path / "doc_marca (1).pdf"
+    assert (tmp_path / "doc_marca.pdf").read_bytes() == b"previo"

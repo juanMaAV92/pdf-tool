@@ -144,3 +144,27 @@ def test_multi_progress_labels_and_completion(tmp_path):
     assert seen[-1][0] == 1.0
     assert any(m.startswith("[1/2] a.pdf:") for _p, m in seen)
     assert any(m.startswith("[2/2] b.pdf:") for _p, m in seen)
+
+
+def test_protect_does_not_overwrite_a_previous_output(tmp_path):
+    a = _pdf(tmp_path / "a.pdf")
+    (tmp_path / "a_protegido.pdf").write_bytes(b"previo")
+
+    res = protect([a], ProtectParams(mode="protect", password="clave"))
+
+    assert res.outputs[0] == tmp_path / "a_protegido (1).pdf"
+    assert (tmp_path / "a_protegido.pdf").read_bytes() == b"previo"
+
+
+def test_remove_password_does_not_overwrite_a_previous_output(tmp_path):
+    a = _pdf(tmp_path / "a.pdf")
+    protected = tmp_path / "a_protegido.pdf"
+    with fitz.open(str(a)) as doc:
+        doc.save(str(protected), encryption=fitz.PDF_ENCRYPT_AES_256,
+                 owner_pw="clave", user_pw="clave")
+    (tmp_path / "a_protegido_sin_clave.pdf").write_bytes(b"previo")
+
+    res = protect([protected], ProtectParams(mode="remove", password="clave"))
+
+    assert res.outputs[0] == tmp_path / "a_protegido_sin_clave (1).pdf"
+    assert (tmp_path / "a_protegido_sin_clave.pdf").read_bytes() == b"previo"

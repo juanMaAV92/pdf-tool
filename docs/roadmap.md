@@ -15,11 +15,12 @@ panel + tests (ver AGENTS.md).
    por fila exitosa en lotes).
 3. ~~**Sanitización de nombres para Windows.**~~ ✅ Hecho en #22 (caracteres
    `? | < > * "` + nombres reservados, validación igual en todas las plataformas).
-4. **No sobrescribir la salida.** Hecho para Unir e Imágenes a PDF
-   (`core/naming.py::unique_path`, sufijo unificado ` (n)`; el campo de nombre
-   de Unir avisa en vivo del nombre final). Proteger, Comprimir y Marca de
-   agua todavía sobrescriben su salida automática sin avisar — pendiente para
-   un PR aparte.
+4. ~~**No sobrescribir la salida.**~~ ✅ Hecho en las 6 herramientas. La regla
+   vive solo en `core/naming.py`: `unique_path` resuelve la colisión con sufijo
+   ` (n)` y `output_path` compone las salidas de nombre automático. Unir avisa
+   además en vivo del nombre final, porque es la única con campo de nombre.
+   Efecto lateral buscado: quedan dos sitios que deciden un directorio de
+   salida, así que "carpeta de salida opcional" ya no toca seis `logic.py`.
 
 ## Después
 
