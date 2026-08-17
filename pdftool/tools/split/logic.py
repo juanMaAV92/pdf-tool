@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.atomic import atomic_output
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.split.params import SplitParams
@@ -120,9 +121,10 @@ def split(inputs: list[Path], params: SplitParams,
         for i, (start, end) in enumerate(ranges):
             out = output_path(src_path, _label(start, end, width),
                               out_dir=params.output_dir)
-            with fitz.open() as dst:
-                dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)
-                dst.save(str(out), garbage=4, deflate=True)
+            with atomic_output(out) as temporary:
+                with fitz.open() as dst:
+                    dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)
+                    dst.save(str(temporary), garbage=4, deflate=True)
             outputs.append(out)
             progress((i + 1) / total, f"Generado {out.name}")
 

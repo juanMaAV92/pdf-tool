@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.atomic import atomic_output
 from pdftool.core.naming import unique_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.images2pdf.params import ImagesToPdfParams
@@ -34,8 +35,9 @@ def _convert_one(input_path: Path, progress: Progress,
         # convert_to_pdf genera una página del tamaño exacto de la imagen.
         with fitz.open(str(input_path)) as img:
             pdf_bytes = img.convert_to_pdf()
-        with fitz.open("pdf", pdf_bytes) as pdf:
-            pdf.save(str(out), garbage=4, deflate=True)
+        with atomic_output(out) as temporary:
+            with fitz.open("pdf", pdf_bytes) as pdf:
+                pdf.save(str(temporary), garbage=4, deflate=True)
         progress(1.0, "Listo")
         return out, f"→ {out.name}"
     except Exception as exc:  # esta imagen falla; el lote continúa

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.atomic import atomic_output
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.protect.params import ProtectParams
@@ -25,22 +26,24 @@ def _protect_one(input_path: Path, params: ProtectParams,
         if params.mode == "protect":
             progress(0.0, "Protegiendo PDF…")
             out = _output(input_path, "protegido", params.output_dir)
-            with fitz.open(str(input_path)) as doc:
-                if doc.needs_pass:
-                    raise ValueError(
-                        "El PDF ya está protegido; quítale la contraseña primero.")
-                doc.save(str(out), encryption=fitz.PDF_ENCRYPT_AES_256,
-                         owner_pw=params.password, user_pw=params.password)
+            with atomic_output(out) as temporary:
+                with fitz.open(str(input_path)) as doc:
+                    if doc.needs_pass:
+                        raise ValueError(
+                            "El PDF ya está protegido; quítale la contraseña primero.")
+                    doc.save(str(temporary), encryption=fitz.PDF_ENCRYPT_AES_256,
+                             owner_pw=params.password, user_pw=params.password)
             progress(1.0, "Listo")
             return out, f"→ {out.name}"
 
         # mode == "remove"
         progress(0.0, "Quitando contraseña…")
         out = _output(input_path, "sin_clave", params.output_dir)
-        with fitz.open(str(input_path)) as doc:
-            if doc.needs_pass and not doc.authenticate(params.password):
-                raise ValueError("Contraseña incorrecta.")
-            doc.save(str(out), encryption=fitz.PDF_ENCRYPT_NONE)
+        with atomic_output(out) as temporary:
+            with fitz.open(str(input_path)) as doc:
+                if doc.needs_pass and not doc.authenticate(params.password):
+                    raise ValueError("Contraseña incorrecta.")
+                doc.save(str(temporary), encryption=fitz.PDF_ENCRYPT_NONE)
         progress(1.0, "Listo")
         return out, f"→ {out.name}"
     except Exception as exc:  # este archivo falla; el lote continúa

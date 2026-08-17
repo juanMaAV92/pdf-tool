@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import re
-import shutil
 from pathlib import Path
 
 import fitz
 
+from pdftool.core.atomic import atomic_copy, atomic_output
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.compress.params import CompressParams
@@ -68,41 +68,44 @@ def output_path_for(input_path: Path, target_mb: float,
 
 
 def _simple_compress(src: Path, dst: Path) -> None:
-    with fitz.open(src) as doc:
-        doc.save(str(dst), garbage=4, deflate=True, clean=True)
+    with atomic_output(dst) as temporary:
+        with fitz.open(src) as doc:
+            doc.save(str(temporary), garbage=4, deflate=True, clean=True)
 
 
 def _rerender(src: Path, dst: Path, *, max_dimension: int, jpg_quality: int) -> None:
-    with fitz.open(src) as source, fitz.open() as doc:
-        for page_num in range(len(source)):
-            src_page = source[page_num]
-            rect = src_page.rect
-            if rect.width == 0 or rect.height == 0:
-                continue
-            zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
-            zoom = max(zoom, 0.5)
-            pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-            img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
-            new_page = doc.new_page(width=rect.width, height=rect.height)
-            new_page.insert_image(new_page.rect, stream=img_bytes)
-        doc.save(str(dst), garbage=4, deflate=True)
+    with atomic_output(dst) as temporary:
+        with fitz.open(src) as source, fitz.open() as doc:
+            for page_num in range(len(source)):
+                src_page = source[page_num]
+                rect = src_page.rect
+                if rect.width == 0 or rect.height == 0:
+                    continue
+                zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
+                zoom = max(zoom, 0.5)
+                pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+                img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
+                new_page = doc.new_page(width=rect.width, height=rect.height)
+                new_page.insert_image(new_page.rect, stream=img_bytes)
+            doc.save(str(temporary), garbage=4, deflate=True)
 
 
 def _preserve_compress(src: Path, dst: Path, *, dpi_threshold: int,
                        dpi_target: int, quality: int) -> None:
     """Optimiza imágenes sin convertir las páginas completas en imágenes."""
-    with fitz.open(src) as doc:
-        rewrite_images = getattr(doc, "rewrite_images", None)
-        if rewrite_images is not None:
-            rewrite_images(
-                dpi_threshold=dpi_threshold,
-                dpi_target=dpi_target,
-                quality=quality,
+    with atomic_output(dst) as temporary:
+        with fitz.open(src) as doc:
+            rewrite_images = getattr(doc, "rewrite_images", None)
+            if rewrite_images is not None:
+                rewrite_images(
+                    dpi_threshold=dpi_threshold,
+                    dpi_target=dpi_target,
+                    quality=quality,
+                )
+            doc.save(
+                str(temporary), garbage=4, deflate=True, deflate_images=True,
+                deflate_fonts=True, clean=True,
             )
-        doc.save(
-            str(dst), garbage=4, deflate=True, deflate_images=True,
-            deflate_fonts=True, clean=True,
-        )
 
 
 def _compress_one(input_path: Path, target_mb: float, progress: Progress,
@@ -113,7 +116,7 @@ def _compress_one(input_path: Path, target_mb: float, progress: Progress,
     progress(0.0, f"Tamaño original: {original:.2f} MB")
 
     if original <= target_mb:
-        shutil.copy2(input_path, out)
+        atomic_copy(input_path, out)
         progress(1.0, "Ya está bajo el objetivo")
         return out, f"{original:.2f} MB (sin cambios)", original, original
 
