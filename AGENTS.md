@@ -4,7 +4,7 @@ Guía para agentes de código (Claude Code, etc.) que trabajen en **pdf-tool**.
 
 ## Qué es
 
-App de escritorio (Flet) **modular** para gestionar PDFs, pensada para usuarios **no técnicos**, multiplataforma (macOS + Windows), instalable y actualizable. Cada funcionalidad es una "herramienta" autocontenida que el host descubre y muestra. Primera herramienta: **Comprimir PDF**.
+App de escritorio (Flet) **modular** para gestionar PDFs, pensada para usuarios **no técnicos**, multiplataforma (macOS + Windows), instalable y actualizable. Cada funcionalidad es una "herramienta" autocontenida que el host descubre y muestra. Actualmente incluye Comprimir, Imágenes a PDF, Unir, Proteger, Dividir y Marca de agua.
 
 ## Comandos
 
@@ -25,18 +25,22 @@ pdftool/
 ├── core/                   # SIN dependencia de Flet (testeable en aislamiento)
 │   ├── plugin.py           # contrato: ToolMeta, ToolResult, ToolContext, Progress, PdfTool
 │   ├── registry.py         # @register, get_tools(), discover()
-│   ├── jobs.py             # run_job(work, on_progress, on_done, on_error) en hilo daemon
-│   ├── config.py           # Settings (pydantic) en el dir de datos del usuario (platformdirs)
+│   ├── jobs.py             # run_job(...) con JobHandle, cancelación y generaciones
+│   ├── atomic.py           # publicación atómica de PDFs y copias
+│   ├── config.py           # Settings en el dir de datos del usuario
+│   ├── naming.py           # destinos y colisiones de nombres
+│   ├── thumbnails.py       # render puro de miniaturas
 │   └── updater.py          # is_newer(), check_for_update() vía GitHub Releases (nunca lanza)
 ├── ui/
 │   ├── theme.py            # build_theme(), resolve_mode(), next_mode() (claro/oscuro/sistema)
 │   └── app.py              # host: NavigationRail + contenido + toggle tema + banner update
 └── tools/
-    └── compress/
-        ├── __init__.py     # importa el panel para disparar @register
-        ├── params.py       # CompressParams (pydantic)
-        ├── logic.py        # compress() PURO (sin Flet) + output_path_for()
-        └── panel.py        # CompressTool(PdfTool): UI Flet
+    ├── compress/
+    ├── images2pdf/
+    ├── merge/
+    ├── protect/
+    ├── split/
+    └── watermark/          # cada carpeta contiene params.py, logic.py, panel.py e __init__.py
 ```
 
 **Regla de oro:** `core/` no importa Flet. La lógica de cada herramienta (`logic.py`) es **pura** (sin Flet) y se testea sola; el `panel.py` solo arma la UI y delega en la lógica.
@@ -71,7 +75,7 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 
 ## Convenciones
 
-- **TDD:** primero el test que falla (sobre la lógica pura), luego la implementación. Los paneles Flet se verifican manualmente.
+- **TDD:** primero el test que falla (sobre la lógica pura), luego la implementación. Los paneles tienen tests de estado; la validación visual completa sigue siendo manual.
 - **Tests de lógica pura** viven en `tests/` espejando la estructura. Fixtures de PDFs en `tests/conftest.py`.
 - **Flet 0.28.x:** iconos y colores son enums **con mayúscula** (`ft.Icons.*`, `ft.Colors.*`). Tamaño de ventana: `page.window.width/height`. Abrir banner: `page.open(banner)`.
 - Operaciones pesadas **siempre** en segundo plano vía `run_job` para no congelar la UI.
@@ -92,4 +96,4 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 ## Notas
 
 - El proyecto usa **Flet 0.28.x**. CI fija **Flutter 3.29.3** (compatible con flet 0.28 y con VS 2022) y **Python 3.12** para `flet build`. flet 0.24.1 quedó obsoleto: no compilaba para Windows en los runners actuales.
-- `docs/superpowers/` (specs y planes de diseño) está en `.gitignore` — es referencia local, no va al repo.
+- Las decisiones vigentes se documentan en `docs/roadmap.md` y `docs/deuda-tecnica.md`. Los specs y planes temporales no forman parte del repositorio y no se conservan cuando la funcionalidad ya está implementada.
