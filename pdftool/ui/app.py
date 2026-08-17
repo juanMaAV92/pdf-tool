@@ -10,6 +10,7 @@ from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import check_for_update
 from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
+from pdftool.ui.thumbnails import shutdown_thumbnail_executor
 
 GITHUB_REPO = "juanMaAV92/pdf-tool"
 GITHUB_PROFILE = "https://github.com/juanMaAV92"
@@ -59,6 +60,15 @@ def build_app(page: ft.Page) -> None:
     registry.discover()
     tools = registry.get_tools()
     settings = load_settings()
+
+    # Libera los workers compartidos cuando Flet cierra la sesión de escritorio
+    # o desconecta la vista web. Las tareas en curso ya tienen además su propio
+    # token de generación y dejan de notificar a la UI obsoleta.
+    def shutdown_resources(_e=None) -> None:
+        shutdown_thumbnail_executor()
+
+    page.on_close = shutdown_resources
+    page.on_disconnect = shutdown_resources
 
     page.title = "pdf-tool"
     page.theme = build_theme()

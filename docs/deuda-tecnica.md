@@ -41,15 +41,19 @@ Origen: evaluación de arquitectura del 2026-07-18, tras los PRs #16-#23.
   contrato — `ToolResult.items: list[FileResult(path, label, ok)]` — y migrar los
   4 tools de lote y el panel en un solo PR.
 
-### 3. Concurrencia por convención, no por diseño
+### 3. Concurrencia acotada y cancelación cooperativa — pagada
 
-- **Qué:** `page.update()` desde hilos daemon + tokens de generación funcionan
-  (es la norma de Flet y el patrón de `run_job`), pero cada feature async
-  re-deriva su seguridad a mano. Hoy hay dos: el job de herramienta y el loader
-  de miniaturas; pueden solaparse (Flet serializa los envíos — riesgo bajo).
-- **Disparador:** la TERCERA feature async (probable: render de la cuadrícula de
-  páginas). Pago: helper común tipo "actualiza este control si la generación
-  sigue vigente", usado por todos.
+- **Qué había:** `page.update()` desde hilos daemon y tareas de miniaturas
+  creadas una por refresco dejaban la seguridad a convenciones locales.
+- **Qué hay ahora:** `JobHandle` invalida callbacks obsoletos mediante generación
+  y solicita cancelación cooperativa en cada progreso. Las miniaturas usan un
+  `ThreadPoolExecutor` compartido limitado a dos workers, cancelan tareas
+  pendientes y conservan su token de generación. El executor se libera al cerrar
+  o desconectar la app.
+- **Límite conocido:** una operación PDF que esté dentro de una llamada pesada de
+  PyMuPDF no puede interrumpirse hasta volver a reportar progreso; la cancelación
+  no es forzada. Si una feature necesita granularidad más fina, debe reportar
+  avance por página o archivo.
 
 ### 4. Tests de UI de estado, no de píxeles
 

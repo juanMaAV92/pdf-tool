@@ -5,7 +5,8 @@ import flet as ft
 import pytest
 
 from pdftool.core import registry
-from pdftool.core.plugin import ToolContext, ToolMeta, ToolResult
+from pdftool.core.jobs import JobHandle
+from pdftool.core.plugin import BaseParams, ToolContext, ToolMeta, ToolResult
 from pdftool.ui.panel_base import MultiFileToolPanel, SingleFileToolPanel
 
 
@@ -56,6 +57,16 @@ class _SingleStub(SingleFileToolPanel):
         return ToolResult(outputs=[], summary="")
 
 
+class _RunnableStub(SingleFileToolPanel):
+    meta = ToolMeta(id="runnable-stub", name="R", description="d", icon="", category="c")
+
+    def make_params(self):
+        return BaseParams()
+
+    def run_logic(self, inputs, params, progress):
+        return ToolResult(outputs=[], summary="")
+
+
 class _MultiStub(MultiFileToolPanel):
     meta = ToolMeta(id="multi-stub", name="M", description="d", icon="", category="c")
     min_files = 2
@@ -91,6 +102,34 @@ def test_single_file_web_mode_without_path_stays_disabled():
 
     assert tool.can_run() is False
     assert "navegador" in tool.status.value.lower()
+
+
+def test_rebuilding_panel_cancels_job_and_ignores_old_callbacks():
+    calls = {}
+    handle = JobHandle()
+
+    def fake_run_job(**kwargs):
+        calls.update(kwargs)
+        return handle
+
+    page = _FakePage()
+    ctx = ToolContext(page=page, run_job=fake_run_job)
+    tool = _RunnableStub()
+    tool.build_panel(ctx)
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    tool.run_btn.on_click(None)
+
+    old_progress = calls["on_progress"]
+    old_done = calls["on_done"]
+    assert handle.cancelled is False
+
+    tool.build_panel(ctx)
+    old_progress(1.0, "resultado antiguo")
+    old_done(ToolResult(outputs=[Path("/tmp/old.pdf")], summary="antiguo"))
+
+    assert handle.cancelled is True
+    assert tool.status.value == ""
+    assert tool.open_btn.visible is False
 
 
 def test_multi_file_requires_min_files():

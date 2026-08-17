@@ -9,6 +9,7 @@ from pathlib import Path
 import flet as ft
 
 from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
+from pdftool.core.jobs import JobHandle
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
@@ -106,6 +107,19 @@ class BaseToolPanel(PdfTool):
         # Un único FilePicker reutilizado entre renders (evita fugas en overlay).
         self._picker = ft.FilePicker()
         self._log_picker = make_log_picker()  # ídem, para "Descargar log"
+        self._job: JobHandle | None = None
+        self._generation = 0
+
+    def _invalidate_active_job(self, *, reset_ui: bool = True) -> None:
+        """Invalida callbacks antiguos y solicita cancelar su trabajo."""
+        self._generation += 1
+        if self._job is not None:
+            self._job.cancel()
+            self._job = None
+        if reset_ui and hasattr(self, "progress"):
+            self.progress.visible = False
+            self.progress.value = 0
+            self.run_btn.disabled = not self.can_run()
 
     # ---- hooks de la herramienta ----
     def extra_controls(self) -> list[ft.Control]:
@@ -177,7 +191,10 @@ class BaseToolPanel(PdfTool):
                                    else "Ver detalle técnico")
         self._page.update()
 
-    def _on_error(self, exc: Exception) -> None:
+    def _on_error(self, exc: Exception, generation: int | None = None) -> None:
+        if generation is not None and generation != self._generation:
+            return
+        self._job = None
         self._logger().error("error · %.1fs", self._elapsed(), exc_info=exc)
         self.progress.visible = False
         message, detail = humanize_error(exc)
@@ -195,6 +212,9 @@ class BaseToolPanel(PdfTool):
 
     # ---- común ----
     def build_panel(self, ctx: ToolContext) -> ft.Control:
+        # Navegar fuera y volver a entrar invalida cualquier callback del panel
+        # anterior antes de reconstruir sus controles.
+        self._invalidate_active_job()
         page = ctx.page
         self._page = page
 
@@ -237,21 +257,6 @@ class BaseToolPanel(PdfTool):
         if self._log_picker not in page.overlay:
             page.overlay.append(self._log_picker)
 
-        def set_progress(pct: float, msg: str) -> None:
-            self.progress.value = pct
-            self.status.value = msg
-            page.update()
-
-        def on_done(result: ToolResult) -> None:
-            self._logger().info("ok · %.1fs", self._elapsed())
-            self._clear_error()
-            self.progress.visible = False
-            self.status.value = result.summary
-            self._show_result_actions(result)
-            self.run_btn.disabled = not self.can_run()
-            self.on_result(result)
-            page.update()
-
         def do_run(_e) -> None:
             if not self.can_run():
                 return
@@ -275,13 +280,40 @@ class BaseToolPanel(PdfTool):
             self.progress.value = 0
             page.update()
             inputs = self.collect_inputs()
+            self._invalidate_active_job(reset_ui=False)
+            run_generation = self._generation
             self._run_started = time.monotonic()
             self._logger().info("inicio · %d archivo(s)", len(inputs))
-            ctx.run_job(
+
+            def is_current() -> bool:
+                return self._generation == run_generation
+
+            def set_progress(pct: float, msg: str) -> None:
+                if not is_current():
+                    return
+                self.progress.value = pct
+                self.status.value = msg
+                page.update()
+
+            def on_done(result: ToolResult) -> None:
+                if not is_current():
+                    return
+                self._job = None
+                self._logger().info("ok · %.1fs", self._elapsed())
+                self._clear_error()
+                self.progress.visible = False
+                self.status.value = result.summary
+                self._show_result_actions(result)
+                self.run_btn.disabled = not self.can_run()
+                self.on_result(result)
+                page.update()
+
+            self._job = ctx.run_job(
                 work=lambda prog: self.run_logic(inputs, params, prog),
                 on_progress=set_progress,
                 on_done=on_done,
-                on_error=self._on_error,
+                on_error=lambda exc: self._on_error(exc, run_generation),
+                is_current=is_current,
             )
 
         self.run_btn.on_click = do_run
@@ -332,6 +364,7 @@ class SingleFileToolPanel(BaseToolPanel):
 
     def _on_pick(self, e) -> None:
         if e.files and e.files[0].path:
+            self._invalidate_active_job()
             self._file = Path(e.files[0].path)
             self._file_label.value = self._file.name
             self._file_label.italic = False
@@ -360,11 +393,15 @@ class MultiFileToolPanel(BaseToolPanel):
     show_thumbnails: bool = False  # solo tools donde el orden/identidad importa
 
     def build_input(self, page) -> ft.Control:
+        previous_task = getattr(self, "_thumb_task", None)
+        if previous_task is not None:
+            previous_task.cancel()
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
         self._row_paths: list[Path | None] = []  # ruta por fila exitosa tras un run
         self._thumb_boxes: dict[str, ft.Container] = {}
-        self._thumb_generation = 0
+        self._thumb_task = None
+        self._thumb_generation = getattr(self, "_thumb_generation", -1) + 1
         self._picker.on_result = self._on_pick
         self._clear_btn = ft.OutlinedButton(
             "Limpiar lista", icon=ft.Icons.CLEAR_ALL, disabled=True,
@@ -412,6 +449,9 @@ class MultiFileToolPanel(BaseToolPanel):
         self._page.update()
 
     def _refresh(self) -> None:
+        if self._thumb_task is not None:
+            self._thumb_task.cancel()
+            self._thumb_task = None
         self._thumb_generation += 1
         generation = self._thumb_generation
         self._thumb_boxes = {}
@@ -445,8 +485,9 @@ class MultiFileToolPanel(BaseToolPanel):
         if self.show_thumbnails:
             pending = [p for p in self._files if get_cached(p) is MISSING]
             if pending:
-                load_async(pending, self._on_thumb_ready,
-                           is_current=lambda: self._thumb_generation == generation)
+                self._thumb_task = load_async(
+                    pending, self._on_thumb_ready,
+                    is_current=lambda: self._thumb_generation == generation)
         self.on_inputs_changed()
         self.run_btn.disabled = not self.can_run()
         self._clear_btn.disabled = not self._files
@@ -463,17 +504,20 @@ class MultiFileToolPanel(BaseToolPanel):
     def _move(self, index: int, delta: int) -> None:
         new_index = index + delta
         if 0 <= new_index < len(self._files):
+            self._invalidate_active_job()
             self._files[index], self._files[new_index] = (
                 self._files[new_index], self._files[index])
             self._clear_results()
             self._refresh()
 
     def _remove(self, index: int) -> None:
+        self._invalidate_active_job()
         self._files.pop(index)
         self._clear_results()
         self._refresh()
 
     def _clear_all(self, _e) -> None:
+        self._invalidate_active_job()
         self._files = []
         self._clear_results()
         self._clear_error()
@@ -484,6 +528,7 @@ class MultiFileToolPanel(BaseToolPanel):
     def _on_pick(self, e) -> None:
         if not e.files:
             return
+        self._invalidate_active_job()
         added = 0
         for f in e.files:
             if not f.path:  # navegador (modo web): sin ruta local
