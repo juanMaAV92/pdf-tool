@@ -11,6 +11,13 @@ from pdftool.tools.compress.logic import compress
 from pdftool.tools.compress.params import CompressParams
 from pdftool.ui.panel_base import InvalidParams, MultiFileToolPanel
 
+_MODE_HELP = (
+    "Reducir al máximo: busca el archivo más pequeño posible. Algunas páginas "
+    "pueden dejar de tener texto seleccionable.\n\n"
+    "Conservar texto y enlaces: mantiene búsqueda, copiar/pegar, enlaces y "
+    "anotaciones cuando sea posible, aunque el archivo puede pesar más."
+)
+
 
 @register
 class CompressTool(MultiFileToolPanel):
@@ -30,11 +37,24 @@ class CompressTool(MultiFileToolPanel):
         self._target_field = ft.TextField(
             label="Tamaño objetivo (MB)", value="5", width=200,
             keyboard_type=ft.KeyboardType.NUMBER)
-        return [self._target_field]
+        self._mode_dd = ft.Dropdown(
+            label="Modo de compresión", width=260, value="max",
+            options=[
+                ft.dropdown.Option("max", "Reducir al máximo (recomendado)"),
+                ft.dropdown.Option("preserve", "Conservar texto y enlaces"),
+            ],
+        )
+        self._mode_help = ft.IconButton(ft.Icons.HELP_OUTLINE, tooltip=_MODE_HELP)
+        return [ft.Row([
+            self._target_field,
+            self._mode_dd,
+            self._mode_help,
+        ], spacing=12)]
 
     def make_params(self):
         try:
-            return CompressParams(target_mb=float(self._target_field.value))
+            return CompressParams(target_mb=float(self._target_field.value),
+                                  mode=self._mode_dd.value)
         except (ValueError, ValidationError):
             raise InvalidParams("Tamaño objetivo inválido")
 

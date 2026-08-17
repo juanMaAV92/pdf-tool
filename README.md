@@ -37,6 +37,10 @@ desde tu propio ordenador. Gratis, de código abierto y sin anuncios.
 
 > 🔐 **Todo ocurre en tu equipo.** Tus archivos nunca salen de tu ordenador.
 
+En **Comprimir PDF**, el modo predeterminado busca la reducción máxima. También
+puedes elegir **Conservar texto y enlaces** desde el selector de modo; el icono
+de ayuda explica la diferencia.
+
 ---
 
 ## ⬇️ Descargar e instalar

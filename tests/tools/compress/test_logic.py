@@ -64,6 +64,14 @@ def test_best_effort_branch(big_pdf):
     assert "no se alcanzó el objetivo" in result.summary
 
 
+def test_preserve_mode_keeps_text_when_target_is_impossible(big_pdf):
+    result = compress([big_pdf], CompressParams(target_mb=0.0001, mode="preserve"))
+
+    with fitz.open(result.outputs[0]) as doc:
+        assert "Hola pdf-tool" in doc[0].get_text()
+    assert "contenido preservado" in result.summary
+
+
 # ---------------------------------------------------------------------------
 # Fix 1: output path must never equal input path
 # ---------------------------------------------------------------------------

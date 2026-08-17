@@ -317,6 +317,16 @@ def test_watermark_opacity_label_shows_decimals():
     assert tool._opacity.round == 2
 
 
+def test_compress_defaults_to_max_mode_with_tooltip():
+    from pdftool.tools.compress.panel import CompressTool
+
+    tool = _build(CompressTool())
+
+    assert tool._mode_dd.value == "max"
+    assert "archivo más pequeño" in tool._mode_help.tooltip
+    assert "texto y enlaces" in tool._mode_help.tooltip
+
+
 def test_multi_row_paths_map_successes_to_outputs():
     tool = _build(_MultiStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf", "/tmp/c.pdf"]))
