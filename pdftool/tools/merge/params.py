@@ -1,7 +1,7 @@
-from pydantic import BaseModel
+from pdftool.core.plugin import BaseParams
 
 
-class MergeParams(BaseModel):
+class MergeParams(BaseParams):
     """El orden lo decide la lista de inputs. `output_name` es la base del
     archivo de salida (sin extensión), ya sanitizada por la UI; None → default."""
 

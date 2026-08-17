@@ -77,3 +77,27 @@ def test_output_path_empty_stem_is_honoured_not_ignored(tmp_path):
     # no caer de vuelta al stem del archivo de entrada.
     out = output_path(tmp_path / "doc.pdf", "marca", stem="")
     assert out == tmp_path / "_marca.pdf"
+
+
+def test_output_path_uses_out_dir_when_given(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    out = output_path(tmp_path / "doc.pdf", "marca", out_dir=destino)
+    assert out == destino / "doc_marca.pdf"
+
+
+def test_output_path_without_out_dir_lands_next_to_the_input(tmp_path):
+    assert output_path(tmp_path / "doc.pdf", "marca") == tmp_path / "doc_marca.pdf"
+
+
+def test_collision_is_resolved_in_the_destination_not_the_origin(tmp_path):
+    """Lo ocupado en la carpeta de origen no afecta; lo del destino sí."""
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    (tmp_path / "doc_marca.pdf").write_bytes(b"en origen")
+    out = output_path(tmp_path / "doc.pdf", "marca", out_dir=destino)
+    assert out == destino / "doc_marca.pdf"
+
+    (destino / "doc_marca.pdf").write_bytes(b"en destino")
+    out = output_path(tmp_path / "doc.pdf", "marca", out_dir=destino)
+    assert out == destino / "doc_marca (1).pdf"

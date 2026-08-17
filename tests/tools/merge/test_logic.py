@@ -111,3 +111,32 @@ def test_two_runs_with_same_custom_name_keep_both(tmp_path):
         assert doc.page_count == 2
     with fitz.open(str(second.outputs[0])) as doc:
         assert doc.page_count == 4
+
+
+def test_output_uses_out_dir_when_given(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    out = output_path_for_merge([a], "informe", destino)
+    assert out == destino / "informe.pdf"
+
+
+def test_out_dir_collision_is_resolved_in_the_destination(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    (destino / "informe.pdf").write_bytes(b"previo")
+    out = output_path_for_merge([a], "informe", destino)
+    assert out == destino / "informe (1).pdf"
+
+
+def test_merge_writes_to_output_dir(tmp_path):
+    destino = tmp_path / "destino"
+    destino.mkdir()
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    b = _pdf(tmp_path / "b.pdf", 1, "B")
+
+    res = merge([a, b], MergeParams(output_name="junto", output_dir=destino))
+
+    assert res.outputs[0] == destino / "junto.pdf"
+    assert res.outputs[0].exists()

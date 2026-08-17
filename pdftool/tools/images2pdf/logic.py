@@ -15,19 +15,22 @@ def _noop(_p: float, _m: str) -> None:
     pass
 
 
-def output_path_for_images(input_path: Path) -> Path:
-    """`<imagen>.pdf` junto al original, sin pisar un archivo existente."""
+def output_path_for_images(input_path: Path,
+                           out_dir: Path | None = None) -> Path:
+    """`<imagen>.pdf` en el destino (o junto al original), sin pisar nada."""
     p = Path(input_path)
-    return unique_path(p.parent / f"{p.stem}.pdf")
+    carpeta = Path(out_dir) if out_dir is not None else p.parent
+    return unique_path(carpeta / f"{p.stem}.pdf")
 
 
-def _convert_one(input_path: Path, progress: Progress) -> tuple[Path | None, str]:
+def _convert_one(input_path: Path, progress: Progress,
+                  out_dir: Path | None = None) -> tuple[Path | None, str]:
     """Convierte una imagen. Devuelve (salida, etiqueta) o (None, error corto)."""
     try:
         if input_path.suffix.lower() not in ALLOWED_SUFFIXES:
             raise ValueError("Formato no soportado (usa JPG o PNG).")
         progress(0.0, "Convirtiendo imagen…")
-        out = output_path_for_images(input_path)
+        out = output_path_for_images(input_path, out_dir)
         # convert_to_pdf genera una página del tamaño exacto de la imagen.
         with fitz.open(str(input_path)) as img:
             pdf_bytes = img.convert_to_pdf()
@@ -59,7 +62,7 @@ def images_to_pdf(inputs: list[Path], params: ImagesToPdfParams,
             label = f"[{_i + 1}/{total}] {_name}: {msg}" if total > 1 else msg
             progress(overall, label)
 
-        out, label = _convert_one(path, scoped)
+        out, label = _convert_one(path, scoped, params.output_dir)
         if out is not None:
             outputs.append(out)
         labels.append(label)

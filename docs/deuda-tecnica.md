@@ -9,13 +9,16 @@ Origen: evaluación de arquitectura del 2026-07-18, tras los PRs #16-#23.
 
 ## Activa — con disparador
 
-### 1. `panel_base.py` es el hotspot universal (~460 líneas)
+### 1. `panel_base.py` es el hotspot universal (~526 líneas)
 
 - **Qué:** acumula manejo de errores, acciones del footer, sanitización de nombres,
   `SingleFileToolPanel`, `MultiFileToolPanel` y el wiring de miniaturas. Empezó el
   2026-07-18 en ~315 líneas; cada feature de UI pasa por él.
 - **Por qué se acepta:** sigue siendo legible y cohesivo; partirlo hoy sería
-  refactor especulativo.
+  refactor especulativo. La carpeta de salida (2026-07-26) se contuvo a propósito:
+  el selector nació en `ui/output_dir.py` y `panel_base` solo lo instancia,
+  sincroniza e inyecta en `do_run` — 9 líneas en vez de un widget entero. **Quedan
+  ~24 líneas de margen**, así que la siguiente feature de UI paga la deuda.
 - **Disparador:** ANTES de construir la cuadrícula de páginas (rotar/extraer/
   Dividir visual, ítems 6-7 del roadmap), o si supera ~550 líneas — lo que ocurra
   primero. Pago: extraer `MultiFileToolPanel` (o los widgets de fila) a su propio
@@ -38,15 +41,19 @@ Origen: evaluación de arquitectura del 2026-07-18, tras los PRs #16-#23.
   contrato — `ToolResult.items: list[FileResult(path, label, ok)]` — y migrar los
   4 tools de lote y el panel en un solo PR.
 
-### 3. Concurrencia por convención, no por diseño
+### 3. Concurrencia acotada y cancelación cooperativa — pagada
 
-- **Qué:** `page.update()` desde hilos daemon + tokens de generación funcionan
-  (es la norma de Flet y el patrón de `run_job`), pero cada feature async
-  re-deriva su seguridad a mano. Hoy hay dos: el job de herramienta y el loader
-  de miniaturas; pueden solaparse (Flet serializa los envíos — riesgo bajo).
-- **Disparador:** la TERCERA feature async (probable: render de la cuadrícula de
-  páginas). Pago: helper común tipo "actualiza este control si la generación
-  sigue vigente", usado por todos.
+- **Qué había:** `page.update()` desde hilos daemon y tareas de miniaturas
+  creadas una por refresco dejaban la seguridad a convenciones locales.
+- **Qué hay ahora:** `JobHandle` invalida callbacks obsoletos mediante generación
+  y solicita cancelación cooperativa en cada progreso. Las miniaturas usan un
+  `ThreadPoolExecutor` compartido limitado a dos workers, cancelan tareas
+  pendientes y conservan su token de generación. El executor se libera al cerrar
+  o desconectar la app.
+- **Límite conocido:** una operación PDF que esté dentro de una llamada pesada de
+  PyMuPDF no puede interrumpirse hasta volver a reportar progreso; la cancelación
+  no es forzada. Si una feature necesita granularidad más fina, debe reportar
+  avance por página o archivo.
 
 ### 4. Tests de UI de estado, no de píxeles
 

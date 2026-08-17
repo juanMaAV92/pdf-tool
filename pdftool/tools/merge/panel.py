@@ -37,9 +37,12 @@ class MergeTool(MultiFileToolPanel):
         """Ruta real que usaría el run, o None si aún no hay archivos."""
         if not self._files:
             return None
-        return output_path_for_merge(self._files, base)
+        return output_path_for_merge(self._files, base, self._out_dir.value)
 
     def on_inputs_changed(self) -> None:
+        self._name_field.refresh()
+
+    def on_output_dir_changed(self) -> None:
         self._name_field.refresh()
 
     def make_params(self):

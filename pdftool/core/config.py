@@ -21,6 +21,9 @@ def settings_path() -> Path:
 
 class Settings(BaseModel):
     theme_mode: str = "system"  # "system" | "light" | "dark"
+    # Carpeta de salida global; None → junto al original. Se guarda como texto
+    # porque el JSON no tiene tipo ruta.
+    output_dir: str | None = None
 
 
 def load_settings(path: Path | None = None) -> Settings:
