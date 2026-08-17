@@ -7,6 +7,10 @@ def test_default_target_is_5mb():
     assert CompressParams().target_mb == 5.0
 
 
+def test_default_mode_is_maximum_compression():
+    assert CompressParams().mode == "max"
+
+
 def test_target_must_be_positive():
     with pytest.raises(ValidationError):
         CompressParams(target_mb=0)

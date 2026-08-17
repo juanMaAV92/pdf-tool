@@ -20,6 +20,12 @@ _ATTEMPTS = [
     {"max_dimension": 600, "jpg_quality": 25},
 ]
 
+_PRESERVE_ATTEMPTS = [
+    {"dpi_threshold": 150, "dpi_target": 120, "quality": 75},
+    {"dpi_threshold": 120, "dpi_target": 96, "quality": 60},
+    {"dpi_threshold": 96, "dpi_target": 72, "quality": 45},
+]
+
 
 def _noop(_p: float, _m: str) -> None:
     pass
@@ -82,8 +88,26 @@ def _rerender(src: Path, dst: Path, *, max_dimension: int, jpg_quality: int) -> 
         doc.save(str(dst), garbage=4, deflate=True)
 
 
+def _preserve_compress(src: Path, dst: Path, *, dpi_threshold: int,
+                       dpi_target: int, quality: int) -> None:
+    """Optimiza imágenes sin convertir las páginas completas en imágenes."""
+    with fitz.open(src) as doc:
+        rewrite_images = getattr(doc, "rewrite_images", None)
+        if rewrite_images is not None:
+            rewrite_images(
+                dpi_threshold=dpi_threshold,
+                dpi_target=dpi_target,
+                quality=quality,
+            )
+        doc.save(
+            str(dst), garbage=4, deflate=True, deflate_images=True,
+            deflate_fonts=True, clean=True,
+        )
+
+
 def _compress_one(input_path: Path, target_mb: float, progress: Progress,
-                  out_dir: Path | None = None) -> tuple[Path, str, float, float]:
+                  out_dir: Path | None = None,
+                  mode: str = "max") -> tuple[Path, str, float, float]:
     out = output_path_for(input_path, target_mb, out_dir)
     original = _size_mb(input_path)
     progress(0.0, f"Tamaño original: {original:.2f} MB")
@@ -99,6 +123,28 @@ def _compress_one(input_path: Path, target_mb: float, progress: Progress,
     if current <= target_mb:
         progress(1.0, "Listo (compresión simple)")
         return out, f"{original:.2f} MB → {current:.2f} MB", original, current
+
+    if mode == "preserve":
+        for i, attempt in enumerate(_PRESERVE_ATTEMPTS):
+            progress((i + 1) / (len(_PRESERVE_ATTEMPTS) + 1),
+                     f"Optimización de imágenes {i + 1}: "
+                     f"{attempt['dpi_target']} dpi, {attempt['quality']}%")
+            _preserve_compress(input_path, out, **attempt)
+            current = _size_mb(out)
+            if current <= target_mb:
+                progress(1.0, f"Listo: {current:.2f} MB (contenido preservado)")
+                return (out, f"{original:.2f} MB → {current:.2f} MB "
+                        "(contenido preservado)",
+                        original, current)
+
+        progress(1.0, f"Mejor esfuerzo: {current:.2f} MB (contenido preservado)")
+        return (
+            out,
+            f"{original:.2f} MB → {current:.2f} MB "
+            "(no se alcanzó el objetivo; contenido preservado)",
+            original,
+            current,
+        )
 
     n = len(_ATTEMPTS)
     for i, attempt in enumerate(_ATTEMPTS):
@@ -138,7 +184,7 @@ def compress(inputs: list[Path], params: CompressParams,
             progress(overall, label)
 
         out, summary, original, final = _compress_one(
-            path, target_mb, scoped, params.output_dir)
+            path, target_mb, scoped, params.output_dir, params.mode)
         outputs.append(out)
         summaries.append(summary)
         total_original += original
