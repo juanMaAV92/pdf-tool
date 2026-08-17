@@ -125,8 +125,8 @@ def test_compress_multiple_progress_reaches_one(tmp_path, big_pdf):
     assert seen and seen[-1][0] == 1.0
 
 
-def test_compress_multiple_has_per_file_details(tmp_path, big_pdf):
-    """Con varios archivos, result.details trae una etiqueta por salida."""
+def test_compress_multiple_has_per_file_items(tmp_path, big_pdf):
+    """Con varios archivos, result.items trae un resultado por entrada."""
     import shutil
 
     src1 = tmp_path / "uno.pdf"
@@ -134,15 +134,16 @@ def test_compress_multiple_has_per_file_details(tmp_path, big_pdf):
     shutil.copy2(big_pdf, src1)
     shutil.copy2(big_pdf, src2)
     result = compress([src1, src2], CompressParams(target_mb=50.0))
-    assert result.details is not None
-    assert len(result.details) == 2
-    assert all("sin cambios" in d for d in result.details)
+    assert result.items is not None
+    assert len(result.items) == 2
+    assert all(item.ok for item in result.items)
+    assert all("sin cambios" in item.message for item in result.items)
 
 
-def test_compress_single_has_no_details(small_pdf):
+def test_compress_single_has_no_items(small_pdf):
     """Con un solo archivo no hace falta detalle por fila."""
     result = compress([small_pdf], CompressParams(target_mb=50.0))
-    assert result.details is None
+    assert result.items is None
 
 
 def test_compress_no_self_overwrite(tmp_path, big_pdf):

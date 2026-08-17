@@ -6,7 +6,7 @@ import fitz
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.naming import output_path
-from pdftool.core.plugin import Progress, ToolResult
+from pdftool.core.plugin import FileResult, Progress, ToolResult
 from pdftool.tools.protect.params import ProtectParams
 
 
@@ -62,6 +62,7 @@ def protect(inputs: list[Path], params: ProtectParams,
     total = len(paths)
     outputs: list[Path] = []
     labels: list[str] = []
+    items: list[FileResult] = []
 
     for index, path in enumerate(paths):
         def scoped(pct: float, msg: str, _i: int = index,
@@ -74,6 +75,7 @@ def protect(inputs: list[Path], params: ProtectParams,
         if out is not None:
             outputs.append(out)
         labels.append(label)
+        items.append(FileResult(path, out, out is not None, label))
 
     if not outputs:
         raise ValueError(labels[0] if total == 1
@@ -91,4 +93,4 @@ def protect(inputs: list[Path], params: ProtectParams,
                    else f"{total} contraseñas removidas")
     else:
         summary = f"{len(outputs)} de {total} PDFs procesados"
-    return ToolResult(outputs=outputs, summary=summary, details=labels)
+    return ToolResult(outputs=outputs, summary=summary, items=items)

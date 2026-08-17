@@ -6,7 +6,8 @@ import pytest
 
 from pdftool.core import registry
 from pdftool.core.jobs import JobHandle
-from pdftool.core.plugin import BaseParams, ToolContext, ToolMeta, ToolResult
+from pdftool.core.plugin import (BaseParams, FileResult, ToolContext, ToolMeta,
+                                  ToolResult)
 from pdftool.ui.panel_base import MultiFileToolPanel, SingleFileToolPanel
 
 
@@ -334,7 +335,11 @@ def test_multi_row_paths_map_successes_to_outputs():
     tool.on_result(ToolResult(
         outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/c_x.pdf")],
         summary="2 de 3 PDFs procesados",
-        details=["→ a_x.pdf", "Contraseña incorrecta.", "→ c_x.pdf"]))
+        items=[
+            FileResult(Path("/tmp/a.pdf"), Path("/tmp/a_x.pdf"), True, "→ a_x.pdf"),
+            FileResult(Path("/tmp/b.pdf"), None, False, "Contraseña incorrecta."),
+            FileResult(Path("/tmp/c.pdf"), Path("/tmp/c_x.pdf"), True, "→ c_x.pdf"),
+        ]))
 
     assert tool._row_paths == [Path("/tmp/a_x.pdf"), None, Path("/tmp/c_x.pdf")]
 
@@ -344,7 +349,10 @@ def test_multi_row_paths_cleared_with_results():
     tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
     tool.on_result(ToolResult(
         outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/b_x.pdf")],
-        summary="2 PDFs", details=["→ a_x.pdf", "→ b_x.pdf"]))
+        summary="2 PDFs", items=[
+            FileResult(Path("/tmp/a.pdf"), Path("/tmp/a_x.pdf"), True, "→ a_x.pdf"),
+            FileResult(Path("/tmp/b.pdf"), Path("/tmp/b_x.pdf"), True, "→ b_x.pdf"),
+        ]))
     assert tool._row_paths != []
 
     tool._clear_all(None)
@@ -359,8 +367,12 @@ def test_multi_row_paths_positional_when_no_failures():
 
     tool.on_result(ToolResult(
         outputs=[Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")],
-        summary="2 PDFs comprimidos",
-        details=["1.23 MB → 0.45 MB", "2.10 MB → 1.80 MB (no se alcanzó el objetivo)"]))
+        summary="2 PDFs comprimidos", items=[
+            FileResult(Path("/tmp/a.pdf"), Path("/tmp/a_2mb.pdf"), True,
+                       "1.23 MB → 0.45 MB"),
+            FileResult(Path("/tmp/b.pdf"), Path("/tmp/b_2mb.pdf"), True,
+                       "2.10 MB → 1.80 MB (no se alcanzó el objetivo)"),
+        ]))
 
     assert tool._row_paths == [Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")]
 

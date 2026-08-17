@@ -34,3 +34,9 @@ def atomic_copy(source: Path, target: Path) -> None:
     """Copia `source` sin dejar una salida parcial si la copia falla."""
     with atomic_output(target) as temporary:
         shutil.copy2(source, temporary)
+
+
+def atomic_write_text(target: Path, text: str, *, encoding: str = "utf-8") -> None:
+    """Escribe texto y publica el archivo solo cuando la escritura termina."""
+    with atomic_output(target) as temporary:
+        temporary.write_text(text, encoding=encoding)

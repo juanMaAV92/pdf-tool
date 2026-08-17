@@ -7,7 +7,7 @@ import fitz
 
 from pdftool.core.atomic import atomic_copy, atomic_output
 from pdftool.core.naming import output_path
-from pdftool.core.plugin import Progress, ToolResult
+from pdftool.core.plugin import FileResult, Progress, ToolResult
 from pdftool.tools.compress.params import CompressParams
 
 _ATTEMPTS = [
@@ -177,6 +177,7 @@ def compress(inputs: list[Path], params: CompressParams,
     total = len(paths)
     outputs: list[Path] = []
     summaries: list[str] = []
+    items: list[FileResult] = []
     total_original = 0.0
     total_final = 0.0
 
@@ -190,6 +191,7 @@ def compress(inputs: list[Path], params: CompressParams,
             path, target_mb, scoped, params.output_dir, params.mode)
         outputs.append(out)
         summaries.append(summary)
+        items.append(FileResult(path, out, True, summary))
         total_original += original
         total_final += final
 
@@ -204,5 +206,5 @@ def compress(inputs: list[Path], params: CompressParams,
         outputs=outputs,
         summary=(f"{total} archivos · "
                  f"{total_original:.2f} MB → {total_final:.2f} MB{tail}"),
-        details=summaries,
+        items=items,
     )

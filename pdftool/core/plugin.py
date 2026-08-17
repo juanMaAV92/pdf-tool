@@ -11,6 +11,16 @@ from pdftool.core.config import Settings
 
 
 @dataclass(frozen=True)
+class FileResult:
+    """Resultado estructurado de una entrada individual de un lote."""
+
+    input_path: Path
+    output_path: Path | None
+    ok: bool
+    message: str
+
+
+@dataclass(frozen=True)
 class ToolMeta:
     id: str
     name: str
@@ -23,9 +33,9 @@ class ToolMeta:
 class ToolResult:
     outputs: list[Path]
     summary: str
-    # Etiqueta corta por salida (misma longitud/orden que outputs), para mostrar
-    # el resultado junto a cada archivo. None si no aplica (p. ej. 1 archivo).
-    details: list[str] | None = None
+    # Resultados por entrada para herramientas por lote. None si no aplica
+    # (p. ej. una herramienta de archivo único).
+    items: list[FileResult] | None = None
 
 
 class BaseParams(BaseModel):

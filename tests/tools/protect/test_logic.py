@@ -86,7 +86,9 @@ def test_protect_multiple_pdfs(tmp_path):
     res = protect([a, b], ProtectParams(mode="protect", password="clave"))
     assert len(res.outputs) == 2
     assert res.summary == "2 PDFs protegidos"
-    assert res.details == ["→ a_protegido.pdf", "→ b_protegido.pdf"]
+    assert [item.message for item in res.items] == [
+        "→ a_protegido.pdf", "→ b_protegido.pdf"]
+    assert all(item.ok for item in res.items)
     for out in res.outputs:
         d = fitz.open(str(out))
         try:
@@ -117,8 +119,9 @@ def test_mixed_batch_continues_and_reports(tmp_path):
     assert len(res.outputs) == 1
     assert res.outputs[0].name == "ok_sin_clave.pdf"
     assert res.summary == "1 de 2 PDFs procesados"
-    assert res.details[0] == "→ ok_sin_clave.pdf"
-    assert "Contraseña incorrecta" in res.details[1]
+    assert res.items[0].message == "→ ok_sin_clave.pdf"
+    assert "Contraseña incorrecta" in res.items[1].message
+    assert res.items[1].ok is False
 
 
 def test_all_fail_raises(tmp_path):
@@ -128,10 +131,10 @@ def test_all_fail_raises(tmp_path):
         protect([a, b], ProtectParams(mode="remove", password="clave"))
 
 
-def test_single_file_has_no_details(tmp_path):
+def test_single_file_has_no_items(tmp_path):
     plain = _pdf(tmp_path / "doc.pdf")
     res = protect([plain], ProtectParams(mode="protect", password="x"))
-    assert res.details is None
+    assert res.items is None
     assert res.summary.startswith("PDF protegido → ")
 
 

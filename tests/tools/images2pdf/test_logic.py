@@ -43,7 +43,8 @@ def test_one_pdf_per_image(tmp_path):
     res = images_to_pdf([a, b, c], ImagesToPdfParams())
     assert [o.name for o in res.outputs] == ["a.pdf", "b.pdf", "c.pdf"]
     assert res.summary == "3 imágenes convertidas"
-    assert res.details == ["→ a.pdf", "→ b.pdf", "→ c.pdf"]
+    assert [item.message for item in res.items] == ["→ a.pdf", "→ b.pdf", "→ c.pdf"]
+    assert all(item.ok for item in res.items)
     for out in res.outputs:
         with fitz.open(str(out)) as d:
             assert d.page_count == 1
@@ -61,10 +62,10 @@ def test_page_keeps_image_proportions(tmp_path):
     assert r1.width / r1.height == pytest.approx(0.5, rel=0.02)
 
 
-def test_single_image_has_no_details(tmp_path):
+def test_single_image_has_no_items(tmp_path):
     a = _img(tmp_path / "a.png", 100, 100)
     res = images_to_pdf([a], ImagesToPdfParams())
-    assert res.details is None
+    assert res.items is None
     assert res.summary == "Imagen convertida → a.pdf"
 
 
@@ -75,8 +76,9 @@ def test_unsupported_file_continues_batch(tmp_path):
     res = images_to_pdf([a, bad], ImagesToPdfParams())
     assert [o.name for o in res.outputs] == ["a.pdf"]
     assert res.summary == "1 de 2 imágenes convertidas"
-    assert res.details[0] == "→ a.pdf"
-    assert "Formato no soportado" in res.details[1]
+    assert res.items[0].message == "→ a.pdf"
+    assert "Formato no soportado" in res.items[1].message
+    assert res.items[1].ok is False
 
 
 def test_all_fail_raises(tmp_path):
@@ -120,7 +122,7 @@ def test_corrupt_image_with_valid_extension_continues(tmp_path):
     res = images_to_pdf([ok, bad], ImagesToPdfParams())
     assert [o.name for o in res.outputs] == ["ok.pdf"]
     assert res.summary == "1 de 2 imágenes convertidas"
-    assert res.details[1] and not res.details[1].startswith("→")
+    assert res.items[1].message and not res.items[1].ok
 
 
 def test_same_stem_in_one_batch_does_not_clobber(tmp_path):

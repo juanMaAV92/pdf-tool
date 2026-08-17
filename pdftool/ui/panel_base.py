@@ -547,21 +547,10 @@ class MultiFileToolPanel(BaseToolPanel):
         self._refresh()
 
     def on_result(self, result: ToolResult) -> None:
-        self._results = list(result.details or [])
-        # Mapear filas a salidas: sin fallos la correspondencia es 1:1 (compress
-        # no prefija sus éxitos con "→"); con fallos, la i-ésima etiqueta de
-        # éxito ("→ …") corresponde a outputs[i] (protect, images2pdf).
-        if self._results and len(self._results) == len(result.outputs):
-            self._row_paths = list(result.outputs)
-        else:
-            self._row_paths = []
-            success = 0
-            for label in self._results:
-                if label.startswith("→") and success < len(result.outputs):
-                    self._row_paths.append(result.outputs[success])
-                    success += 1
-                else:
-                    self._row_paths.append(None)
+        items = result.items or []
+        self._results = [item.message for item in items]
+        self._row_paths = [item.output_path if item.ok else None
+                           for item in items]
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

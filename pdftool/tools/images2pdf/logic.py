@@ -6,7 +6,7 @@ import fitz
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.naming import unique_path
-from pdftool.core.plugin import Progress, ToolResult
+from pdftool.core.plugin import FileResult, Progress, ToolResult
 from pdftool.tools.images2pdf.params import ImagesToPdfParams
 
 ALLOWED_SUFFIXES = {".jpg", ".jpeg", ".png"}
@@ -56,6 +56,7 @@ def images_to_pdf(inputs: list[Path], params: ImagesToPdfParams,
     total = len(paths)
     outputs: list[Path] = []
     labels: list[str] = []
+    items: list[FileResult] = []
 
     for index, path in enumerate(paths):
         def scoped(pct: float, msg: str, _i: int = index,
@@ -68,6 +69,7 @@ def images_to_pdf(inputs: list[Path], params: ImagesToPdfParams,
         if out is not None:
             outputs.append(out)
         labels.append(label)
+        items.append(FileResult(path, out, out is not None, label))
 
     if not outputs:
         raise ValueError(labels[0] if total == 1
@@ -82,4 +84,4 @@ def images_to_pdf(inputs: list[Path], params: ImagesToPdfParams,
         summary = f"{total} imágenes convertidas"
     else:
         summary = f"{len(outputs)} de {total} imágenes convertidas"
-    return ToolResult(outputs=outputs, summary=summary, details=labels)
+    return ToolResult(outputs=outputs, summary=summary, items=items)

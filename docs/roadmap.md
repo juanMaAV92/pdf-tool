@@ -5,6 +5,17 @@ Marca de agua) sobre un panel base compartido con lote, footer anclado, logging 
 descarga y auto-update. Cada feature nueva sigue el flujo del repo: lógica pura +
 panel + tests (ver AGENTS.md).
 
+## Mantenimiento reciente
+
+- ✅ Resultados por archivo tipados con `FileResult`; el panel ya no infiere el
+  estado de una fila a partir de prefijos de texto.
+- ✅ Persistencia de ajustes endurecida: JSON inválido vuelve a defaults y los
+  guardados son atómicos.
+- ✅ Smoke test del flujo panel real → `run_job` real → PDF real. Queda pendiente
+  la validación con renderer Flet y diálogos nativos en builds de escritorio.
+- ✅ Salidas PDF atómicas en todas las herramientas; el PR #30 agrupa esta
+  protección con el mantenimiento de contratos y configuración.
+
 ## Próximo — alto valor
 
 1. ~~**Vista previa (thumbnails).**~~ ✅ Hecho en #23 (inline 56px en Unir e
@@ -40,8 +51,9 @@ panel + tests (ver AGENTS.md).
    3, 1, 5 en ese orden".
 8. **Metadatos.** Ver/limpiar título y autor; coherente con la postura de privacidad
    del logging (que ya redacta rutas).
-9. **Persistir preferencias.** Tema y últimos parámetros por herramienta (extender
-   `core/config.py`).
+9. **Persistir preferencias.** El destino de salida ya persiste y el archivo de
+   ajustes es robusto; queda guardar tema aplicado y últimos parámetros por
+   herramienta (extender `core/config.py`).
 
 ## Descartado por ahora — decisiones explícitas
 
