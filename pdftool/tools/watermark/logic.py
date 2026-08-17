@@ -4,6 +4,7 @@ from pathlib import Path
 
 import fitz
 
+from pdftool.core.atomic import atomic_output
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.watermark.params import WatermarkParams
@@ -38,28 +39,29 @@ def watermark(inputs: list[Path], params: WatermarkParams,
     step_y = params.font_size * 4
 
     progress(0.0, "Aplicando marca de agua…")
-    with fitz.open(str(input_path)) as doc:
-        total = doc.page_count
-        for pno in range(total):
-            page = doc[pno]
-            rect = page.rect
-            y = step_y / 2
-            while y < rect.height + step_y:
-                x = -text_w
-                while x < rect.width + step_x:
-                    pivot = fitz.Point(x, y)
-                    page.insert_text(
-                        pivot, text,
-                        fontsize=params.font_size,
-                        color=tuple(params.color),
-                        fill_opacity=params.opacity,
-                        morph=(pivot, rot),
-                        overlay=True,
-                    )
-                    x += step_x
-                y += step_y
-            progress((pno + 1) / total, f"Página {pno + 1}/{total}")
-        doc.save(str(out), garbage=4, deflate=True)
+    with atomic_output(out) as temporary:
+        with fitz.open(str(input_path)) as doc:
+            total = doc.page_count
+            for pno in range(total):
+                page = doc[pno]
+                rect = page.rect
+                y = step_y / 2
+                while y < rect.height + step_y:
+                    x = -text_w
+                    while x < rect.width + step_x:
+                        pivot = fitz.Point(x, y)
+                        page.insert_text(
+                            pivot, text,
+                            fontsize=params.font_size,
+                            color=tuple(params.color),
+                            fill_opacity=params.opacity,
+                            morph=(pivot, rot),
+                            overlay=True,
+                        )
+                        x += step_x
+                    y += step_y
+                progress((pno + 1) / total, f"Página {pno + 1}/{total}")
+            doc.save(str(temporary), garbage=4, deflate=True)
 
     progress(1.0, f"Listo: {out.name}")
     return ToolResult(outputs=[out], summary=f"Marca '{text}' aplicada → {out.name}")
