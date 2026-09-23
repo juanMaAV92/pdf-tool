@@ -14,14 +14,17 @@ aproximadamente 550 líneas. La solución prevista es extraer `MultiFileToolPane
 o los widgets de fila a módulos propios; la cuadrícula debe nacer fuera de este
 archivo.
 
-## 2. Cobertura visual y de empaquetado
+## 2. Smoke visual de los artefactos
 
-Los tests cubren lógica y estado de paneles con stubs. Todavía no se valida una
-ventana Flet real ni los instaladores en macOS y Windows.
+El workflow **Package smoke** construye la app universal y valida el contenido
+del DMG en macOS; en Windows compila el instalador y comprueba que instala el
+ejecutable. Los tests cubren lógica y estado de paneles con stubs, pero ningún
+runner puede validar de forma fiable la ventana Flet, el FilePicker ni los
+permisos nativos.
 
 **Disparador:** antes de una release importante o de aceptar una actualización de
-Flet. La validación debe cubrir layout, diálogos nativos, permisos, rutas y
-arranque de los artefactos empaquetados.
+Flet. Ejecutar [la checklist manual](release-smoke.md) para cubrir layout,
+diálogos nativos, permisos, rutas y arranque de los artefactos empaquetados.
 
 ## 3. Pin de Flet 0.28.2
 

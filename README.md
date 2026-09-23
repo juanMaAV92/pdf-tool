@@ -105,6 +105,12 @@ Eso dispara `release.yml`, que corre los tests, construye macOS (`.dmg`) y Windo
 un **GitHub Release en borrador** con ambos instaladores. Revísalo y pulsa
 **Publish release** para que las apps instaladas detecten la actualización.
 
+Los PRs que cambian la app, el empaquetado o sus dependencias ejecutan además
+**Package smoke**: construye e inspecciona el DMG de macOS y compila e instala de
+forma silenciosa el instalador de Windows. Antes de una release importante,
+seguir la [checklist manual](docs/release-smoke.md) para validar la ventana y los
+diálogos nativos.
+
 El número de versión es **el tag** — única fuente de verdad.
 
 ### Build local (para depurar el empaquetado)
