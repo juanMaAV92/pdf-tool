@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+
 from pdftool.tools.compress.params import CompressParams
 
 

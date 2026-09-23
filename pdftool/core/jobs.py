@@ -33,9 +33,14 @@ class JobHandle:
             self._thread.join(timeout=timeout)
 
 
-def run_job(work: Callable, on_progress: Callable, on_done: Callable,
-            on_error: Callable, *,
-            is_current: Callable[[], bool] | None = None) -> JobHandle:
+def run_job(
+    work: Callable,
+    on_progress: Callable,
+    on_done: Callable,
+    on_error: Callable,
+    *,
+    is_current: Callable[[], bool] | None = None,
+) -> JobHandle:
     """Ejecuta `work(on_progress)` en un hilo daemon con cancelación cooperativa.
 
     `work` recibe el callback de progreso y devuelve un resultado.

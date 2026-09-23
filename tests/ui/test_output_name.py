@@ -29,8 +29,9 @@ def test_only_extension_gives_none():
     assert parse_output_name(".pdf") is None
 
 
-@pytest.mark.parametrize("bad", ["a/b", "a\\b", "a:b", "a\x00b",
-                                 "a?b", "a|b", "a<b", "a>b", "a*b", 'a"b'])
+@pytest.mark.parametrize(
+    "bad", ["a/b", "a\\b", "a:b", "a\x00b", "a?b", "a|b", "a<b", "a>b", "a*b", 'a"b']
+)
 def test_path_characters_raise_invalid_params(bad):
     with pytest.raises(InvalidParams):
         parse_output_name(bad)
@@ -73,9 +74,12 @@ def test_merge_panel_invalid_name_raises():
         tool.make_params()
 
 
-@pytest.mark.parametrize("reserved", ["con", "CON", "Con.pdf", "PRN", "AUX", "NUL"]
-                         + [f"COM{i}" for i in range(1, 10)]
-                         + [f"LPT{i}" for i in range(1, 10)])
+@pytest.mark.parametrize(
+    "reserved",
+    ["con", "CON", "Con.pdf", "PRN", "AUX", "NUL"]
+    + [f"COM{i}" for i in range(1, 10)]
+    + [f"LPT{i}" for i in range(1, 10)],
+)
 def test_windows_reserved_names_raise_invalid_params(reserved):
     with pytest.raises(InvalidParams, match="reservado por Windows"):
         parse_output_name(reserved)
@@ -324,7 +328,8 @@ def test_missing_destination_stops_the_run_with_an_accurate_message(tmp_path):
     assert calls == []
     assert tool.status.value == (
         "La carpeta de destino ya no está disponible. Elige otra "
-        "o vuelve a «junto al original».")
+        "o vuelve a «junto al original»."
+    )
 
 
 def test_output_dir_field_without_settings_never_writes_a_file(tmp_path):

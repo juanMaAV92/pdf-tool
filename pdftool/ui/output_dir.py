@@ -27,9 +27,12 @@ class OutputDirField(ft.Row):
     carpeta borrada), se vuelve al default en silencio.
     """
 
-    def __init__(self, settings: Settings | None,
-                 on_change: Callable[[], None] | None = None,
-                 settings_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None,
+        on_change: Callable[[], None] | None = None,
+        settings_path: Path | None = None,
+    ) -> None:
         # Sin Settings real (p. ej. tests que no pasan ctx.settings), el
         # widget usa una privada solo para no romper pero nunca persiste:
         # de lo contrario `set_dir` escribiría en el settings.json real.
@@ -41,17 +44,22 @@ class OutputDirField(ft.Row):
         self.settings_path = settings_path
         self._dir = self._restore()
 
-        self.label = ft.Text(_DEFAULT_LABEL, max_lines=1,
-                            overflow=ft.TextOverflow.ELLIPSIS, expand=True)
-        self.change_btn = ft.TextButton("Cambiar…", icon=ft.Icons.FOLDER_OPEN,
-                                        on_click=self._pick)
-        self.reset_btn = ft.IconButton(ft.Icons.UNDO,
-                                       tooltip="Volver a «junto al original»",
-                                       on_click=lambda _e: self.set_dir(None))
+        self.label = ft.Text(
+            _DEFAULT_LABEL, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, expand=True
+        )
+        self.change_btn = ft.TextButton(
+            "Cambiar…", icon=ft.Icons.FOLDER_OPEN, on_click=self._pick
+        )
+        self.reset_btn = ft.IconButton(
+            ft.Icons.UNDO,
+            tooltip="Volver a «junto al original»",
+            on_click=lambda _e: self.set_dir(None),
+        )
         self._picker = ft.FilePicker(on_result=self._on_pick_result)
 
-        super().__init__([ft.Text("Guardar en:"), self.label,
-                          self.change_btn, self.reset_btn])
+        super().__init__(
+            [ft.Text("Guardar en:"), self.label, self.change_btn, self.reset_btn]
+        )
         self._render()
 
     # ---- estado ----
@@ -104,8 +112,9 @@ class OutputDirField(ft.Row):
         return None
 
     def _render(self) -> None:
-        self.label.value = (_DEFAULT_LABEL if self._dir is None
-                            else abbreviate_home(self._dir))
+        self.label.value = (
+            _DEFAULT_LABEL if self._dir is None else abbreviate_home(self._dir)
+        )
         self.label.tooltip = None if self._dir is None else str(self._dir)
         self.reset_btn.visible = self._dir is not None
 

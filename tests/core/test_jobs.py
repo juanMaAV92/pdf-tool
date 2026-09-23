@@ -12,10 +12,12 @@ def test_run_job_calls_on_done_with_result():
         progress(0.5, "medio")
         return "RESULT"
 
-    run_job(work,
-            on_progress=lambda p, m: box.setdefault("prog", (p, m)),
-            on_done=lambda r: (box.update(result=r), done.set()),
-            on_error=lambda e: (box.update(error=e), done.set()))
+    run_job(
+        work,
+        on_progress=lambda p, m: box.setdefault("prog", (p, m)),
+        on_done=lambda r: (box.update(result=r), done.set()),
+        on_error=lambda e: (box.update(error=e), done.set()),
+    )
 
     assert done.wait(timeout=5)
     assert box["result"] == "RESULT"
@@ -29,10 +31,12 @@ def test_run_job_calls_on_error_on_exception():
     def work(progress):
         raise ValueError("boom")
 
-    run_job(work,
-            on_progress=lambda p, m: None,
-            on_done=lambda r: done.set(),
-            on_error=lambda e: (box.update(error=e), done.set()))
+    run_job(
+        work,
+        on_progress=lambda p, m: None,
+        on_done=lambda r: done.set(),
+        on_error=lambda e: (box.update(error=e), done.set()),
+    )
 
     assert done.wait(timeout=5)
     assert isinstance(box["error"], ValueError)
@@ -52,10 +56,12 @@ def test_run_job_cancellation_stops_at_next_progress():
         finally:
             stopped.set()
 
-    handle = run_job(work,
-                     on_progress=lambda *_: None,
-                     on_done=lambda _: callbacks.append("done"),
-                     on_error=lambda _: callbacks.append("error"))
+    handle = run_job(
+        work,
+        on_progress=lambda *_: None,
+        on_done=lambda _: callbacks.append("done"),
+        on_error=lambda _: callbacks.append("error"),
+    )
 
     assert started.wait(timeout=5)
     handle.cancel()

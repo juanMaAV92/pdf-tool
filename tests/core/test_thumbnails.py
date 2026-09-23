@@ -17,8 +17,9 @@ def _pdf(path: Path, pages: int = 1) -> Path:
 def _protected_pdf(path: Path) -> Path:
     with fitz.open() as doc:
         doc.new_page()
-        doc.save(str(path), encryption=fitz.PDF_ENCRYPT_AES_256,
-                 owner_pw="x", user_pw="x")
+        doc.save(
+            str(path), encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw="x", user_pw="x"
+        )
     return path
 
 

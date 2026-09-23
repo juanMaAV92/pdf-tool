@@ -16,6 +16,7 @@ def _fake_render(counter):
     def fake(path, page_index=0, height_px=56):
         counter.append(path)
         return b"png-falso"
+
     return fake
 
 
@@ -24,15 +25,17 @@ def test_cache_avoids_second_render(monkeypatch):
     monkeypatch.setattr(thumbs, "render_thumbnail", _fake_render(rendered))
     ready = []
 
-    t = thumbs.load_async([Path("/tmp/a.pdf")], lambda p, b: ready.append((p, b)),
-                          is_current=lambda: True)
+    t = thumbs.load_async(
+        [Path("/tmp/a.pdf")], lambda p, b: ready.append((p, b)), is_current=lambda: True
+    )
     t.join(timeout=5)
-    t = thumbs.load_async([Path("/tmp/a.pdf")], lambda p, b: ready.append((p, b)),
-                          is_current=lambda: True)
+    t = thumbs.load_async(
+        [Path("/tmp/a.pdf")], lambda p, b: ready.append((p, b)), is_current=lambda: True
+    )
     t.join(timeout=5)
 
-    assert len(rendered) == 1          # segunda vez sale de caché
-    assert len(ready) == 2             # pero on_ready se notifica igual
+    assert len(rendered) == 1  # segunda vez sale de caché
+    assert len(ready) == 2  # pero on_ready se notifica igual
     assert ready[0] == (Path("/tmp/a.pdf"), b"png-falso")
     assert thumbs.get_cached(Path("/tmp/a.pdf")) == b"png-falso"
 
@@ -46,8 +49,9 @@ def test_none_result_is_cached_and_not_retried(monkeypatch):
 
     monkeypatch.setattr(thumbs, "render_thumbnail", fake_none)
     for _ in range(2):
-        t = thumbs.load_async([Path("/tmp/p.pdf")], lambda p, b: None,
-                              is_current=lambda: True)
+        t = thumbs.load_async(
+            [Path("/tmp/p.pdf")], lambda p, b: None, is_current=lambda: True
+        )
         t.join(timeout=5)
 
     assert len(rendered) == 1
@@ -73,8 +77,9 @@ def test_stale_generation_never_notifies(monkeypatch):
     monkeypatch.setattr(thumbs, "render_thumbnail", _fake_render([]))
     ready = []
 
-    t = thumbs.load_async([Path("/tmp/a.pdf")], lambda p, b: ready.append(p),
-                          is_current=lambda: False)
+    t = thumbs.load_async(
+        [Path("/tmp/a.pdf")], lambda p, b: ready.append(p), is_current=lambda: False
+    )
     t.join(timeout=5)
 
     assert ready == []

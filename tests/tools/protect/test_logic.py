@@ -18,8 +18,7 @@ def _pdf(path: Path) -> Path:
 def _protected_pdf(path: Path, pw: str = "clave") -> Path:
     with fitz.open() as d:
         d.new_page().insert_text((72, 72), "Secreto")
-        d.save(str(path), encryption=fitz.PDF_ENCRYPT_AES_256,
-               owner_pw=pw, user_pw=pw)
+        d.save(str(path), encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw=pw, user_pw=pw)
     return path
 
 
@@ -75,8 +74,11 @@ def test_remove_wrong_password_raises(tmp_path):
 def test_progress_reaches_one(tmp_path):
     plain = _pdf(tmp_path / "doc.pdf")
     seen = []
-    protect([plain], ProtectParams(mode="protect", password="x"),
-            progress=lambda p, m: seen.append(p))
+    protect(
+        [plain],
+        ProtectParams(mode="protect", password="x"),
+        progress=lambda p, m: seen.append(p),
+    )
     assert seen and seen[-1] == 1.0
 
 
@@ -86,7 +88,11 @@ def test_protect_multiple_pdfs(tmp_path):
     res = protect([a, b], ProtectParams(mode="protect", password="clave"))
     assert len(res.outputs) == 2
     assert res.summary == "2 PDFs protegidos"
-    assert res.details == ["→ a_protegido.pdf", "→ b_protegido.pdf"]
+    assert [item.message for item in res.items] == [
+        "→ a_protegido.pdf",
+        "→ b_protegido.pdf",
+    ]
+    assert all(item.ok for item in res.items)
     for out in res.outputs:
         d = fitz.open(str(out))
         try:
@@ -117,8 +123,9 @@ def test_mixed_batch_continues_and_reports(tmp_path):
     assert len(res.outputs) == 1
     assert res.outputs[0].name == "ok_sin_clave.pdf"
     assert res.summary == "1 de 2 PDFs procesados"
-    assert res.details[0] == "→ ok_sin_clave.pdf"
-    assert "Contraseña incorrecta" in res.details[1]
+    assert res.items[0].message == "→ ok_sin_clave.pdf"
+    assert "Contraseña incorrecta" in res.items[1].message
+    assert res.items[1].ok is False
 
 
 def test_all_fail_raises(tmp_path):
@@ -128,10 +135,10 @@ def test_all_fail_raises(tmp_path):
         protect([a, b], ProtectParams(mode="remove", password="clave"))
 
 
-def test_single_file_has_no_details(tmp_path):
+def test_single_file_has_no_items(tmp_path):
     plain = _pdf(tmp_path / "doc.pdf")
     res = protect([plain], ProtectParams(mode="protect", password="x"))
-    assert res.details is None
+    assert res.items is None
     assert res.summary.startswith("PDF protegido → ")
 
 
@@ -139,8 +146,11 @@ def test_multi_progress_labels_and_completion(tmp_path):
     a = _pdf(tmp_path / "a.pdf")
     b = _pdf(tmp_path / "b.pdf")
     seen = []
-    protect([a, b], ProtectParams(mode="protect", password="x"),
-            progress=lambda p, m: seen.append((p, m)))
+    protect(
+        [a, b],
+        ProtectParams(mode="protect", password="x"),
+        progress=lambda p, m: seen.append((p, m)),
+    )
     assert seen[-1][0] == 1.0
     assert any(m.startswith("[1/2] a.pdf:") for _p, m in seen)
     assert any(m.startswith("[2/2] b.pdf:") for _p, m in seen)
@@ -160,8 +170,12 @@ def test_remove_password_does_not_overwrite_a_previous_output(tmp_path):
     a = _pdf(tmp_path / "a.pdf")
     protected = tmp_path / "a_protegido.pdf"
     with fitz.open(str(a)) as doc:
-        doc.save(str(protected), encryption=fitz.PDF_ENCRYPT_AES_256,
-                 owner_pw="clave", user_pw="clave")
+        doc.save(
+            str(protected),
+            encryption=fitz.PDF_ENCRYPT_AES_256,
+            owner_pw="clave",
+            user_pw="clave",
+        )
     (tmp_path / "a_protegido_sin_clave.pdf").write_bytes(b"previo")
 
     res = protect([protected], ProtectParams(mode="remove", password="clave"))
@@ -175,8 +189,9 @@ def test_protect_writes_to_output_dir(tmp_path):
     destino.mkdir()
     a = _pdf(tmp_path / "a.pdf")
 
-    res = protect([a], ProtectParams(mode="protect", password="clave",
-                                     output_dir=destino))
+    res = protect(
+        [a], ProtectParams(mode="protect", password="clave", output_dir=destino)
+    )
 
     assert res.outputs[0] == destino / "a_protegido.pdf"
     assert res.outputs[0].exists()

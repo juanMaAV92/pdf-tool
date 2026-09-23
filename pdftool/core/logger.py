@@ -77,7 +77,8 @@ def setup_logging() -> None:
     logger.propagate = False  # sin ruido de/para el root (pymupdf, flet)
     # Histórico mínimo a propósito (~32 KB total): basta para diagnosticar el
     # último fallo sin acumular una bitácora que parezca vigilancia del usuario.
-    handler = RotatingFileHandler(log_dir() / "pdf-tool.log", maxBytes=16_000,
-                                  backupCount=1, encoding="utf-8")
+    handler = RotatingFileHandler(
+        log_dir() / "pdf-tool.log", maxBytes=16_000, backupCount=1, encoding="utf-8"
+    )
     handler.setFormatter(_SanitizingFormatter(_FORMAT))
     logger.addHandler(handler)

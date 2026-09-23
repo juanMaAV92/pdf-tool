@@ -16,14 +16,14 @@ def _noop(_p: float, _m: str) -> None:
     pass
 
 
-def output_path_for_watermark(input_path: Path,
-                              out_dir: Path | None = None) -> Path:
+def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> Path:
     """Política de nombre de Marca de agua; la colisión la resuelve el helper."""
     return output_path(input_path, "marca", out_dir=out_dir)
 
 
-def watermark(inputs: list[Path], params: WatermarkParams,
-              progress: Progress = _noop) -> ToolResult:
+def watermark(
+    inputs: list[Path], params: WatermarkParams, progress: Progress = _noop
+) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")
     input_path = Path(inputs[0])
@@ -51,7 +51,8 @@ def watermark(inputs: list[Path], params: WatermarkParams,
                     while x < rect.width + step_x:
                         pivot = fitz.Point(x, y)
                         page.insert_text(
-                            pivot, text,
+                            pivot,
+                            text,
                             fontsize=params.font_size,
                             color=tuple(params.color),
                             fill_opacity=params.opacity,

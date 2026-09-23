@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import threading
-from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from collections import OrderedDict
+from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from pathlib import Path
 from typing import Callable
 
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX, render_thumbnail
 
 MISSING = object()  # nunca se intentó (distinto de None = no renderizable)
-_CACHE_MAX = 512    # tope duro: ~2-5 MB de RAM; al superarlo expulsa el LRU
-_MAX_WORKERS = 2    # renderizar miniaturas es CPU/memoria intensivo
+_CACHE_MAX = 512  # tope duro: ~2-5 MB de RAM; al superarlo expulsa el LRU
+_MAX_WORKERS = 2  # renderizar miniaturas es CPU/memoria intensivo
 
 _cache: OrderedDict[tuple[str, int, int], bytes | None] = OrderedDict()
 _lock = threading.Lock()
 _executor_lock = threading.Lock()
 _executor: ThreadPoolExecutor | None = ThreadPoolExecutor(
-    max_workers=_MAX_WORKERS, thread_name_prefix="pdftool-thumbnail")
+    max_workers=_MAX_WORKERS, thread_name_prefix="pdftool-thumbnail"
+)
 
 
 class ThumbnailTask:
@@ -42,7 +43,8 @@ def _get_executor() -> ThreadPoolExecutor:
     with _executor_lock:
         if _executor is None:
             _executor = ThreadPoolExecutor(
-                max_workers=_MAX_WORKERS, thread_name_prefix="pdftool-thumbnail")
+                max_workers=_MAX_WORKERS, thread_name_prefix="pdftool-thumbnail"
+            )
         return _executor
 
 
@@ -74,9 +76,11 @@ def _store(key: tuple[str, int, int], value: bytes | None) -> None:
             _cache.popitem(last=False)
 
 
-def load_async(paths: list[Path],
-               on_ready: Callable[[Path, bytes | None], None],
-               is_current: Callable[[], bool]) -> ThumbnailTask:
+def load_async(
+    paths: list[Path],
+    on_ready: Callable[[Path, bytes | None], None],
+    is_current: Callable[[], bool],
+) -> ThumbnailTask:
     """Renderiza `paths` en un worker compartido y notifica cada resultado.
 
     `is_current` es el token de generación del panel: si devuelve False la lista
@@ -84,6 +88,7 @@ def load_async(paths: list[Path],
     El executor limita el número de renders simultáneos; una tarea que ya empezó
     se detiene cooperativamente en el siguiente archivo.
     """
+
     def _target() -> None:
         for path in paths:
             if not is_current():

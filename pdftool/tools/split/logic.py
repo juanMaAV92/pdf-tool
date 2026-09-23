@@ -101,8 +101,9 @@ def _ranges_for(params: SplitParams, page_count: int) -> list[tuple[int, int]]:
     return resolve_ranges(parse_ranges(params.ranges), page_count)
 
 
-def split(inputs: list[Path], params: SplitParams,
-          progress: Progress = _noop) -> ToolResult:
+def split(
+    inputs: list[Path], params: SplitParams, progress: Progress = _noop
+) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")
 
@@ -119,8 +120,9 @@ def split(inputs: list[Path], params: SplitParams,
         progress(0.0, f"Dividiendo en {total} archivos…")
 
         for i, (start, end) in enumerate(ranges):
-            out = output_path(src_path, _label(start, end, width),
-                              out_dir=params.output_dir)
+            out = output_path(
+                src_path, _label(start, end, width), out_dir=params.output_dir
+            )
             with atomic_output(out) as temporary:
                 with fitz.open() as dst:
                     dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)

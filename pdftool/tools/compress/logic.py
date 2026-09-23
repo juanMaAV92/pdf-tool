@@ -7,7 +7,7 @@ import fitz
 
 from pdftool.core.atomic import atomic_copy, atomic_output
 from pdftool.core.naming import output_path
-from pdftool.core.plugin import Progress, ToolResult
+from pdftool.core.plugin import FileResult, Progress, ToolResult
 from pdftool.tools.compress.params import CompressParams
 
 _ATTEMPTS = [
@@ -59,12 +59,14 @@ def _clean_stem(stem: str) -> str:
     return _STEM_NOISE.sub("", stem)
 
 
-def output_path_for(input_path: Path, target_mb: float,
-                    out_dir: Path | None = None) -> Path:
+def output_path_for(
+    input_path: Path, target_mb: float, out_dir: Path | None = None
+) -> Path:
     """Política de nombre de Comprimir; la colisión la resuelve el helper."""
     p = Path(input_path)
-    return output_path(p, _target_label(target_mb), stem=_clean_stem(p.stem),
-                       out_dir=out_dir)
+    return output_path(
+        p, _target_label(target_mb), stem=_clean_stem(p.stem), out_dir=out_dir
+    )
 
 
 def _simple_compress(src: Path, dst: Path) -> None:
@@ -90,8 +92,9 @@ def _rerender(src: Path, dst: Path, *, max_dimension: int, jpg_quality: int) -> 
             doc.save(str(temporary), garbage=4, deflate=True)
 
 
-def _preserve_compress(src: Path, dst: Path, *, dpi_threshold: int,
-                       dpi_target: int, quality: int) -> None:
+def _preserve_compress(
+    src: Path, dst: Path, *, dpi_threshold: int, dpi_target: int, quality: int
+) -> None:
     """Optimiza imágenes sin convertir las páginas completas en imágenes."""
     with atomic_output(dst) as temporary:
         with fitz.open(src) as doc:
@@ -103,14 +106,22 @@ def _preserve_compress(src: Path, dst: Path, *, dpi_threshold: int,
                     quality=quality,
                 )
             doc.save(
-                str(temporary), garbage=4, deflate=True, deflate_images=True,
-                deflate_fonts=True, clean=True,
+                str(temporary),
+                garbage=4,
+                deflate=True,
+                deflate_images=True,
+                deflate_fonts=True,
+                clean=True,
             )
 
 
-def _compress_one(input_path: Path, target_mb: float, progress: Progress,
-                  out_dir: Path | None = None,
-                  mode: str = "max") -> tuple[Path, str, float, float]:
+def _compress_one(
+    input_path: Path,
+    target_mb: float,
+    progress: Progress,
+    out_dir: Path | None = None,
+    mode: str = "max",
+) -> tuple[Path, str, float, float]:
     out = output_path_for(input_path, target_mb, out_dir)
     original = _size_mb(input_path)
     progress(0.0, f"Tamaño original: {original:.2f} MB")
@@ -129,16 +140,21 @@ def _compress_one(input_path: Path, target_mb: float, progress: Progress,
 
     if mode == "preserve":
         for i, attempt in enumerate(_PRESERVE_ATTEMPTS):
-            progress((i + 1) / (len(_PRESERVE_ATTEMPTS) + 1),
-                     f"Optimización de imágenes {i + 1}: "
-                     f"{attempt['dpi_target']} dpi, {attempt['quality']}%")
+            progress(
+                (i + 1) / (len(_PRESERVE_ATTEMPTS) + 1),
+                f"Optimización de imágenes {i + 1}: "
+                f"{attempt['dpi_target']} dpi, {attempt['quality']}%",
+            )
             _preserve_compress(input_path, out, **attempt)
             current = _size_mb(out)
             if current <= target_mb:
                 progress(1.0, f"Listo: {current:.2f} MB (contenido preservado)")
-                return (out, f"{original:.2f} MB → {current:.2f} MB "
-                        "(contenido preservado)",
-                        original, current)
+                return (
+                    out,
+                    f"{original:.2f} MB → {current:.2f} MB (contenido preservado)",
+                    original,
+                    current,
+                )
 
         progress(1.0, f"Mejor esfuerzo: {current:.2f} MB (contenido preservado)")
         return (
@@ -151,8 +167,10 @@ def _compress_one(input_path: Path, target_mb: float, progress: Progress,
 
     n = len(_ATTEMPTS)
     for i, attempt in enumerate(_ATTEMPTS):
-        progress((i + 1) / (n + 1),
-                 f"Intento {i + 1}: {attempt['max_dimension']}px, {attempt['jpg_quality']}%")
+        progress(
+            (i + 1) / (n + 1),
+            f"Intento {i + 1}: {attempt['max_dimension']}px, {attempt['jpg_quality']}%",
+        )
         _rerender(input_path, out, **attempt)
         current = _size_mb(out)
         if current <= target_mb:
@@ -160,12 +178,17 @@ def _compress_one(input_path: Path, target_mb: float, progress: Progress,
             return out, f"{original:.2f} MB → {current:.2f} MB", original, current
 
     progress(1.0, f"Mejor esfuerzo: {current:.2f} MB")
-    return (out, f"{original:.2f} MB → {current:.2f} MB (no se alcanzó el objetivo)",
-            original, current)
+    return (
+        out,
+        f"{original:.2f} MB → {current:.2f} MB (no se alcanzó el objetivo)",
+        original,
+        current,
+    )
 
 
-def compress(inputs: list[Path], params: CompressParams,
-             progress: Progress = _noop) -> ToolResult:
+def compress(
+    inputs: list[Path], params: CompressParams, progress: Progress = _noop
+) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")
     paths = [Path(p) for p in inputs]
@@ -177,19 +200,25 @@ def compress(inputs: list[Path], params: CompressParams,
     total = len(paths)
     outputs: list[Path] = []
     summaries: list[str] = []
+    items: list[FileResult] = []
     total_original = 0.0
     total_final = 0.0
 
     for index, path in enumerate(paths):
-        def scoped(pct: float, msg: str, _i: int = index, _name: str = path.name) -> None:
+
+        def scoped(
+            pct: float, msg: str, _i: int = index, _name: str = path.name
+        ) -> None:
             overall = (_i + pct) / total
             label = f"[{_i + 1}/{total}] {_name}: {msg}" if total > 1 else msg
             progress(overall, label)
 
         out, summary, original, final = _compress_one(
-            path, target_mb, scoped, params.output_dir, params.mode)
+            path, target_mb, scoped, params.output_dir, params.mode
+        )
         outputs.append(out)
         summaries.append(summary)
+        items.append(FileResult(path, out, True, summary))
         total_original += original
         total_final += final
 
@@ -202,7 +231,8 @@ def compress(inputs: list[Path], params: CompressParams,
     progress(1.0, f"{total} archivos comprimidos")
     return ToolResult(
         outputs=outputs,
-        summary=(f"{total} archivos · "
-                 f"{total_original:.2f} MB → {total_final:.2f} MB{tail}"),
-        details=summaries,
+        summary=(
+            f"{total} archivos · {total_original:.2f} MB → {total_final:.2f} MB{tail}"
+        ),
+        items=items,
     )

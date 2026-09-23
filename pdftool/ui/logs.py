@@ -24,6 +24,7 @@ def make_log_picker() -> ft.FilePicker:
 
     El llamador debe añadirlo a page.overlay (una sola vez).
     """
+
     def on_save(e: ft.FilePickerResultEvent) -> None:
         if not e.path:  # diálogo cancelado (o modo web sin ruta)
             return
@@ -38,8 +39,11 @@ def make_log_picker() -> ft.FilePicker:
 def download_log_button(picker: ft.FilePicker) -> ft.Control:
     """Botón "Descargar log": abre el diálogo de guardado sobre `picker`."""
     return ft.TextButton(
-        "Descargar log", icon=ft.Icons.DOWNLOAD,
+        "Descargar log",
+        icon=ft.Icons.DOWNLOAD,
         on_click=lambda _e: picker.save_file(
-            dialog_title="Guardar log", file_name="pdf-tool-log.txt",
-            allowed_extensions=["txt"]),
+            dialog_title="Guardar log",
+            file_name="pdf-tool-log.txt",
+            allowed_extensions=["txt"],
+        ),
     )

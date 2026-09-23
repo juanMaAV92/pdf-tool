@@ -5,8 +5,7 @@ from pathlib import Path
 import pytest
 
 import pdftool.core.logger as logger_mod
-from pdftool.core.logger import (_SanitizingFormatter, log_paths, sanitize,
-                                 setup_logging)
+from pdftool.core.logger import _SanitizingFormatter, log_paths, sanitize, setup_logging
 
 
 @pytest.fixture(autouse=True)
@@ -38,7 +37,9 @@ def test_sanitize_redacts_windows_user_paths():
 
 
 def test_sanitize_redacts_full_path_not_just_user_segment():
-    out = sanitize("No such file or directory: '/Users/maria/Documentos/Nomina-enero.pdf'")
+    out = sanitize(
+        "No such file or directory: '/Users/maria/Documentos/Nomina-enero.pdf'"
+    )
     assert "Documentos" not in out
     assert "Nomina-enero" not in out
 
@@ -57,11 +58,13 @@ def test_sanitize_redacts_bare_document_filenames():
 def test_formatter_traceback_hides_document_name():
     fmt = _SanitizingFormatter("%(message)s")
     try:
-        raise FileNotFoundError(2, "No such file or directory",
-                                "/Users/maria/Documentos/Nomina-enero.pdf")
+        raise FileNotFoundError(
+            2, "No such file or directory", "/Users/maria/Documentos/Nomina-enero.pdf"
+        )
     except FileNotFoundError:
-        record = logging.LogRecord("pdftool", logging.ERROR, __file__, 1,
-                                   "error", (), sys.exc_info())
+        record = logging.LogRecord(
+            "pdftool", logging.ERROR, __file__, 1, "error", (), sys.exc_info()
+        )
     out = fmt.format(record)
     assert "Nomina-enero" not in out
     assert "Documentos" not in out
@@ -77,8 +80,9 @@ def test_formatter_sanitizes_traceback():
     try:
         raise FileNotFoundError("/Users/maria/factura.pdf")
     except FileNotFoundError:
-        record = logging.LogRecord("pdftool", logging.ERROR, __file__, 1,
-                                   "error", (), sys.exc_info())
+        record = logging.LogRecord(
+            "pdftool", logging.ERROR, __file__, 1, "error", (), sys.exc_info()
+        )
     out = fmt.format(record)
     assert "Traceback" in out
     assert "/Users/maria" not in out

@@ -18,7 +18,8 @@ def atomic_output(target: Path) -> Iterator[Path]:
     """
     target = Path(target)
     fd, temporary_name = tempfile.mkstemp(
-        prefix=".pdf-tool-", suffix=target.suffix, dir=target.parent)
+        prefix=".pdf-tool-", suffix=target.suffix, dir=target.parent
+    )
     os.close(fd)
     temporary = Path(temporary_name)
     try:
@@ -34,3 +35,9 @@ def atomic_copy(source: Path, target: Path) -> None:
     """Copia `source` sin dejar una salida parcial si la copia falla."""
     with atomic_output(target) as temporary:
         shutil.copy2(source, temporary)
+
+
+def atomic_write_text(target: Path, text: str, *, encoding: str = "utf-8") -> None:
+    """Escribe texto y publica el archivo solo cuando la escritura termina."""
+    with atomic_output(target) as temporary:
+        temporary.write_text(text, encoding=encoding)

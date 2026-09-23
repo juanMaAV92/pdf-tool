@@ -1,4 +1,4 @@
-from pdftool.core.updater import is_newer, check_for_update
+from pdftool.core.updater import check_for_update, is_newer
 
 
 def test_is_newer_true():
@@ -15,15 +15,17 @@ def test_is_newer_handles_v_prefix():
 
 def test_check_for_update_returns_url_when_newer():
     fake = {"tag_name": "v0.2.0", "html_url": "https://example/release"}
-    url = check_for_update(current="0.1.0", repo="me/pdf-tool",
-                           http_get=lambda _u: fake)
+    url = check_for_update(
+        current="0.1.0", repo="me/pdf-tool", http_get=lambda _u: fake
+    )
     assert url == "https://example/release"
 
 
 def test_check_for_update_returns_none_when_current():
     fake = {"tag_name": "v0.1.0", "html_url": "https://example/release"}
-    url = check_for_update(current="0.1.0", repo="me/pdf-tool",
-                           http_get=lambda _u: fake)
+    url = check_for_update(
+        current="0.1.0", repo="me/pdf-tool", http_get=lambda _u: fake
+    )
     assert url is None
 
 
@@ -49,6 +51,7 @@ def test_check_for_update_survives_prerelease_tag():
     # Antes: _parse reventaba y check_for_update devolvía None en silencio,
     # dejando de avisar de nuevas versiones. Ahora debe detectar la novedad.
     fake = {"tag_name": "v1.2.0-beta.1", "html_url": "https://example/release"}
-    url = check_for_update(current="1.1.0", repo="me/pdf-tool",
-                           http_get=lambda _u: fake)
+    url = check_for_update(
+        current="1.1.0", repo="me/pdf-tool", http_get=lambda _u: fake
+    )
     assert url == "https://example/release"

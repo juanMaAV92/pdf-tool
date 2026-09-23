@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-_FILE_NOT_FOUND = ("No se encontró el archivo. ¿Lo moviste o borraste? "
-                   "Vuelve a elegirlo.")
-_PERMISSION = ("No se pudo guardar el resultado. Cierra el archivo si lo "
-               "tienes abierto e inténtalo de nuevo.")
+_FILE_NOT_FOUND = (
+    "No se encontró el archivo. ¿Lo moviste o borraste? Vuelve a elegirlo."
+)
+_PERMISSION = (
+    "No se pudo guardar el resultado. Cierra el archivo si lo "
+    "tienes abierto e inténtalo de nuevo."
+)
 _GENERIC = "No se pudo procesar el PDF. Puede estar dañado o protegido."
 
 
