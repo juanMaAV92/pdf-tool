@@ -1,7 +1,16 @@
 import threading
 import time
 
-from pdftool.core.jobs import JobHandle, run_job
+import pytest
+
+from pdftool.core.jobs import JobHandle, run_job, shutdown_job_executor
+
+
+@pytest.fixture(autouse=True)
+def _clean_executor():
+    shutdown_job_executor()
+    yield
+    shutdown_job_executor()
 
 
 def test_run_job_calls_on_done_with_result():
@@ -85,3 +94,78 @@ def test_run_job_suppresses_callbacks_for_stale_generation():
 
     assert isinstance(handle, JobHandle)
     assert callbacks == []
+
+
+def test_shared_executor_bounds_parallel_jobs_and_cancels_queue():
+    release = threading.Event()
+    first_started = threading.Event()
+    second_started = threading.Event()
+    third_started = threading.Event()
+
+    def blocking(started):
+        def work(_progress):
+            started.set()
+            release.wait(timeout=5)
+
+        return work
+
+    first = run_job(
+        blocking(first_started), lambda *_: None, lambda _: None, lambda _: None
+    )
+    second = run_job(
+        blocking(second_started), lambda *_: None, lambda _: None, lambda _: None
+    )
+    assert first_started.wait(timeout=5)
+    assert second_started.wait(timeout=5)
+
+    third = run_job(
+        blocking(third_started), lambda *_: None, lambda _: None, lambda _: None
+    )
+    third.cancel()
+    release.set()
+    first.join(timeout=5)
+    second.join(timeout=5)
+    third.join(timeout=5)
+
+    assert not third_started.is_set()
+
+
+def test_shutdown_cancels_running_job_before_its_next_progress():
+    started = threading.Event()
+    release = threading.Event()
+    callbacks = []
+
+    def work(progress):
+        started.set()
+        release.wait(timeout=5)
+        progress(1.0, "terminado")
+
+    handle = run_job(
+        work,
+        on_progress=lambda *_: callbacks.append("progress"),
+        on_done=lambda _: callbacks.append("done"),
+        on_error=lambda _: callbacks.append("error"),
+    )
+    assert started.wait(timeout=5)
+
+    shutdown_job_executor()
+    release.set()
+    handle.join(timeout=5)
+
+    assert handle.cancelled
+    assert callbacks == []
+
+
+def test_executor_is_available_again_after_shutdown():
+    shutdown_job_executor()
+    done = threading.Event()
+
+    handle = run_job(
+        lambda _progress: "nuevo trabajo",
+        on_progress=lambda *_: None,
+        on_done=lambda _: done.set(),
+        on_error=lambda _: None,
+    )
+
+    assert done.wait(timeout=5)
+    handle.join(timeout=5)
