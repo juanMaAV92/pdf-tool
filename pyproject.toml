@@ -20,6 +20,7 @@ platformdirs = "^4.2.0"
 pytest = "^8.0.0"
 ruff = "^0.16.8"
 mypy = "^2.3.1"
+pytest-cov = "^7.1.0"
 
 [tool.poetry.scripts]
 pdftool = "pdftool.main:main"

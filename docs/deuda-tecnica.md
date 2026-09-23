@@ -37,9 +37,9 @@ visual/empaquetada de la deuda anterior.
 
 No volver a abrir estos temas como deuda: jobs y miniaturas tienen cancelación y
 generaciones; las salidas PDF y los ajustes se escriben atómicamente; los lotes
-usan `FileResult` por archivo; Ruff valida formato/lint y mypy comprueba el
-núcleo; y la carpeta de salida, colisiones, logging, errores y actualización ya
-están integrados.
+usan `FileResult` por archivo; CI exige formato/lint con Ruff, tipos del núcleo
+con mypy y al menos 85% de cobertura; y la carpeta de salida, colisiones,
+logging, errores y actualización ya están integrados.
 
 ## No son deuda prioritaria
 
