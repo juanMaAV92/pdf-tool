@@ -33,16 +33,27 @@ class WatermarkTool(SingleFileToolPanel):
     pick_label = "Elegir PDF"
 
     def extra_controls(self) -> list[ft.Control]:
-        self._text_field = ft.TextField(label="Texto de la marca", value="CONFIDENCIAL",
-                                         width=320)
-        self._opacity = ft.Slider(min=0.05, max=0.6, value=0.15, divisions=11,
-                                  label="{value}", round=2, width=320)
+        self._text_field = ft.TextField(
+            label="Texto de la marca", value="CONFIDENCIAL", width=320
+        )
+        self._opacity = ft.Slider(
+            min=0.05,
+            max=0.6,
+            value=0.15,
+            divisions=11,
+            label="{value}",
+            round=2,
+            width=320,
+        )
         self._color_dd = ft.Dropdown(
-            label="Color", width=160, value="Gris",
+            label="Color",
+            width=160,
+            value="Gris",
             options=[ft.dropdown.Option(name) for name in _COLORS],
         )
-        self._size_field = ft.TextField(label="Tamaño", value="40", width=120,
-                                        keyboard_type=ft.KeyboardType.NUMBER)
+        self._size_field = ft.TextField(
+            label="Tamaño", value="40", width=120, keyboard_type=ft.KeyboardType.NUMBER
+        )
         return [
             self._text_field,
             ft.Row([self._color_dd, self._size_field]),

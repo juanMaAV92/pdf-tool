@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pdftool.core.atomic import atomic_copy, atomic_output
+from pdftool.core.atomic import atomic_copy, atomic_output, atomic_write_text
 
 
 def _temporary_files(path: Path) -> list[Path]:
@@ -41,4 +41,13 @@ def test_atomic_copy_publishes_complete_copy(tmp_path):
     atomic_copy(source, target)
 
     assert target.read_bytes() == source.read_bytes()
+    assert _temporary_files(target) == []
+
+
+def test_atomic_write_text_publishes_complete_text(tmp_path):
+    target = tmp_path / "settings.json"
+
+    atomic_write_text(target, '{"theme_mode":"dark"}')
+
+    assert target.read_text(encoding="utf-8") == '{"theme_mode":"dark"}'
     assert _temporary_files(target) == []

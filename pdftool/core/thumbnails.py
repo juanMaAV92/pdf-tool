@@ -7,8 +7,9 @@ import fitz
 THUMBNAIL_HEIGHT_PX = 56
 
 
-def render_thumbnail(path: Path, page_index: int = 0,
-                     height_px: int = THUMBNAIL_HEIGHT_PX) -> bytes | None:
+def render_thumbnail(
+    path: Path, page_index: int = 0, height_px: int = THUMBNAIL_HEIGHT_PX
+) -> bytes | None:
     """PNG de la página `page_index` a `height_px` de alto; None si no se puede.
 
     El fallo (protegido, corrupto, página inexistente) es un estado esperado del

@@ -71,8 +71,11 @@ def test_reset_returns_to_the_default(tmp_path):
 
 def test_on_change_fires_when_the_destination_changes(tmp_path):
     seen = []
-    field = OutputDirField(Settings(), on_change=lambda: seen.append(1),
-                           settings_path=tmp_path / "settings.json")
+    field = OutputDirField(
+        Settings(),
+        on_change=lambda: seen.append(1),
+        settings_path=tmp_path / "settings.json",
+    )
 
     field.set_dir(tmp_path)
     field.set_dir(None)

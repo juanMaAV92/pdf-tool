@@ -14,8 +14,9 @@ def _noop(_p: float, _m: str) -> None:
     pass
 
 
-def output_path_for_merge(inputs: list[Path], name: str | None = None,
-                          out_dir: Path | None = None) -> Path:
+def output_path_for_merge(
+    inputs: list[Path], name: str | None = None, out_dir: Path | None = None
+) -> Path:
     """Salida junto al primer PDF (o en el destino); `name` custom o `<primero>_merged`.
 
     Nunca pisa un archivo existente ni una de las entradas: si el nombre está
@@ -30,8 +31,9 @@ def output_path_for_merge(inputs: list[Path], name: str | None = None,
     return unique_path(carpeta / f"{base}.pdf", taken=inputs)
 
 
-def merge(inputs: list[Path], params: MergeParams,
-          progress: Progress = _noop) -> ToolResult:
+def merge(
+    inputs: list[Path], params: MergeParams, progress: Progress = _noop
+) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")
 

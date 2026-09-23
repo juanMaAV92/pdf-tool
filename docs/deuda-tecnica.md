@@ -14,27 +14,7 @@ aproximadamente 550 líneas. La solución prevista es extraer `MultiFileToolPane
 o los widgets de fila a módulos propios; la cuadrícula debe nacer fuera de este
 archivo.
 
-## 2. Contrato de resultados por archivo
-
-`ToolResult` todavía expone etiquetas de texto separadas de `outputs`. En lotes,
-la UI debe inferir si una fila tiene salida a partir de la posición y del formato
-del mensaje, lo que vuelve frágil el mapeo cuando hay fallos parciales.
-
-**Disparador:** antes de añadir una herramienta que multiplique los consumidores
-del resultado por archivo o ante otro bug de iconos/salidas. La solución prevista
-es introducir `FileResult(input_path, output_path, ok, message)` y migrar las
-herramientas por lote junto con `MultiFileToolPanel`.
-
-## 3. Persistencia resistente de ajustes
-
-`Settings` se guarda como JSON directamente. Un archivo corrupto puede impedir la
-carga normal y una interrupción durante la escritura puede dejarlo incompleto.
-
-**Disparador:** antes de añadir más preferencias o si aparece un reporte de
-arranque con ajustes inválidos. La solución prevista es validar/fallback a
-defaults y publicar el JSON mediante escritura atómica.
-
-## 4. Cobertura visual y de empaquetado
+## 2. Cobertura visual y de empaquetado
 
 Los tests cubren lógica y estado de paneles con stubs. Todavía no se valida una
 ventana Flet real ni los instaladores en macOS y Windows.
@@ -43,7 +23,7 @@ ventana Flet real ni los instaladores en macOS y Windows.
 Flet. La validación debe cubrir layout, diálogos nativos, permisos, rutas y
 arranque de los artefactos empaquetados.
 
-## 5. Pin de Flet 0.28.2
+## 3. Pin de Flet 0.28.2
 
 La versión está fijada porque la app funciona y el `FilePicker` de esa serie es
 conocido. Migrar a una serie nueva toca todos los paneles, logging, navegación y
@@ -56,8 +36,10 @@ visual/empaquetada de la deuda anterior.
 ## Ya resuelto
 
 No volver a abrir estos temas como deuda: jobs y miniaturas tienen cancelación y
-generaciones; las salidas PDF se escriben atómicamente; y la carpeta de salida,
-colisiones, logging, errores y actualización ya están integrados.
+generaciones; las salidas PDF y los ajustes se escriben atómicamente; los lotes
+usan `FileResult` por archivo; CI exige formato/lint con Ruff, tipos del núcleo
+con mypy y al menos 85% de cobertura; y la carpeta de salida, colisiones,
+logging, errores y actualización ya están integrados.
 
 ## No son deuda prioritaria
 

@@ -23,8 +23,9 @@ def _tool_card(index, tool, on_open):
             [
                 ft.Icon(tool.meta.icon, size=30),
                 ft.Text(tool.meta.name, weight=ft.FontWeight.BOLD, size=15),
-                ft.Text(tool.meta.description, size=12,
-                        color=ft.Colors.ON_SURFACE_VARIANT),
+                ft.Text(
+                    tool.meta.description, size=12, color=ft.Colors.ON_SURFACE_VARIANT
+                ),
             ],
             spacing=6,
         ),
@@ -43,7 +44,9 @@ def _build_home(tools, on_open):
     # con pocas herramientas). Cuando haya muchas por categoría, se puede agrupar.
     cards = ft.Row(
         [_tool_card(i, t, on_open) for i, t in enumerate(tools)],
-        wrap=True, spacing=16, run_spacing=16,
+        wrap=True,
+        spacing=16,
+        run_spacing=16,
     )
     return ft.Column(
         [
@@ -52,7 +55,9 @@ def _build_home(tools, on_open):
             ft.Container(height=8),
             cards,
         ],
-        spacing=14, scroll=ft.ScrollMode.AUTO, expand=True,
+        spacing=14,
+        scroll=ft.ScrollMode.AUTO,
+        expand=True,
     )
 
 
@@ -118,7 +123,11 @@ def build_app(page: ft.Page) -> None:
 
     update_banner = ft.Banner(
         content=ft.Text("Hay una nueva versión disponible."),
-        actions=[ft.TextButton("Descargar", on_click=lambda e: page.launch_url(e.control.data))],
+        actions=[
+            ft.TextButton(
+                "Descargar", on_click=lambda e: page.launch_url(e.control.data)
+            )
+        ],
         bgcolor=ft.Colors.AMBER_100,
         leading=ft.Icon(ft.Icons.SYSTEM_UPDATE),
     )
@@ -135,18 +144,22 @@ def build_app(page: ft.Page) -> None:
                 on_click=lambda _e: page.launch_url(AUTHOR_SITE),
             ),
             download_log_button(log_picker),
-            ft.IconButton(ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema",
-                          on_click=toggle_theme),
+            ft.IconButton(
+                ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema", on_click=toggle_theme
+            ),
         ],
         alignment=ft.MainAxisAlignment.CENTER,
     )
 
     page.add(
-        ft.Column([
-            ft.Row([rail, ft.VerticalDivider(width=1), content], expand=True),
-            ft.Divider(height=1),
-            footer,
-        ], expand=True)
+        ft.Column(
+            [
+                ft.Row([rail, ft.VerticalDivider(width=1), content], expand=True),
+                ft.Divider(height=1),
+                footer,
+            ],
+            expand=True,
+        )
     )
     open_home()
 
@@ -159,5 +172,9 @@ def build_app(page: ft.Page) -> None:
             update_banner.actions[0].data = url
             page.open(update_banner)
 
-    run_job(_check, on_progress=lambda *_: None, on_done=_on_update,
-            on_error=lambda *_: None)
+    run_job(
+        _check,
+        on_progress=lambda *_: None,
+        on_done=_on_update,
+        on_error=lambda *_: None,
+    )

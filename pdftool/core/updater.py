@@ -10,8 +10,9 @@ def _parse(version: str) -> tuple[int, ...]:
     # Toma los dígitos iniciales de cada segmento e ignora sufijos (p.ej.
     # "0-beta" -> 0), para no reventar con tags de preversión.
     parts = version.lstrip("vV").split(".")
-    return tuple((int(m.group()) if (m := re.match(r"\d+", part)) else 0)
-                 for part in parts)
+    return tuple(
+        (int(m.group()) if (m := re.match(r"\d+", part)) else 0) for part in parts
+    )
 
 
 def is_newer(latest: str, current: str) -> bool:
@@ -29,8 +30,9 @@ def _default_get(url: str) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def check_for_update(current: str, repo: str,
-                     http_get: Callable[[str], dict] = _default_get) -> Optional[str]:
+def check_for_update(
+    current: str, repo: str, http_get: Callable[[str], dict] = _default_get
+) -> Optional[str]:
     """Devuelve la URL del release si hay una versión más nueva, si no None.
 
     Nunca lanza: ante cualquier error (offline, formato raro) devuelve None.

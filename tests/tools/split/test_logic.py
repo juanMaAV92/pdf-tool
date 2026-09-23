@@ -23,6 +23,7 @@ def _pdf(path: Path, pages: int) -> Path:
 
 # --- parse_ranges: sintaxis pura (sin saber el total de páginas) ---
 
+
 def test_parse_single_page():
     assert parse_ranges("5") == [(5, 5)]
 
@@ -83,6 +84,7 @@ def test_parse_too_many_dashes_raises():
 
 # --- resolve_ranges: contra el total real de páginas ---
 
+
 def test_resolve_fills_open_ends():
     parsed = parse_ranges("8-, -4")
     assert resolve_ranges(parsed, 10) == [(8, 10), (1, 4)]
@@ -99,6 +101,7 @@ def test_resolve_open_end_out_of_bounds_raises():
 
 
 # --- split: genera los PDFs ---
+
 
 def test_split_empty_inputs_raises():
     with pytest.raises(ValueError):
@@ -171,7 +174,10 @@ def test_split_only_disambiguates_the_range_that_is_taken(tmp_path):
     result = split([src], SplitParams(mode="single"))
 
     assert [o.name for o in result.outputs] == [
-        "doc_p1 (1).pdf", "doc_p2.pdf", "doc_p3.pdf", "doc_p4.pdf",
+        "doc_p1 (1).pdf",
+        "doc_p2.pdf",
+        "doc_p3.pdf",
+        "doc_p4.pdf",
     ]
     assert (tmp_path / "doc_p1.pdf").read_bytes() == b"previo"
     assert all(o.exists() for o in result.outputs)
@@ -184,7 +190,10 @@ def test_split_twice_keeps_both_batches(tmp_path):
     second = split([src], SplitParams(mode="single")).outputs
 
     assert [o.name for o in second] == [
-        "doc_p1 (1).pdf", "doc_p2 (1).pdf", "doc_p3 (1).pdf", "doc_p4 (1).pdf",
+        "doc_p1 (1).pdf",
+        "doc_p2 (1).pdf",
+        "doc_p3 (1).pdf",
+        "doc_p4 (1).pdf",
     ]
     assert all(o.exists() for o in first + second)
 
@@ -196,7 +205,9 @@ def test_split_ranges_with_duplicate_range_disambiguates_the_repeat(tmp_path):
     result = split([src], SplitParams(mode="ranges", ranges="1-2,1-2,3"))
 
     assert [o.name for o in result.outputs] == [
-        "doc_p1-2.pdf", "doc_p1-2 (1).pdf", "doc_p3.pdf",
+        "doc_p1-2.pdf",
+        "doc_p1-2 (1).pdf",
+        "doc_p3.pdf",
     ]
     assert len(set(result.outputs)) == 3
     assert all(o.exists() for o in result.outputs)
@@ -222,7 +233,10 @@ def test_split_writes_every_range_to_output_dir(tmp_path):
     res = split([src], SplitParams(mode="single", output_dir=destino))
 
     assert [o.name for o in res.outputs] == [
-        "doc_p1.pdf", "doc_p2.pdf", "doc_p3.pdf", "doc_p4.pdf",
+        "doc_p1.pdf",
+        "doc_p2.pdf",
+        "doc_p3.pdf",
+        "doc_p4.pdf",
     ]
     assert all(o.parent == destino for o in res.outputs)
     assert all(o.exists() for o in res.outputs)

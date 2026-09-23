@@ -38,25 +38,37 @@ class SplitTool(SingleFileToolPanel):
     def extra_controls(self) -> list[ft.Control]:
         self._pages = 0
         self._ranges_field = ft.TextField(
-            label="Rangos", hint_text="ej: 1-3, 5, 8-", width=240, disabled=False)
+            label="Rangos", hint_text="ej: 1-3, 5, 8-", width=240, disabled=False
+        )
         self._every_field = ft.TextField(
-            label="Cada N páginas", value="10", width=160, disabled=True,
-            keyboard_type=ft.KeyboardType.NUMBER)
+            label="Cada N páginas",
+            value="10",
+            width=160,
+            disabled=True,
+            keyboard_type=ft.KeyboardType.NUMBER,
+        )
         self._mode = ft.RadioGroup(
             value="ranges",
-            content=ft.Column([
-                ft.Row([
-                    ft.Radio(value="ranges", label="Por rangos"),
-                    self._ranges_field,
-                    ft.IconButton(ft.Icons.HELP_OUTLINE, tooltip=_RANGES_HELP),
-                ]),
-                ft.Radio(value="single", label="Una página por archivo"),
-                ft.Row([
-                    ft.Radio(value="every", label="Cada"),
-                    self._every_field,
-                    ft.Text("páginas"),
-                ]),
-            ], spacing=8),
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.Radio(value="ranges", label="Por rangos"),
+                            self._ranges_field,
+                            ft.IconButton(ft.Icons.HELP_OUTLINE, tooltip=_RANGES_HELP),
+                        ]
+                    ),
+                    ft.Radio(value="single", label="Una página por archivo"),
+                    ft.Row(
+                        [
+                            ft.Radio(value="every", label="Cada"),
+                            self._every_field,
+                            ft.Text("páginas"),
+                        ]
+                    ),
+                ],
+                spacing=8,
+            ),
         )
         self._mode.on_change = self._on_mode_change
         return [ft.Text("Cómo dividir:", weight=ft.FontWeight.W_500), self._mode]

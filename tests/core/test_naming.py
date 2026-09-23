@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from pdftool.core.naming import output_path, unique_path
 
 
@@ -36,8 +34,9 @@ def test_extension_is_preserved(tmp_path):
 
 def test_stem_with_spaces_and_dots(tmp_path):
     (tmp_path / "informe v1.2.pdf").write_bytes(b"x")
-    assert (unique_path(tmp_path / "informe v1.2.pdf")
-            == tmp_path / "informe v1.2 (1).pdf")
+    assert (
+        unique_path(tmp_path / "informe v1.2.pdf") == tmp_path / "informe v1.2 (1).pdf"
+    )
 
 
 def test_output_path_composes_stem_and_suffix(tmp_path):

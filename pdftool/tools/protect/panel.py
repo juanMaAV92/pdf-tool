@@ -28,20 +28,24 @@ class ProtectTool(MultiFileToolPanel):
 
     def extra_controls(self) -> list[ft.Control]:
         self._mode_dd = ft.Dropdown(
-            label="Acción", width=240, value="protect",
+            label="Acción",
+            width=240,
+            value="protect",
             options=[
                 ft.dropdown.Option("protect", "Proteger (poner contraseña)"),
                 ft.dropdown.Option("remove", "Quitar contraseña"),
             ],
         )
-        self._pw_field = ft.TextField(label="Contraseña", width=320, password=True,
-                                      can_reveal_password=True)
+        self._pw_field = ft.TextField(
+            label="Contraseña", width=320, password=True, can_reveal_password=True
+        )
         return [self._mode_dd, self._pw_field]
 
     def make_params(self):
         try:
-            return ProtectParams(mode=self._mode_dd.value,
-                                 password=self._pw_field.value or "")
+            return ProtectParams(
+                mode=self._mode_dd.value, password=self._pw_field.value or ""
+            )
         except (ValueError, ValidationError):
             raise InvalidParams("Escribe una contraseña.")
 

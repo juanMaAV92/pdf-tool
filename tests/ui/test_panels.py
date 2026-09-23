@@ -6,12 +6,19 @@ import pytest
 
 from pdftool.core import registry
 from pdftool.core.jobs import JobHandle
-from pdftool.core.plugin import BaseParams, ToolContext, ToolMeta, ToolResult
+from pdftool.core.plugin import (
+    BaseParams,
+    FileResult,
+    ToolContext,
+    ToolMeta,
+    ToolResult,
+)
 from pdftool.ui.panel_base import MultiFileToolPanel, SingleFileToolPanel
 
 
 class _FakePage:
     """Sustituto mínimo de ft.Page para construir paneles en tests."""
+
     def __init__(self) -> None:
         self.overlay = []
 
@@ -37,6 +44,7 @@ def test_panel_builds_and_registers_picker(tool):
 # Subclases mínimas NO registradas (no ensucian el registry ni el test de
 # arriba). Ejercitan la lógica que el refactor centralizó en la base.
 
+
 class _FakeFile:
     def __init__(self, path) -> None:
         self.path = path
@@ -58,7 +66,9 @@ class _SingleStub(SingleFileToolPanel):
 
 
 class _RunnableStub(SingleFileToolPanel):
-    meta = ToolMeta(id="runnable-stub", name="R", description="d", icon="", category="c")
+    meta = ToolMeta(
+        id="runnable-stub", name="R", description="d", icon="", category="c"
+    )
 
     def make_params(self):
         return BaseParams()
@@ -158,7 +168,10 @@ def test_multi_file_ignores_duplicates():
 def test_on_error_generic_shows_folded_detail():
     tool = _build(_SingleStub())
     tool._on_error(RuntimeError("boom"))
-    assert tool.status.value == "No se pudo procesar el PDF. Puede estar dañado o protegido."
+    assert (
+        tool.status.value
+        == "No se pudo procesar el PDF. Puede estar dañado o protegido."
+    )
     assert tool._error_toggle.visible is True
     assert tool._error_detail.value == "RuntimeError: boom"
     assert tool._error_detail.visible is False  # arranca plegado
@@ -210,7 +223,7 @@ def test_on_error_generic_shows_log_button():
 
 def test_on_error_value_error_hides_log_button():
     tool = _build(_SingleStub())
-    tool._on_error(RuntimeError("boom"))       # deja el botón visible
+    tool._on_error(RuntimeError("boom"))  # deja el botón visible
     tool._on_error(ValueError("Contraseña incorrecta."))
     assert tool._log_btn.visible is False
 
@@ -285,22 +298,21 @@ def test_open_file_button_visible_only_for_single_output():
     tool = _build(_SingleStub())
     assert tool.open_file_btn.visible is False
 
-    tool._show_result_actions(
-        ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
+    tool._show_result_actions(ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
     assert tool.open_file_btn.visible is True
     assert tool.open_file_btn.data == Path("/tmp/a.pdf")
     assert tool.open_btn.visible is True
 
     tool._show_result_actions(
-        ToolResult(outputs=[Path("/tmp/a.pdf"), Path("/tmp/b.pdf")], summary="ok"))
+        ToolResult(outputs=[Path("/tmp/a.pdf"), Path("/tmp/b.pdf")], summary="ok")
+    )
     assert tool.open_file_btn.visible is False
     assert tool.open_btn.visible is True
 
 
 def test_open_file_button_hides_on_new_pick():
     tool = _build(_SingleStub())
-    tool._show_result_actions(
-        ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
+    tool._show_result_actions(ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
 
     tool._on_pick(_FakeEvent(["/tmp/b.pdf"]))
 
@@ -331,10 +343,17 @@ def test_multi_row_paths_map_successes_to_outputs():
     tool = _build(_MultiStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf", "/tmp/c.pdf"]))
 
-    tool.on_result(ToolResult(
-        outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/c_x.pdf")],
-        summary="2 de 3 PDFs procesados",
-        details=["→ a_x.pdf", "Contraseña incorrecta.", "→ c_x.pdf"]))
+    tool.on_result(
+        ToolResult(
+            outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/c_x.pdf")],
+            summary="2 de 3 PDFs procesados",
+            items=[
+                FileResult(Path("/tmp/a.pdf"), Path("/tmp/a_x.pdf"), True, "→ a_x.pdf"),
+                FileResult(Path("/tmp/b.pdf"), None, False, "Contraseña incorrecta."),
+                FileResult(Path("/tmp/c.pdf"), Path("/tmp/c_x.pdf"), True, "→ c_x.pdf"),
+            ],
+        )
+    )
 
     assert tool._row_paths == [Path("/tmp/a_x.pdf"), None, Path("/tmp/c_x.pdf")]
 
@@ -342,9 +361,16 @@ def test_multi_row_paths_map_successes_to_outputs():
 def test_multi_row_paths_cleared_with_results():
     tool = _build(_MultiStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
-    tool.on_result(ToolResult(
-        outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/b_x.pdf")],
-        summary="2 PDFs", details=["→ a_x.pdf", "→ b_x.pdf"]))
+    tool.on_result(
+        ToolResult(
+            outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/b_x.pdf")],
+            summary="2 PDFs",
+            items=[
+                FileResult(Path("/tmp/a.pdf"), Path("/tmp/a_x.pdf"), True, "→ a_x.pdf"),
+                FileResult(Path("/tmp/b.pdf"), Path("/tmp/b_x.pdf"), True, "→ b_x.pdf"),
+            ],
+        )
+    )
     assert tool._row_paths != []
 
     tool._clear_all(None)
@@ -353,14 +379,29 @@ def test_multi_row_paths_cleared_with_results():
 
 
 def test_multi_row_paths_positional_when_no_failures():
-    # compress no prefija sus éxitos con "→": sin fallos el mapeo es 1:1.
     tool = _build(_MultiStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
 
-    tool.on_result(ToolResult(
-        outputs=[Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")],
-        summary="2 PDFs comprimidos",
-        details=["1.23 MB → 0.45 MB", "2.10 MB → 1.80 MB (no se alcanzó el objetivo)"]))
+    tool.on_result(
+        ToolResult(
+            outputs=[Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")],
+            summary="2 PDFs comprimidos",
+            items=[
+                FileResult(
+                    Path("/tmp/a.pdf"),
+                    Path("/tmp/a_2mb.pdf"),
+                    True,
+                    "1.23 MB → 0.45 MB",
+                ),
+                FileResult(
+                    Path("/tmp/b.pdf"),
+                    Path("/tmp/b_2mb.pdf"),
+                    True,
+                    "2.10 MB → 1.80 MB (no se alcanzó el objetivo)",
+                ),
+            ],
+        )
+    )
 
     assert tool._row_paths == [Path("/tmp/a_2mb.pdf"), Path("/tmp/b_2mb.pdf")]
 
@@ -378,8 +419,10 @@ class _ThumbStub(MultiFileToolPanel):
 
 def test_no_thumbnails_by_default(monkeypatch):
     launched = []
-    monkeypatch.setattr("pdftool.ui.panel_base.load_async",
-                        lambda paths, on_ready, is_current: launched.append(paths))
+    monkeypatch.setattr(
+        "pdftool.ui.panel_base.load_async",
+        lambda paths, on_ready, is_current: launched.append(paths),
+    )
     tool = _build(_MultiStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
 
@@ -389,8 +432,10 @@ def test_no_thumbnails_by_default(monkeypatch):
 
 def test_thumbnails_flag_creates_placeholders_and_loads(monkeypatch):
     launched = []
-    monkeypatch.setattr("pdftool.ui.panel_base.load_async",
-                        lambda paths, on_ready, is_current: launched.append(list(paths)))
+    monkeypatch.setattr(
+        "pdftool.ui.panel_base.load_async",
+        lambda paths, on_ready, is_current: launched.append(list(paths)),
+    )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.png"]))
 
@@ -399,8 +444,9 @@ def test_thumbnails_flag_creates_placeholders_and_loads(monkeypatch):
 
 
 def test_thumb_ready_swaps_placeholder_for_image(monkeypatch):
-    monkeypatch.setattr("pdftool.ui.panel_base.load_async",
-                        lambda paths, on_ready, is_current: None)
+    monkeypatch.setattr(
+        "pdftool.ui.panel_base.load_async", lambda paths, on_ready, is_current: None
+    )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
     box = tool._thumb_boxes["/tmp/a.pdf"]
@@ -412,13 +458,14 @@ def test_thumb_ready_swaps_placeholder_for_image(monkeypatch):
 
 
 def test_thumb_ready_none_keeps_icon_and_gone_row_is_noop(monkeypatch):
-    monkeypatch.setattr("pdftool.ui.panel_base.load_async",
-                        lambda paths, on_ready, is_current: None)
+    monkeypatch.setattr(
+        "pdftool.ui.panel_base.load_async", lambda paths, on_ready, is_current: None
+    )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
     box = tool._thumb_boxes["/tmp/a.pdf"]
 
-    tool._on_thumb_ready(Path("/tmp/a.pdf"), None)      # no renderizable
-    assert isinstance(box.content, ft.Icon)             # el icono se queda
+    tool._on_thumb_ready(Path("/tmp/a.pdf"), None)  # no renderizable
+    assert isinstance(box.content, ft.Icon)  # el icono se queda
 
-    tool._on_thumb_ready(Path("/tmp/zzz.pdf"), b"x")    # fila inexistente: no lanza
+    tool._on_thumb_ready(Path("/tmp/zzz.pdf"), b"x")  # fila inexistente: no lanza

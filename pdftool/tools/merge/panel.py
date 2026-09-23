@@ -8,8 +8,7 @@ from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.merge.logic import merge, output_path_for_merge
 from pdftool.tools.merge.params import MergeParams
-from pdftool.ui.panel_base import (MultiFileToolPanel, OutputNameField,
-                                   parse_output_name)
+from pdftool.ui.panel_base import MultiFileToolPanel, OutputNameField, parse_output_name
 
 
 @register

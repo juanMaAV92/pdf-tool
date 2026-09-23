@@ -6,7 +6,7 @@ import fitz
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.naming import output_path
-from pdftool.core.plugin import Progress, ToolResult
+from pdftool.core.plugin import FileResult, Progress, ToolResult
 from pdftool.tools.protect.params import ProtectParams
 
 
@@ -19,8 +19,9 @@ def _output(input_path: Path, suffix: str, out_dir: Path | None = None) -> Path:
     return output_path(input_path, suffix, out_dir=out_dir)
 
 
-def _protect_one(input_path: Path, params: ProtectParams,
-                 progress: Progress) -> tuple[Path | None, str]:
+def _protect_one(
+    input_path: Path, params: ProtectParams, progress: Progress
+) -> tuple[Path | None, str]:
     """Procesa un archivo. Devuelve (salida, etiqueta) o (None, error corto)."""
     try:
         if params.mode == "protect":
@@ -30,9 +31,14 @@ def _protect_one(input_path: Path, params: ProtectParams,
                 with fitz.open(str(input_path)) as doc:
                     if doc.needs_pass:
                         raise ValueError(
-                            "El PDF ya está protegido; quítale la contraseña primero.")
-                    doc.save(str(temporary), encryption=fitz.PDF_ENCRYPT_AES_256,
-                             owner_pw=params.password, user_pw=params.password)
+                            "El PDF ya está protegido; quítale la contraseña primero."
+                        )
+                    doc.save(
+                        str(temporary),
+                        encryption=fitz.PDF_ENCRYPT_AES_256,
+                        owner_pw=params.password,
+                        user_pw=params.password,
+                    )
             progress(1.0, "Listo")
             return out, f"→ {out.name}"
 
@@ -50,8 +56,9 @@ def _protect_one(input_path: Path, params: ProtectParams,
         return None, str(exc)
 
 
-def protect(inputs: list[Path], params: ProtectParams,
-            progress: Progress = _noop) -> ToolResult:
+def protect(
+    inputs: list[Path], params: ProtectParams, progress: Progress = _noop
+) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")
     paths = [Path(p) for p in inputs]
@@ -62,10 +69,13 @@ def protect(inputs: list[Path], params: ProtectParams,
     total = len(paths)
     outputs: list[Path] = []
     labels: list[str] = []
+    items: list[FileResult] = []
 
     for index, path in enumerate(paths):
-        def scoped(pct: float, msg: str, _i: int = index,
-                   _name: str = path.name) -> None:
+
+        def scoped(
+            pct: float, msg: str, _i: int = index, _name: str = path.name
+        ) -> None:
             overall = (_i + pct) / total
             label = f"[{_i + 1}/{total}] {_name}: {msg}" if total > 1 else msg
             progress(overall, label)
@@ -74,21 +84,22 @@ def protect(inputs: list[Path], params: ProtectParams,
         if out is not None:
             outputs.append(out)
         labels.append(label)
+        items.append(FileResult(path, out, out is not None, label))
 
     if not outputs:
-        raise ValueError(labels[0] if total == 1
-                         else "Ningún PDF pudo procesarse.")
+        raise ValueError(labels[0] if total == 1 else "Ningún PDF pudo procesarse.")
 
     if total == 1:
-        verb = ("PDF protegido" if params.mode == "protect"
-                else "Contraseña removida")
-        return ToolResult(outputs=outputs,
-                          summary=f"{verb} → {outputs[0].name}")
+        verb = "PDF protegido" if params.mode == "protect" else "Contraseña removida"
+        return ToolResult(outputs=outputs, summary=f"{verb} → {outputs[0].name}")
 
     progress(1.0, "Listo")
     if len(outputs) == total:
-        summary = (f"{total} PDFs protegidos" if params.mode == "protect"
-                   else f"{total} contraseñas removidas")
+        summary = (
+            f"{total} PDFs protegidos"
+            if params.mode == "protect"
+            else f"{total} contraseñas removidas"
+        )
     else:
         summary = f"{len(outputs)} de {total} PDFs procesados"
-    return ToolResult(outputs=outputs, summary=summary, details=labels)
+    return ToolResult(outputs=outputs, summary=summary, items=items)

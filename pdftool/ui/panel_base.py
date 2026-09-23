@@ -8,8 +8,8 @@ from pathlib import Path
 
 import flet as ft
 
-from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
 from pdftool.core.jobs import JobHandle
+from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
@@ -47,10 +47,12 @@ def parse_output_name(value: str | None) -> str | None:
         return None
     if any(c in _FORBIDDEN_NAME_CHARS for c in name):
         raise InvalidParams(
-            'Nombre de salida inválido: no puede contener / \\ : ? | < > * "')
+            'Nombre de salida inválido: no puede contener / \\ : ? | < > * "'
+        )
     if name.upper() in _WINDOWS_RESERVED_NAMES:
         raise InvalidParams(
-            f"Nombre de salida inválido: {name!r} está reservado por Windows.")
+            f"Nombre de salida inválido: {name!r} está reservado por Windows."
+        )
     return name
 
 
@@ -67,8 +69,7 @@ class OutputNameField(ft.TextField):
     """
 
     def __init__(self, resolve: Callable[[str | None], Path | None]) -> None:
-        super().__init__(hint_text="Nombre de salida (opcional)", width=280,
-                         dense=True)
+        super().__init__(hint_text="Nombre de salida (opcional)", width=280, dense=True)
         self._resolve = resolve
         self.on_change = lambda _e: self.refresh(update=True)
 
@@ -187,8 +188,9 @@ class BaseToolPanel(PdfTool):
 
     def _toggle_error_detail(self, _e) -> None:
         self._error_detail.visible = not self._error_detail.visible
-        self._error_toggle.text = ("Ocultar detalle" if self._error_detail.visible
-                                   else "Ver detalle técnico")
+        self._error_toggle.text = (
+            "Ocultar detalle" if self._error_detail.visible else "Ver detalle técnico"
+        )
         self._page.update()
 
     def _on_error(self, exc: Exception, generation: int | None = None) -> None:
@@ -221,27 +223,36 @@ class BaseToolPanel(PdfTool):
         self.progress = ft.ProgressBar(value=0, visible=False)
         self.status = ft.Text("")
         self._counter = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
-        self._error_toggle = ft.TextButton("Ver detalle técnico", visible=False,
-                                            on_click=self._toggle_error_detail)
-        self._error_detail = ft.Text("", visible=False, selectable=True, size=12,
-                                      color=ft.Colors.ON_SURFACE_VARIANT)
+        self._error_toggle = ft.TextButton(
+            "Ver detalle técnico", visible=False, on_click=self._toggle_error_detail
+        )
+        self._error_detail = ft.Text(
+            "",
+            visible=False,
+            selectable=True,
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+        )
         self._log_btn = download_log_button(self._log_picker)
         self._log_btn.visible = False
         self._error_actions = ft.Row([self._error_toggle, self._log_btn], visible=False)
-        self.open_btn = ft.OutlinedButton("Abrir carpeta", icon=ft.Icons.FOLDER_OPEN,
-                                          visible=False)
-        self.open_file_btn = ft.OutlinedButton("Abrir archivo",
-                                               icon=ft.Icons.OPEN_IN_NEW,
-                                               visible=False)
-        self.run_btn = ft.FilledButton(self.run_label, icon=self.run_icon,
-                                       disabled=True)
+        self.open_btn = ft.OutlinedButton(
+            "Abrir carpeta", icon=ft.Icons.FOLDER_OPEN, visible=False
+        )
+        self.open_file_btn = ft.OutlinedButton(
+            "Abrir archivo", icon=ft.Icons.OPEN_IN_NEW, visible=False
+        )
+        self.run_btn = ft.FilledButton(
+            self.run_label, icon=self.run_icon, disabled=True
+        )
 
         # Una única instancia reutilizada entre renders: `build_panel` corre en
         # cada navegación y cada OutputDirField trae su propio FilePicker, que
         # se quedaría en page.overlay. Mismo motivo que self._picker.
         if not hasattr(self, "_out_dir"):
-            self._out_dir = OutputDirField(ctx.settings,
-                                           on_change=self.on_output_dir_changed)
+            self._out_dir = OutputDirField(
+                ctx.settings, on_change=self.on_output_dir_changed
+            )
         self._out_dir.attach(page)
         # El destino es global (vive en Settings) y el widget sobrevive entre
         # navegaciones: sin este re-sync, otra herramienta pudo cambiarlo
@@ -264,12 +275,14 @@ class BaseToolPanel(PdfTool):
             if self._out_dir.destination_missing():
                 self.status.value = (
                     "La carpeta de destino ya no está disponible. Elige otra "
-                    "o vuelve a «junto al original».")
+                    "o vuelve a «junto al original»."
+                )
                 page.update()
                 return
             try:
                 params = self.make_params().model_copy(
-                    update={"output_dir": self._out_dir.value})
+                    update={"output_dir": self._out_dir.value}
+                )
             except InvalidParams as exc:
                 self.status.value = str(exc)
                 page.update()
@@ -318,8 +331,7 @@ class BaseToolPanel(PdfTool):
 
         self.run_btn.on_click = do_run
         self.open_btn.on_click = lambda _e: open_folder(Path(self.open_btn.data))
-        self.open_file_btn.on_click = (
-            lambda _e: open_file(self.open_file_btn.data))
+        self.open_file_btn.on_click = lambda _e: open_file(self.open_file_btn.data)
 
         # Tres zonas: superior fija · cuerpo flexible · footer anclado.
         # `body` es el único hijo con expand=True: todo lo posterior queda
@@ -334,8 +346,15 @@ class BaseToolPanel(PdfTool):
                 body,
                 ft.Divider(),
                 self._out_dir,
-                ft.Row([self.run_btn, self.open_file_btn, self.open_btn,
-                        ft.Container(expand=True), self._counter]),
+                ft.Row(
+                    [
+                        self.run_btn,
+                        self.open_file_btn,
+                        self.open_btn,
+                        ft.Container(expand=True),
+                        self._counter,
+                    ]
+                ),
                 self.progress,
                 self.status,
                 self._error_actions,
@@ -351,13 +370,18 @@ class SingleFileToolPanel(BaseToolPanel):
         self._file: Path | None = None
         self._file_label = ft.Text("Ningún archivo seleccionado", italic=True)
         self._picker.on_result = self._on_pick
-        return ft.Row([
-            ft.FilledTonalButton(
-                self.pick_label, icon=self.pick_icon,
-                on_click=lambda _e: self._picker.pick_files(
-                    allow_multiple=False, allowed_extensions=self.allowed_extensions)),
-            self._file_label,
-        ])
+        return ft.Row(
+            [
+                ft.FilledTonalButton(
+                    self.pick_label,
+                    icon=self.pick_icon,
+                    on_click=lambda _e: self._picker.pick_files(
+                        allow_multiple=False, allowed_extensions=self.allowed_extensions
+                    ),
+                ),
+                self._file_label,
+            ]
+        )
 
     def build_body(self) -> ft.Control:
         return ft.Container(expand=True)  # empuja el footer al fondo
@@ -404,38 +428,55 @@ class MultiFileToolPanel(BaseToolPanel):
         self._thumb_generation = getattr(self, "_thumb_generation", -1) + 1
         self._picker.on_result = self._on_pick
         self._clear_btn = ft.OutlinedButton(
-            "Limpiar lista", icon=ft.Icons.CLEAR_ALL, disabled=True,
-            on_click=self._clear_all)
-        return ft.Row([
-            ft.FilledTonalButton(
-                self.pick_label, icon=self.pick_icon,
-                on_click=lambda _e: self._picker.pick_files(
-                    allow_multiple=True, allowed_extensions=self.allowed_extensions)),
-            self._clear_btn,
-        ])
+            "Limpiar lista",
+            icon=ft.Icons.CLEAR_ALL,
+            disabled=True,
+            on_click=self._clear_all,
+        )
+        return ft.Row(
+            [
+                ft.FilledTonalButton(
+                    self.pick_label,
+                    icon=self.pick_icon,
+                    on_click=lambda _e: self._picker.pick_files(
+                        allow_multiple=True, allowed_extensions=self.allowed_extensions
+                    ),
+                ),
+                self._clear_btn,
+            ]
+        )
 
     def build_body(self) -> ft.Control:
         # La lista rellena el cuerpo y scrollea sola cuando no cabe; el footer
         # (ejecutar, progreso, status) queda siempre visible.
-        self._file_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO,
-                                    expand=True)
+        self._file_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO, expand=True)
         return self._file_list
 
     @staticmethod
     def _thumb_image(png: bytes) -> ft.Image:
-        return ft.Image(src_base64=base64.b64encode(png).decode(),
-                        height=THUMBNAIL_HEIGHT_PX, fit=ft.ImageFit.CONTAIN)
+        return ft.Image(
+            src_base64=base64.b64encode(png).decode(),
+            height=THUMBNAIL_HEIGHT_PX,
+            fit=ft.ImageFit.CONTAIN,
+        )
 
     def _thumb_control(self, path: Path) -> ft.Container:
         cached = get_cached(path)
         if cached is not MISSING and cached is not None:
             content: ft.Control = self._thumb_image(cached)
         else:
-            icon = (ft.Icons.PICTURE_AS_PDF if path.suffix.lower() == ".pdf"
-                    else ft.Icons.IMAGE)
+            icon = (
+                ft.Icons.PICTURE_AS_PDF
+                if path.suffix.lower() == ".pdf"
+                else ft.Icons.IMAGE
+            )
             content = ft.Icon(icon, size=28, color=ft.Colors.ON_SURFACE_VARIANT)
-        box = ft.Container(content=content, height=THUMBNAIL_HEIGHT_PX, width=44,
-                           alignment=ft.alignment.center)
+        box = ft.Container(
+            content=content,
+            height=THUMBNAIL_HEIGHT_PX,
+            width=44,
+            alignment=ft.alignment.center,
+        )
         self._thumb_boxes[str(path)] = box
         return box
 
@@ -458,43 +499,60 @@ class MultiFileToolPanel(BaseToolPanel):
         self._file_list.controls.clear()
         for index, path in enumerate(self._files):
             result = self._results[index] if index < len(self._results) else None
-            row_path = (self._row_paths[index]
-                        if index < len(self._row_paths) else None)
+            row_path = self._row_paths[index] if index < len(self._row_paths) else None
             controls: list[ft.Control] = [ft.Text(f"{index + 1}.", width=28)]
             if self.show_thumbnails:
                 controls.append(self._thumb_control(path))
             controls += [
-                ft.Text(path.name, expand=True,
-                        overflow=ft.TextOverflow.ELLIPSIS),
-                ft.Text(result or "", size=12, no_wrap=True,
-                        color=ft.Colors.ON_SURFACE_VARIANT),
-                ft.IconButton(ft.Icons.OPEN_IN_NEW, tooltip="Abrir",
-                              visible=row_path is not None,
-                              on_click=lambda _e, p=row_path: open_file(p)),
-                ft.IconButton(ft.Icons.ARROW_UPWARD, tooltip="Subir",
-                              disabled=index == 0,
-                              on_click=lambda _e, i=index: self._move(i, -1)),
-                ft.IconButton(ft.Icons.ARROW_DOWNWARD, tooltip="Bajar",
-                              disabled=index == len(self._files) - 1,
-                              on_click=lambda _e, i=index: self._move(i, 1)),
-                ft.IconButton(ft.Icons.CLOSE, tooltip="Quitar",
-                              on_click=lambda _e, i=index: self._remove(i)),
+                ft.Text(path.name, expand=True, overflow=ft.TextOverflow.ELLIPSIS),
+                ft.Text(
+                    result or "",
+                    size=12,
+                    no_wrap=True,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+                ft.IconButton(
+                    ft.Icons.OPEN_IN_NEW,
+                    tooltip="Abrir",
+                    visible=row_path is not None,
+                    on_click=lambda _e, p=row_path: open_file(p),
+                ),
+                ft.IconButton(
+                    ft.Icons.ARROW_UPWARD,
+                    tooltip="Subir",
+                    disabled=index == 0,
+                    on_click=lambda _e, i=index: self._move(i, -1),
+                ),
+                ft.IconButton(
+                    ft.Icons.ARROW_DOWNWARD,
+                    tooltip="Bajar",
+                    disabled=index == len(self._files) - 1,
+                    on_click=lambda _e, i=index: self._move(i, 1),
+                ),
+                ft.IconButton(
+                    ft.Icons.CLOSE,
+                    tooltip="Quitar",
+                    on_click=lambda _e, i=index: self._remove(i),
+                ),
             ]
             self._file_list.controls.append(
-                ft.Row(controls, alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
+                ft.Row(controls, alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+            )
         if self.show_thumbnails:
             pending = [p for p in self._files if get_cached(p) is MISSING]
             if pending:
                 self._thumb_task = load_async(
-                    pending, self._on_thumb_ready,
-                    is_current=lambda: self._thumb_generation == generation)
+                    pending,
+                    self._on_thumb_ready,
+                    is_current=lambda: self._thumb_generation == generation,
+                )
         self.on_inputs_changed()
         self.run_btn.disabled = not self.can_run()
         self._clear_btn.disabled = not self._files
         n = len(self._files)
-        self._counter.value = ("" if n == 0
-                               else "1 archivo" if n == 1
-                               else f"{n} archivos")
+        self._counter.value = (
+            "" if n == 0 else "1 archivo" if n == 1 else f"{n} archivos"
+        )
         self._page.update()
 
     def _clear_results(self) -> None:
@@ -506,7 +564,9 @@ class MultiFileToolPanel(BaseToolPanel):
         if 0 <= new_index < len(self._files):
             self._invalidate_active_job()
             self._files[index], self._files[new_index] = (
-                self._files[new_index], self._files[index])
+                self._files[new_index],
+                self._files[index],
+            )
             self._clear_results()
             self._refresh()
 
@@ -547,21 +607,9 @@ class MultiFileToolPanel(BaseToolPanel):
         self._refresh()
 
     def on_result(self, result: ToolResult) -> None:
-        self._results = list(result.details or [])
-        # Mapear filas a salidas: sin fallos la correspondencia es 1:1 (compress
-        # no prefija sus éxitos con "→"); con fallos, la i-ésima etiqueta de
-        # éxito ("→ …") corresponde a outputs[i] (protect, images2pdf).
-        if self._results and len(self._results) == len(result.outputs):
-            self._row_paths = list(result.outputs)
-        else:
-            self._row_paths = []
-            success = 0
-            for label in self._results:
-                if label.startswith("→") and success < len(result.outputs):
-                    self._row_paths.append(result.outputs[success])
-                    success += 1
-                else:
-                    self._row_paths.append(None)
+        items = result.items or []
+        self._results = [item.message for item in items]
+        self._row_paths = [item.output_path if item.ok else None for item in items]
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

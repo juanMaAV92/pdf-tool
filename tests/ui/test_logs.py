@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pdftool.ui.logs as logs_mod
 from pdftool.ui.logs import download_log_button, make_log_picker
 
