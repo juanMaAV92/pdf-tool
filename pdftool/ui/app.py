@@ -5,7 +5,7 @@ import flet as ft
 from pdftool import __version__
 from pdftool.core import registry
 from pdftool.core.config import load_settings, save_settings
-from pdftool.core.jobs import run_job
+from pdftool.core.jobs import run_job, shutdown_job_executor
 from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import check_for_update
 from pdftool.ui.logs import download_log_button, make_log_picker
@@ -70,6 +70,7 @@ def build_app(page: ft.Page) -> None:
     # o desconecta la vista web. Las tareas en curso ya tienen además su propio
     # token de generación y dejan de notificar a la UI obsoleta.
     def shutdown_resources(_e=None) -> None:
+        shutdown_job_executor()
         shutdown_thumbnail_executor()
 
     page.on_close = shutdown_resources

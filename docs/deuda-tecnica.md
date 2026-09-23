@@ -35,11 +35,12 @@ visual/empaquetada de la deuda anterior.
 
 ## Ya resuelto
 
-No volver a abrir estos temas como deuda: jobs y miniaturas tienen cancelación y
-generaciones; las salidas PDF y los ajustes se escriben atómicamente; los lotes
-usan `FileResult` por archivo; CI exige formato/lint con Ruff, tipos del núcleo
-con mypy y al menos 85% de cobertura; y la carpeta de salida, colisiones,
-logging, errores y actualización ya están integrados.
+No volver a abrir estos temas como deuda: jobs y miniaturas usan executors
+compartidos, tienen cancelación y generaciones, y se cierran al salir; las
+salidas PDF y los ajustes se escriben atómicamente; los lotes usan `FileResult`
+por archivo; CI exige formato/lint con Ruff, tipos del núcleo con mypy y al
+menos 85% de cobertura; y la carpeta de salida, colisiones, logging, errores y
+actualización ya están integrados.
 
 ## No son deuda prioritaria
 
