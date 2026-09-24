@@ -27,8 +27,14 @@ jobs:
         run: pipx install poetry
       - name: Install dependencies
         run: poetry install
+      - name: Check formatting
+        run: poetry run ruff format --check pdftool tests
+      - name: Lint
+        run: poetry run ruff check pdftool tests
+      - name: Check core types
+        run: poetry run mypy
       - name: Run tests
-        run: poetry run pytest -q
+        run: poetry run pytest -q --cov=pdftool --cov-report=term-missing --cov-fail-under=85
 
   # 2a) Build macOS -> .dmg
   build-macos:

@@ -1,0 +1,124 @@
+name: Package smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "pdftool/**"
+      - "installer/**"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - ".github/workflows/package-smoke.yml"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Evita que la salida de Flet con emojis falle en la consola cp1252 de Windows.
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  macos-dmg:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.29.3
+          channel: stable
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Export runtime requirements
+        run: |
+          poetry self add poetry-plugin-export
+          poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt
+      - name: Install dependencies
+        run: poetry install
+      - name: Build universal macOS app
+        run: poetry run flet build macos --arch arm64 x86_64 --build-version "0.0.0" --product "pdf-tool" --org "com.juanmaav" -v
+      - name: Verify app bundle
+        run: |
+          APP=$(ls -d build/macos/*.app | head -1)
+          BIN="$APP/Contents/MacOS/pdf-tool"
+          test -x "$BIN"
+          ARCHS=$(lipo -archs "$BIN")
+          echo "Arquitecturas: $ARCHS"
+          echo "$ARCHS" | grep -q x86_64
+          echo "$ARCHS" | grep -q arm64
+      - name: Package and inspect DMG
+        run: |
+          APP=$(ls -d build/macos/*.app | head -1)
+          STAGE=$(mktemp -d)
+          cp -R "$APP" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname "pdf-tool" -srcfolder "$STAGE" -ov -format UDZO "pdf-tool-smoke-macos.dmg"
+          hdiutil verify "pdf-tool-smoke-macos.dmg"
+          MOUNT=$(mktemp -d)
+          hdiutil attach -nobrowse -readonly -mountpoint "$MOUNT" "pdf-tool-smoke-macos.dmg"
+          test -d "$MOUNT/pdf-tool.app"
+          test -L "$MOUNT/Applications"
+          hdiutil detach "$MOUNT"
+          rm -rf "$STAGE" "$MOUNT"
+
+  windows-installer:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.29.3
+          channel: stable
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Export runtime requirements
+        shell: bash
+        run: |
+          poetry self add poetry-plugin-export
+          poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt
+      - name: Install dependencies
+        run: poetry install
+      - name: Build Windows app
+        run: poetry run flet build windows --build-version "0.0.0" --product "pdf-tool" --org "com.juanmaav" -v
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Package and install smoke artifact
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/windows.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $installer = Join-Path $PWD "installer/Output/pdf-tool-setup.exe"
+          $destination = Join-Path $env:RUNNER_TEMP "pdf-tool-smoke"
+          $arguments = @(
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/DIR=`"$destination`""
+          )
+          $process = Start-Process -FilePath $installer -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+          $app = Join-Path $destination "pdf_tool.exe"
+          if (-not (Test-Path $app -PathType Leaf)) {
+            Write-Host "Contenido del destino de instalación:"
+            if (Test-Path $destination) {
+              Get-ChildItem $destination -Recurse -Force
+            }
+            throw "El instalador no publicó pdf_tool.exe"
+          }
+          $uninstaller = Join-Path $destination "unins000.exe"
+          if (Test-Path $uninstaller -PathType Leaf) {
+            & $uninstaller /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          }

@@ -31,8 +31,9 @@ seguridad de salida y una UX pequeña para personas no técnicas.
 
 Antes de crecer en features, pagar las deudas que afectan confianza y releases:
 
-1. **Validación de release.** Smoke visual y empaquetado real en macOS y Windows,
-   incluyendo FilePicker, permisos, rutas y artefactos instalables.
+1. **Smoke visual de release.** El empaquetado real de macOS y Windows se valida
+   en PRs relevantes; antes de publicar o actualizar Flet, ejecutar la checklist
+   manual de FilePicker, permisos, rutas y la ventana real.
 2. **Panel base.** Extraer la fila/lista de archivos antes de construir una
    cuadrícula de páginas.
 
