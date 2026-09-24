@@ -8,7 +8,7 @@ from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.images2pdf.logic import images_to_pdf
 from pdftool.tools.images2pdf.params import ImagesToPdfParams
-from pdftool.ui.panel_base import MultiFileToolPanel
+from pdftool.ui.file_list import MultiFileToolPanel
 
 
 @register
