@@ -102,10 +102,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $installer = Join-Path $PWD "installer/Output/pdf-tool-setup.exe"
           $destination = Join-Path $env:RUNNER_TEMP "pdf-tool-smoke"
-          & $installer /VERYSILENT /SUPPRESSMSGBOXES /NORESTART "/DIR=$destination"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $arguments = @(
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/DIR=`"$destination`""
+          )
+          $process = Start-Process -FilePath $installer -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
           $app = Join-Path $destination "pdf_tool.exe"
           if (-not (Test-Path $app -PathType Leaf)) {
+            Write-Host "Contenido del destino de instalación:"
+            if (Test-Path $destination) {
+              Get-ChildItem $destination -Recurse -Force
+            }
             throw "El instalador no publicó pdf_tool.exe"
           }
           $uninstaller = Join-Path $destination "unins000.exe"
