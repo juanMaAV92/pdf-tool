@@ -9,7 +9,8 @@ from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.protect.logic import protect
 from pdftool.tools.protect.params import ProtectParams
-from pdftool.ui.panel_base import InvalidParams, MultiFileToolPanel
+from pdftool.ui.file_list import MultiFileToolPanel
+from pdftool.ui.panel_base import InvalidParams
 
 
 @register
