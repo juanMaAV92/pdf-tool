@@ -27,88 +27,91 @@ seguridad de salida y una UX pequeña para personas no técnicas.
 | [Stirling PDF](https://docs.stirlingpdf.com/) | 55+ herramientas, self-hosting, API, pipelines, carpetas vigiladas y funciones enterprise. | Ofrecer una experiencia de escritorio sencilla, sin servidor ni configuración. |
 | [Adobe Acrobat](https://helpx.adobe.com/acrobat/using/explore-acrobat-tools.html) | Referencia en edición, OCR, formularios, firma, colaboración y seguridad avanzada. | No intentar ser un editor completo; resolver mejor las operaciones cotidianas y locales. |
 
-## Prioridad 0 — cerrar la base
+## Prioridad 0 — control de release
 
-Antes de crecer en features, pagar las deudas que afectan confianza y releases:
+No es una feature ni deuda abierta: antes de una release importante o una
+actualización de Flet, ejecutar la checklist manual de macOS y Windows. El CI ya
+valida los paquetes; esta prueba cubre la ventana real, el FilePicker, permisos y
+rutas nativas.
 
-1. **Smoke visual de release.** El empaquetado real de macOS y Windows se valida
-   en PRs relevantes; antes de publicar o actualizar Flet, ejecutar la checklist
-   manual de FilePicker, permisos, rutas y la ventana real.
+## Prioridad 1 — organizar y entregar el PDF con confianza
 
-## Prioridad 1 — flujo de páginas y compresión confiable
+### 1. Organizador visual de páginas (MVP)
 
-### 1. Espacio visual de páginas
+Una experiencia para un PDF: ver miniaturas, seleccionar, reordenar, rotar,
+eliminar y extraer páginas. Debe cubrir una selección como `3, 1, 5` sin pedir al
+usuario que escriba rangos, y reutilizar el motor de miniaturas existente.
 
-Una sola experiencia para seleccionar, previsualizar, reordenar, rotar, eliminar
-y extraer páginas, incluso entre varios PDFs. Debe cubrir el caso `3, 1, 5` y
-reutilizar el motor de miniaturas existente.
+La primera versión no mueve páginas entre varios PDFs ni intenta ser un editor de
+contenido. Esa extensión solo entra después de que el flujo de un documento sea
+sólido, predecible y reversible antes de guardar.
 
-**Impacto:** muy alto. **Complejidad:** alta. Es la base visual más importante.
+**Impacto:** muy alto. **Complejidad:** media-alta. Es la carencia funcional más
+clara de la app y el siguiente trabajo de producto.
 
-### 2. Compresión explicable
+### 2. Resultado de compresión entendible
 
-Mantener la compresión máxima como default, pero mostrar un resultado entendible:
+La compresión máxima ya es el modo predeterminado; mantenerlo así. Completar el
+resultado de cada archivo con tamaño inicial/final, porcentaje ahorrado y, cuando
+ocurra, una explicación breve de que alguna página se rasterizó y puede haber
+perdido texto seleccionable, enlaces o anotaciones. El modo alternativo para
+conservar contenido seleccionable y su tooltip siguen disponibles.
 
-- tamaño inicial/final y porcentaje ahorrado;
-- si se rasterizó alguna página;
-- si texto, enlaces o selección pueden haberse perdido;
-- opción de conservar contenido seleccionable;
-- advertencia breve y tooltip, sin pasos ni clics extra.
+La información aparece en el resultado, no como un paso, diálogo ni clic adicional.
 
-**Impacto:** alto. **Complejidad:** media. Es un diferenciador concreto para una
-función que el usuario normalmente prueba a ciegas.
+**Impacto:** alto. **Complejidad:** media. Vuelve verificable una operación que los
+usuarios normalmente ejecutan a ciegas.
 
-### 3. Perfiles simples para lotes
+## Prioridad 2 — preparar documentos para compartir
 
-Permitir guardar y reutilizar perfiles como “máxima compresión”, “para enviar por
-correo”, “archivo legible” o “proteger y guardar en…”. Cada ejecución debe ofrecer
-un resumen por archivo y conservar el comportamiento no destructivo.
+### 3. Recortar márgenes y ajustar tamaño de página
 
-**Impacto:** alto. **Complejidad:** media. PDF24 ya tiene perfiles, pero aquí el
-valor sería hacerlos comprensibles y seguros para usuarios no técnicos.
+Recortar bordes blancos, definir el área visible y ajustar el tamaño de página. Es
+especialmente útil para escaneos, formularios e impresión, y encaja con naturalidad
+en el organizador visual. La edición debe previsualizarse antes de producir un PDF
+nuevo; los originales nunca se modifican.
 
-## Prioridad 2 — confianza y privacidad
+**Impacto:** alto. **Complejidad:** media.
 
-### 4. Limpiar PDF antes de compartir
+### 4. Inspeccionar y limpiar antes de compartir
 
-Eliminar metadatos, comentarios, adjuntos, capas ocultas y otros datos no visibles,
-con un reporte claro de lo eliminado. No debe confundirse con dibujar un rectángulo
-negro: cualquier redacción futura debe eliminar realmente el contenido subyacente.
+Mostrar antes de actuar los datos relevantes: páginas, tamaño, cifrado, metadatos,
+adjuntos y otras señales que afecten al envío. Ofrecer una limpieza conservadora de
+metadatos, comentarios, adjuntos, JavaScript y enlaces externos, con un reporte de
+lo eliminado.
 
-**Impacto:** alto. **Complejidad:** alta. Requiere fixtures adversariales y
-verificación de que el texto oculto no puede recuperarse.
+No se debe llamar a esto redacción: una redacción real exige eliminar el contenido
+subyacente y pruebas de seguridad específicas. Es una iniciativa separada y no
+entra todavía.
 
-### 5. OCR local opcional
+**Impacto:** alto. **Complejidad:** media-alta. Hace tangible la promesa de
+privacidad local sin sumar una pantalla de “diagnóstico” aislada.
 
-Agregar OCR como dependencia opcional, no obligatoria: convertir escaneos en PDFs
-buscables sin enviar documentos a un servidor. Debe incluir una estimación de
-tiempo/tamaño y dejar claro que el resultado es una nueva capa de texto.
+## Prioridad 3 — repetir flujos ya maduros
 
-**Impacto:** alto. **Complejidad:** alta. No entra antes de estabilizar el flujo
-visual y el empaquetado multiplataforma.
+### 5. Perfiles simples para lotes
 
-### 6. Diagnóstico de privacidad
+Cuando las operaciones anteriores estén estabilizadas, permitir guardar y reutilizar
+perfiles como “máxima compresión”, “para enviar por correo” o “archivo legible”.
+Cada ejecución conserva las salidas no destructivas y presenta un resumen por
+archivo.
 
-Un modo visible “solo local” que explique qué operaciones hacen red —por ejemplo,
-actualizaciones— y cuál es el destino de los archivos. El procesamiento PDF debe
-seguir siendo local por defecto.
+**Impacto:** medio-alto. **Complejidad:** media. Es valioso para uso repetido, no
+para descubrir la app por primera vez.
 
-**Impacto:** medio-alto. **Complejidad:** media. Convierte una promesa de README
-en una propiedad comprobable del producto.
+### 6. Automatización y verificación avanzada
 
-## Prioridad 3 — automatización sin convertirlo en una suite empresarial
-
-7. **CLI y perfiles exportables.** Ejecutar un perfil sobre una carpeta desde
-   terminal y producir un reporte JSON/CSV.
-8. **Comparar PDFs.** Mostrar páginas añadidas, eliminadas o cambiadas; útil para
-   contratos y versiones, pero posterior a la edición de páginas.
-9. **Accesibilidad básica.** Detectar ausencia de texto, título, idioma y señales
-   comunes de un PDF difícil de leer con tecnologías asistivas.
+Solo si existe demanda concreta: CLI con perfiles exportables y reporte JSON/CSV,
+comparación de PDFs o comprobaciones básicas de accesibilidad. No deben desplazar
+los flujos visuales y locales de uso diario.
 
 ## Fuera de foco por ahora
 
 - Editor completo de texto/imágenes, formularios colaborativos y firma avanzada:
   Adobe, PDFgear y Sejda ya compiten ahí.
+- OCR local: requiere binarios adicionales, aumenta el tamaño y el coste de
+  empaquetado y no responde a una necesidad demostrada del público actual. Solo se
+  reconsidera con evidencia de demanda y un plan de soporte multiplataforma.
 - AI/chat con documentos: PDFgear, Acrobat y Stirling ya cubren esa dirección;
   además elevaría el coste de privacidad y soporte.
 - Drag & drop como feature aislada: solo entra junto con una decisión de migrar
