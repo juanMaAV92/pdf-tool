@@ -99,6 +99,10 @@ class BaseToolPanel(PdfTool):
     pick_label: str = "Elegir PDF"
     pick_icon = ft.Icons.UPLOAD_FILE
     allowed_extensions: list[str] = ["pdf"]
+    # Las listas de lotes necesitan ocupar el espacio disponible cuando hay
+    # archivos. Los paneles de un solo archivo no: un cuerpo vacío solo aleja la
+    # acción principal de los controles que la preparan.
+    expand_body_when_ready = True
 
     def __init__(self) -> None:
         super().__init__()
@@ -154,6 +158,28 @@ class BaseToolPanel(PdfTool):
 
     def can_run(self) -> bool:
         raise NotImplementedError
+
+    def _empty_action_hint(self) -> str:
+        """Explica junto al botón qué falta para poder ejecutar."""
+        required = getattr(self, "min_files", 1)
+        selected = sum(path is not None for path in self.collect_inputs())
+        remaining = max(required - selected, 0)
+        if remaining == 0:
+            return ""
+        if required == 1:
+            return "Añade un archivo para continuar."
+        if selected == 0:
+            return f"Añade al menos {required} archivos para continuar."
+        suffix = "archivo" if remaining == 1 else "archivos"
+        return f"Añade {remaining} {suffix} más para continuar."
+
+    def _sync_ready_state(self) -> None:
+        """Sincroniza acción, ayuda y densidad con las entradas actuales."""
+        ready = self.can_run()
+        self.run_btn.disabled = not ready
+        self._empty_hint.value = "" if ready else self._empty_action_hint()
+        self._empty_hint.visible = not ready
+        self._body.expand = ready and self.expand_body_when_ready
 
     # ---- registro (log de diagnóstico; sin datos del usuario) ----
     def _logger(self) -> logging.Logger:
@@ -258,6 +284,14 @@ class BaseToolPanel(PdfTool):
 
         input_bar = self.build_input(page)  # subclase; fija self._picker.on_result
         body = self.build_body()
+        self._body = body
+        self._empty_hint = ft.Text(
+            "",
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            visible=False,
+        )
+        self._sync_ready_state()
 
         if self._picker not in page.overlay:
             page.overlay.append(self._picker)
@@ -343,6 +377,7 @@ class BaseToolPanel(PdfTool):
                 body,
                 ft.Divider(),
                 self._out_dir,
+                self._empty_hint,
                 ft.Row(
                     [
                         self.run_btn,
@@ -363,6 +398,8 @@ class BaseToolPanel(PdfTool):
 
 
 class SingleFileToolPanel(BaseToolPanel):
+    expand_body_when_ready = False
+
     def build_input(self, page) -> ft.Control:
         self._file: Path | None = None
         self._file_label = ft.Text("Ningún archivo seleccionado", italic=True)
@@ -392,7 +429,7 @@ class SingleFileToolPanel(BaseToolPanel):
             self._hide_result_actions()
             self.status.value = ""
             self._clear_error()
-            self.run_btn.disabled = False
+            self._sync_ready_state()
             self.after_pick(self._file)
         elif e.files:
             self.status.value = _WEB_MODE_MSG

@@ -40,6 +40,7 @@ class CompressTool(MultiFileToolPanel):
             value="5",
             width=200,
             keyboard_type=ft.KeyboardType.NUMBER,
+            helper_text="Objetivo, no garantía.",
         )
         self._mode_dd = ft.Dropdown(
             label="Modo de compresión",

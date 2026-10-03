@@ -76,7 +76,7 @@ def build_app(page: ft.Page) -> None:
     page.on_close = shutdown_resources
     page.on_disconnect = shutdown_resources
 
-    page.title = "pdf-tool"
+    page.title = f"pdf-tool · v{__version__}"
     page.theme = build_theme()
     page.theme_mode = resolve_mode(settings.theme_mode)
     page.window.width = 980
@@ -145,6 +145,12 @@ def build_app(page: ft.Page) -> None:
                 on_click=lambda _e: page.launch_url(AUTHOR_SITE),
             ),
             download_log_button(log_picker),
+            ft.Text(
+                f"v{__version__}",
+                size=11,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+                tooltip=f"Versión de la aplicación: {__version__}",
+            ),
             ft.IconButton(
                 ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema", on_click=toggle_theme
             ),

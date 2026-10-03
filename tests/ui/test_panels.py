@@ -98,11 +98,16 @@ def test_single_file_pick_enables_run():
     tool = _build(_SingleStub())
     assert tool.can_run() is False
     assert tool.run_btn.disabled is True
+    assert tool._empty_hint.visible is True
+    assert tool._empty_hint.value == "Añade un archivo para continuar."
+    assert tool._body.expand is False
 
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
 
     assert tool.can_run() is True
     assert tool.run_btn.disabled is False
+    assert tool._empty_hint.visible is False
+    assert tool._body.expand is False
     assert tool.collect_inputs() == [Path("/tmp/a.pdf")]
 
 
@@ -146,14 +151,20 @@ def test_rebuilding_panel_cancels_job_and_ignores_old_callbacks():
 def test_multi_file_requires_min_files():
     tool = _build(_MultiStub())
     assert tool.can_run() is False
+    assert tool._empty_hint.value == "Añade al menos 2 archivos para continuar."
+    assert tool._body.expand is False
 
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
     assert tool.can_run() is False  # 1 < min_files(2)
     assert tool.run_btn.disabled is True
+    assert tool._empty_hint.value == "Añade 1 archivo más para continuar."
+    assert tool._body.expand is False
 
     tool._on_pick(_FakeEvent(["/tmp/b.pdf"]))
     assert tool.can_run() is True  # 2 >= min_files
     assert tool.run_btn.disabled is False
+    assert tool._empty_hint.visible is False
+    assert tool._body.expand is True
     assert tool.collect_inputs() == [Path("/tmp/a.pdf"), Path("/tmp/b.pdf")]
 
 

@@ -149,7 +149,7 @@ class MultiFileToolPanel(BaseToolPanel):
                     is_current=lambda: self._thumb_generation == generation,
                 )
         self.on_inputs_changed()
-        self.run_btn.disabled = not self.can_run()
+        self._sync_ready_state()
         self._clear_btn.disabled = not self._files
         n = len(self._files)
         self._counter.value = (
