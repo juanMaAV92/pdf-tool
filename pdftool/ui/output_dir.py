@@ -6,6 +6,7 @@ from pathlib import Path
 import flet as ft
 
 from pdftool.core.config import Settings, save_settings
+from pdftool.ui.accessibility import NamedIconButton
 
 _DEFAULT_LABEL = "Junto al original"
 
@@ -50,9 +51,9 @@ class OutputDirField(ft.Row):
         self.change_btn = ft.TextButton(
             "Cambiar…", icon=ft.Icons.FOLDER_OPEN, on_click=self._pick
         )
-        self.reset_btn = ft.IconButton(
+        self.reset_btn = NamedIconButton(
             ft.Icons.UNDO,
-            tooltip="Volver a «junto al original»",
+            "Volver a «junto al original»",
             on_click=lambda _e: self.set_dir(None),
         )
         self._picker = ft.FilePicker(on_result=self._on_pick_result)

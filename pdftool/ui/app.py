@@ -8,6 +8,7 @@ from pdftool.core.config import load_settings, save_settings
 from pdftool.core.jobs import run_job, shutdown_job_executor
 from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import check_for_update
+from pdftool.ui.accessibility import NamedIconButton, icon_content
 from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 from pdftool.ui.thumbnails import shutdown_thumbnail_executor
@@ -18,7 +19,7 @@ AUTHOR_SITE = "https://juanMaAV92.github.io"
 
 
 def _tool_card(index, tool, on_open):
-    return ft.Container(
+    return ft.OutlinedButton(
         content=ft.Column(
             [
                 ft.Icon(tool.meta.icon, size=30),
@@ -28,13 +29,24 @@ def _tool_card(index, tool, on_open):
                 ),
             ],
             spacing=6,
+            tight=True,
+            width=208,
+            height=108,
+            horizontal_alignment=ft.CrossAxisAlignment.START,
         ),
         width=240,
         height=140,
-        padding=16,
-        border_radius=14,
-        border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
-        ink=True,
+        style=ft.ButtonStyle(
+            padding=16,
+            alignment=ft.alignment.top_left,
+            color=ft.Colors.ON_SURFACE,
+            shape=ft.RoundedRectangleBorder(radius=14),
+            side={
+                ft.ControlState.DEFAULT: ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                ft.ControlState.FOCUSED: ft.BorderSide(2, ft.Colors.PRIMARY),
+            },
+            bgcolor={ft.ControlState.FOCUSED: ft.Colors.PRIMARY_CONTAINER},
+        ),
         on_click=lambda _e: on_open(index),
     )
 
@@ -76,7 +88,7 @@ def build_app(page: ft.Page) -> None:
     page.on_close = shutdown_resources
     page.on_disconnect = shutdown_resources
 
-    page.title = "pdf-tool"
+    page.title = f"pdf-tool · v{__version__}"
     page.theme = build_theme()
     page.theme_mode = resolve_mode(settings.theme_mode)
     page.window.width = 980
@@ -120,7 +132,23 @@ def build_app(page: ft.Page) -> None:
         settings.theme_mode = next_mode(settings.theme_mode)
         save_settings(settings)
         page.theme_mode = resolve_mode(settings.theme_mode)
+        refresh_theme_label()
         page.update()
+
+    theme_button = NamedIconButton(
+        ft.Icons.BRIGHTNESS_6, "Cambiar tema", on_click=toggle_theme
+    )
+
+    def refresh_theme_label() -> None:
+        names = {"system": "sistema", "light": "claro", "dark": "oscuro"}
+        label = (
+            f"Tema actual: {names[settings.theme_mode]}. "
+            f"Cambiar a tema {names[next_mode(settings.theme_mode)]}."
+        )
+        theme_button.content = icon_content(ft.Icons.BRIGHTNESS_6, label)
+        theme_button.tooltip = label
+
+    refresh_theme_label()
 
     update_banner = ft.Banner(
         content=ft.Text("Hay una nueva versión disponible."),
@@ -145,9 +173,13 @@ def build_app(page: ft.Page) -> None:
                 on_click=lambda _e: page.launch_url(AUTHOR_SITE),
             ),
             download_log_button(log_picker),
-            ft.IconButton(
-                ft.Icons.BRIGHTNESS_6, tooltip="Cambiar tema", on_click=toggle_theme
+            ft.Text(
+                f"v{__version__}",
+                size=11,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+                tooltip=f"Versión de la aplicación: {__version__}",
             ),
+            theme_button,
         ],
         alignment=ft.MainAxisAlignment.CENTER,
     )

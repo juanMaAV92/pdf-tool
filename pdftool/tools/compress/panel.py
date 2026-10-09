@@ -9,6 +9,7 @@ from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.compress.logic import compress
 from pdftool.tools.compress.params import CompressParams
+from pdftool.ui.accessibility import HelpButton
 from pdftool.ui.file_list import MultiFileToolPanel
 from pdftool.ui.panel_base import InvalidParams
 
@@ -40,6 +41,7 @@ class CompressTool(MultiFileToolPanel):
             value="5",
             width=200,
             keyboard_type=ft.KeyboardType.NUMBER,
+            helper_text="Objetivo, no garantía.",
         )
         self._mode_dd = ft.Dropdown(
             label="Modo de compresión",
@@ -50,7 +52,7 @@ class CompressTool(MultiFileToolPanel):
                 ft.dropdown.Option("preserve", "Conservar texto y enlaces"),
             ],
         )
-        self._mode_help = ft.IconButton(ft.Icons.HELP_OUTLINE, tooltip=_MODE_HELP)
+        self._mode_help = HelpButton("Ayuda sobre compresión", _MODE_HELP)
         return [
             ft.Row(
                 [
@@ -59,7 +61,8 @@ class CompressTool(MultiFileToolPanel):
                     self._mode_help,
                 ],
                 spacing=12,
-            )
+            ),
+            self._mode_help.detail,
         ]
 
     def make_params(self):
