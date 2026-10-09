@@ -320,6 +320,7 @@ def test_open_file_button_visible_only_for_single_output():
     )
     assert tool.open_file_btn.visible is False
     assert tool.open_btn.visible is True
+    assert tool.open_btn.style is None  # abrir carpeta prima si hay varias salidas
 
 
 def test_open_file_button_hides_on_new_pick():
@@ -330,6 +331,54 @@ def test_open_file_button_hides_on_new_pick():
 
     assert tool.open_file_btn.visible is False
     assert tool.open_btn.visible is False
+
+
+def test_result_actions_are_grouped_below_summary():
+    tool = _build(_RunnableStub())
+    assert tool._result_actions.visible is False
+    assert tool._feedback.controls[:3] == [
+        tool.progress,
+        tool.status,
+        tool._result_actions,
+    ]
+    assert tool._result_actions.wrap is True
+
+    tool._show_result_actions(ToolResult(outputs=[Path("/tmp/a.pdf")], summary="ok"))
+    assert tool._result_actions.visible is True
+    assert isinstance(tool.open_file_btn, ft.FilledButton)
+    assert tool.run_btn.style is not None
+
+    tool._on_pick(_FakeEvent(["/tmp/b.pdf"]))
+    assert tool._result_actions.visible is False
+    assert tool.run_btn.style is None
+
+
+def test_retry_clears_previous_summary_and_result_actions():
+    calls = {}
+    tool = _RunnableStub()
+    tool.build_panel(
+        ToolContext(page=_FakePage(), run_job=lambda **kw: calls.update(kw))
+    )
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    tool.run_btn.on_click(None)
+    calls["on_done"](ToolResult(outputs=[Path("/tmp/out.pdf")], summary="Listo"))
+    assert tool.status.value == "Listo"
+
+    tool.run_btn.on_click(None)
+    assert tool.status.value == "Procesando…"
+    assert tool._result_actions.visible is False
+    assert tool.progress.visible is True
+    calls["on_error"](RuntimeError("boom"))
+    assert tool._log_btn.visible is True
+    assert tool._error_actions in tool._feedback.controls
+
+
+def test_result_without_outputs_does_not_offer_open_actions():
+    tool = _build(_RunnableStub())
+    tool._show_result_actions(ToolResult(outputs=[], summary="Sin archivos"))
+    assert tool._result_actions.visible is False
+    assert tool.open_btn.visible is False
+    assert tool.open_file_btn.visible is False
 
 
 def test_watermark_opacity_label_shows_decimals():

@@ -8,7 +8,7 @@ from pdftool.core.config import load_settings, save_settings
 from pdftool.core.jobs import run_job, shutdown_job_executor
 from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import check_for_update
-from pdftool.ui.accessibility import NamedIconButton, icon_content
+from pdftool.ui.accessibility import icon_content
 from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 from pdftool.ui.thumbnails import shutdown_thumbnail_executor
@@ -16,6 +16,38 @@ from pdftool.ui.thumbnails import shutdown_thumbnail_executor
 GITHUB_REPO = "juanMaAV92/pdf-tool"
 GITHUB_PROFILE = "https://github.com/juanMaAV92"
 AUTHOR_SITE = "https://juanMaAV92.github.io"
+
+
+def _build_footer(theme_label, on_theme, on_log, on_author):
+    """Utilidades globales secundarias; el resultado pertenece al panel."""
+    return ft.Row(
+        [
+            ft.Text(
+                f"v{__version__}",
+                size=11,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+                tooltip=f"Versión de la aplicación: {__version__}",
+            ),
+            ft.PopupMenuButton(
+                content=icon_content(ft.Icons.MORE_HORIZ, "Opciones de la aplicación"),
+                tooltip="Opciones de la aplicación",
+                items=[
+                    ft.PopupMenuItem(
+                        text=theme_label, icon=ft.Icons.BRIGHTNESS_6, on_click=on_theme
+                    ),
+                    ft.PopupMenuItem(
+                        text="Descargar log", icon=ft.Icons.DOWNLOAD, on_click=on_log
+                    ),
+                    ft.PopupMenuItem(
+                        text="Acerca del autor",
+                        icon=ft.Icons.OPEN_IN_NEW,
+                        on_click=on_author,
+                    ),
+                ],
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.END,
+    )
 
 
 def _tool_card(index, tool, on_open):
@@ -135,20 +167,13 @@ def build_app(page: ft.Page) -> None:
         refresh_theme_label()
         page.update()
 
-    theme_button = NamedIconButton(
-        ft.Icons.BRIGHTNESS_6, "Cambiar tema", on_click=toggle_theme
-    )
-
     def refresh_theme_label() -> None:
         names = {"system": "sistema", "light": "claro", "dark": "oscuro"}
         label = (
-            f"Tema actual: {names[settings.theme_mode]}. "
-            f"Cambiar a tema {names[next_mode(settings.theme_mode)]}."
+            f"Tema: {names[settings.theme_mode]} → "
+            f"{names[next_mode(settings.theme_mode)]}"
         )
-        theme_button.content = icon_content(ft.Icons.BRIGHTNESS_6, label)
-        theme_button.tooltip = label
-
-    refresh_theme_label()
+        footer.controls[1].items[0].text = label
 
     update_banner = ft.Banner(
         content=ft.Text("Hay una nueva versión disponible."),
@@ -164,25 +189,13 @@ def build_app(page: ft.Page) -> None:
     log_picker = make_log_picker()
     page.overlay.append(log_picker)
 
-    footer = ft.Row(
-        [
-            ft.TextButton(
-                "powered by juanMaAV92",
-                icon=ft.Icons.OPEN_IN_NEW,
-                tooltip="Abrir la página personal del autor",
-                on_click=lambda _e: page.launch_url(AUTHOR_SITE),
-            ),
-            download_log_button(log_picker),
-            ft.Text(
-                f"v{__version__}",
-                size=11,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-                tooltip=f"Versión de la aplicación: {__version__}",
-            ),
-            theme_button,
-        ],
-        alignment=ft.MainAxisAlignment.CENTER,
+    footer = _build_footer(
+        "Cambiar tema",
+        toggle_theme,
+        download_log_button(log_picker).on_click,
+        lambda _e: page.launch_url(AUTHOR_SITE),
     )
+    refresh_theme_label()
 
     page.add(
         ft.Column(
