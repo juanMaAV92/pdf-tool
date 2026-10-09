@@ -31,3 +31,15 @@ actualizar Flet, ejecutar esta lista sobre los artefactos del draft release.
 
 Registrar sistema operativo, arquitectura y cualquier excepción en las notas de
 la release o en el issue asociado.
+
+## Accesibilidad del paquete nativo
+
+- En Inicio, recorrer las tarjetas con Tab y Shift+Tab: el foco es visible y
+  Enter abre la herramienta correspondiente.
+- Llegar con teclado a Elegir/Añadir PDF, abrir el selector y cancelarlo con
+  Escape; después seleccionar un PDF de prueba y ejecutar la operación.
+- En Comprimir y Dividir, llegar a la ayuda con Tab y comprobar que se puede
+  leer sin hover; al abandonar el botón, el texto temporal se oculta.
+- Con VoiceOver en macOS y el lector de pantalla disponible en Windows, comprobar
+  que las tarjetas se anuncian como botones y que tema, ayuda y acciones de cada
+  archivo tienen nombres útiles.

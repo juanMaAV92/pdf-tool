@@ -6,6 +6,17 @@ existentes para que el futuro organizador visual herede una base clara y accesib
 
 Referencia: auditoría visual Impeccable realizada sobre la interfaz de PDF Tool.
 
+## Estado de ejecución
+
+- Fases 0 y 1: implementadas; validación del paquete real pendiente de release.
+- Fase 2: tarjetas de Inicio convertidas en botones estándar con foco visible;
+  iconos con etiquetas específicas; ayuda de compresión y rangos disponible al
+  foco y al activar el botón. Verificados roles en el árbol de accesibilidad web,
+  Tab/Shift+Tab y apertura de una herramienta con Enter. Pendiente: recorrido
+  completo en los paquetes nativos, diálogos de archivo con Escape y lectura con
+  VoiceOver en macOS y lector de pantalla en Windows.
+- Fases 3 y 4: pendientes.
+
 ## Fase 0 — Línea base del artefacto
 
 **Objetivo:** saber qué versión se está revisando y evitar confundir una

@@ -7,6 +7,7 @@ import flet as ft
 
 from pdftool.core.plugin import ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
+from pdftool.ui.accessibility import NamedIconButton
 from pdftool.ui.panel_base import _WEB_MODE_MSG, BaseToolPanel
 from pdftool.ui.platform import open_file
 from pdftool.ui.thumbnails import MISSING, get_cached, load_async
@@ -113,27 +114,27 @@ class MultiFileToolPanel(BaseToolPanel):
                     no_wrap=True,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
-                ft.IconButton(
+                NamedIconButton(
                     ft.Icons.OPEN_IN_NEW,
-                    tooltip="Abrir",
+                    f"Abrir resultado de {path.name}",
                     visible=row_path is not None,
                     on_click=lambda _e, p=row_path: open_file(p),
                 ),
-                ft.IconButton(
+                NamedIconButton(
                     ft.Icons.ARROW_UPWARD,
-                    tooltip="Subir",
+                    f"Subir {path.name}",
                     disabled=index == 0,
                     on_click=lambda _e, i=index: self._move(i, -1),
                 ),
-                ft.IconButton(
+                NamedIconButton(
                     ft.Icons.ARROW_DOWNWARD,
-                    tooltip="Bajar",
+                    f"Bajar {path.name}",
                     disabled=index == len(self._files) - 1,
                     on_click=lambda _e, i=index: self._move(i, 1),
                 ),
-                ft.IconButton(
+                NamedIconButton(
                     ft.Icons.CLOSE,
-                    tooltip="Quitar",
+                    f"Quitar {path.name} de la lista",
                     on_click=lambda _e, i=index: self._remove(i),
                 ),
             ]

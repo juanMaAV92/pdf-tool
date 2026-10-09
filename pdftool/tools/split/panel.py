@@ -9,6 +9,7 @@ from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.split.logic import parse_ranges, resolve_ranges, split
 from pdftool.tools.split.params import SplitParams
+from pdftool.ui.accessibility import HelpButton
 from pdftool.ui.panel_base import InvalidParams, SingleFileToolPanel
 
 _RANGES_HELP = (
@@ -37,6 +38,7 @@ class SplitTool(SingleFileToolPanel):
 
     def extra_controls(self) -> list[ft.Control]:
         self._pages = 0
+        self._ranges_help = HelpButton("Ayuda sobre rangos de páginas", _RANGES_HELP)
         self._ranges_field = ft.TextField(
             label="Rangos", hint_text="ej: 1-3, 5, 8-", width=240, disabled=False
         )
@@ -55,9 +57,10 @@ class SplitTool(SingleFileToolPanel):
                         [
                             ft.Radio(value="ranges", label="Por rangos"),
                             self._ranges_field,
-                            ft.IconButton(ft.Icons.HELP_OUTLINE, tooltip=_RANGES_HELP),
+                            self._ranges_help,
                         ]
                     ),
+                    self._ranges_help.detail,
                     ft.Radio(value="single", label="Una página por archivo"),
                     ft.Row(
                         [
