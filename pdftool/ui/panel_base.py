@@ -191,14 +191,34 @@ class BaseToolPanel(PdfTool):
 
     # ---- acciones post-run (footer) ----
     def _show_result_actions(self, result: ToolResult) -> None:
+        self._hide_result_actions()
+        if not result.outputs:
+            return
+        self._result_actions.visible = True
+        # Tras completar, abrir el resultado prima sobre volver a procesarlo.
+        self.run_btn.style = ft.ButtonStyle(
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST, color=ft.Colors.ON_SURFACE
+        )
         self.open_btn.visible = True
+        self.open_btn.style = (
+            ft.ButtonStyle(
+                bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                color=ft.Colors.ON_SECONDARY_CONTAINER,
+            )
+            if len(result.outputs) == 1
+            else None
+        )
         self.open_btn.data = result.outputs[0].parent
         self.open_file_btn.visible = len(result.outputs) == 1
         self.open_file_btn.data = result.outputs[0]
 
     def _hide_result_actions(self) -> None:
+        self._result_actions.visible = False
         self.open_btn.visible = False
         self.open_file_btn.visible = False
+        self.open_btn.data = None
+        self.open_file_btn.data = None
+        self.run_btn.style = None
 
     # ---- errores (mensajes para el usuario) ----
     def _clear_error(self) -> None:
@@ -220,6 +240,7 @@ class BaseToolPanel(PdfTool):
         if generation is not None and generation != self._generation:
             return
         self._job = None
+        self._hide_result_actions()
         self._logger().error("error · %.1fs", self._elapsed(), exc_info=exc)
         self.progress.visible = False
         message, detail = humanize_error(exc)
@@ -244,7 +265,7 @@ class BaseToolPanel(PdfTool):
         self._page = page
 
         self.progress = ft.ProgressBar(value=0, visible=False)
-        self.status = ft.Text("")
+        self.status = ft.Text("", weight=ft.FontWeight.W_500)
         self._counter = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
         self._error_toggle = ft.TextButton(
             "Ver detalle técnico", visible=False, on_click=self._toggle_error_detail
@@ -258,15 +279,31 @@ class BaseToolPanel(PdfTool):
         )
         self._log_btn = download_log_button(self._log_picker)
         self._log_btn.visible = False
-        self._error_actions = ft.Row([self._error_toggle, self._log_btn], visible=False)
-        self.open_btn = ft.OutlinedButton(
+        self._error_actions = ft.Row(
+            [self._error_toggle, self._log_btn], visible=False, wrap=True
+        )
+        self.open_btn = ft.FilledButton(
             "Abrir carpeta", icon=ft.Icons.FOLDER_OPEN, visible=False
         )
-        self.open_file_btn = ft.OutlinedButton(
+        self.open_file_btn = ft.FilledButton(
             "Abrir archivo", icon=ft.Icons.OPEN_IN_NEW, visible=False
         )
         self.run_btn = ft.FilledButton(
             self.run_label, icon=self.run_icon, disabled=True
+        )
+        self._result_actions = ft.Row(
+            [self.open_file_btn, self.open_btn], visible=False, wrap=True, spacing=8
+        )
+        self._feedback = ft.Column(
+            [
+                self.progress,
+                self.status,
+                self._result_actions,
+                self._error_actions,
+                self._error_detail,
+            ],
+            spacing=8,
+            tight=True,
         )
 
         # Una única instancia reutilizada entre renders: `build_panel` corre en
@@ -303,6 +340,7 @@ class BaseToolPanel(PdfTool):
             if not self.can_run():
                 return
             self._clear_error()
+            self._hide_result_actions()
             if self._out_dir.destination_missing():
                 self.status.value = (
                     "La carpeta de destino ya no está disponible. Elige otra "
@@ -319,9 +357,9 @@ class BaseToolPanel(PdfTool):
                 page.update()
                 return
             self.run_btn.disabled = True
-            self._hide_result_actions()
             self.progress.visible = True
             self.progress.value = 0
+            self.status.value = "Procesando…"
             page.update()
             inputs = self.collect_inputs()
             self._invalidate_active_job(reset_ui=False)
@@ -381,16 +419,11 @@ class BaseToolPanel(PdfTool):
                 ft.Row(
                     [
                         self.run_btn,
-                        self.open_file_btn,
-                        self.open_btn,
                         ft.Container(expand=True),
                         self._counter,
                     ]
                 ),
-                self.progress,
-                self.status,
-                self._error_actions,
-                self._error_detail,
+                self._feedback,
             ],
             spacing=16,
             expand=True,
