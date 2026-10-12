@@ -170,3 +170,19 @@ def test_same_stem_from_different_folders_with_shared_output_dir(tmp_path):
 
     assert [o.name for o in res.outputs] == ["a.pdf", "a (1).pdf"]
     assert all(o.exists() for o in res.outputs)
+
+
+def test_cancellation_stops_the_batch(tmp_path):
+    from pdftool.core.jobs import JobCancelled
+
+    a = _img(tmp_path / "a.png", 10, 10)
+    b = _img(tmp_path / "b.png", 10, 10)
+    calls = []
+
+    def cancel(p, m):
+        calls.append(m)
+        raise JobCancelled()
+
+    with pytest.raises(JobCancelled):
+        images_to_pdf([a, b], ImagesToPdfParams(), progress=cancel)
+    assert len(calls) == 1

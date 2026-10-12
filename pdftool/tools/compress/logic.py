@@ -6,8 +6,9 @@ from pathlib import Path
 import fitz
 
 from pdftool.core.atomic import atomic_copy, atomic_output
+from pdftool.core.batch import noop_progress, run_batch
 from pdftool.core.naming import output_path
-from pdftool.core.plugin import FileResult, Progress, ToolResult
+from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.compress.params import CompressParams
 
 _ATTEMPTS = [
@@ -25,10 +26,6 @@ _PRESERVE_ATTEMPTS = [
     {"dpi_threshold": 120, "dpi_target": 96, "quality": 60},
     {"dpi_threshold": 96, "dpi_target": 72, "quality": 45},
 ]
-
-
-def _noop(_p: float, _m: str) -> None:
-    pass
 
 
 def _size_mb(path: Path) -> float:
@@ -117,12 +114,11 @@ def _preserve_compress(
 
 def _compress_one(
     input_path: Path,
+    out: Path,
     target_mb: float,
     progress: Progress,
-    out_dir: Path | None = None,
     mode: str = "max",
 ) -> tuple[Path, str, float, float]:
-    out = output_path_for(input_path, target_mb, out_dir)
     original = _size_mb(input_path)
     progress(0.0, f"Tamaño original: {original:.2f} MB")
 
@@ -187,52 +183,45 @@ def _compress_one(
 
 
 def compress(
-    inputs: list[Path], params: CompressParams, progress: Progress = _noop
+    inputs: list[Path], params: CompressParams, progress: Progress = noop_progress
 ) -> ToolResult:
-    if not inputs:
-        raise ValueError("inputs está vacío")
-    paths = [Path(p) for p in inputs]
-    for path in paths:
-        if not path.exists():
-            raise FileNotFoundError(path)
-
     target_mb = params.target_mb
-    total = len(paths)
-    outputs: list[Path] = []
-    summaries: list[str] = []
-    items: list[FileResult] = []
-    total_original = 0.0
-    total_final = 0.0
+    sizes: list[tuple[float, float]] = []
 
-    for index, path in enumerate(paths):
+    def one(path: Path, scoped: Progress) -> tuple[Path, str]:
+        out = output_path_for(path, target_mb, params.output_dir)
+        try:
+            _, summary, original, final = _compress_one(
+                path, out, target_mb, scoped, params.mode
+            )
+        except BaseException:
+            # Los intentos van publicando salidas intermedias; si el archivo
+            # falla o se cancela, no se deja un resultado a medias. `out` lo
+            # eligió `output_path`, así que no existía antes de este archivo.
+            out.unlink(missing_ok=True)
+            raise
+        sizes.append((original, final))
+        return out, summary
 
-        def scoped(
-            pct: float, msg: str, _i: int = index, _name: str = path.name
-        ) -> None:
-            overall = (_i + pct) / total
-            label = f"[{_i + 1}/{total}] {_name}: {msg}" if total > 1 else msg
-            progress(overall, label)
-
-        out, summary, original, final = _compress_one(
-            path, target_mb, scoped, params.output_dir, params.mode
-        )
-        outputs.append(out)
-        summaries.append(summary)
-        items.append(FileResult(path, out, True, summary))
-        total_original += original
-        total_final += final
+    batch = run_batch(inputs, one, progress, all_failed="Ningún PDF pudo comprimirse.")
+    outputs, total = batch.outputs, batch.total
 
     if total == 1:
-        return ToolResult(outputs=outputs, summary=summaries[0])
+        return ToolResult(outputs=outputs, summary=batch.items[0].message)
 
+    total_original = sum(original for original, _ in sizes)
+    total_final = sum(final for _, final in sizes)
     saved = total_original - total_final
     pct = (saved / total_original * 100) if total_original else 0.0
     tail = f" ({pct:.0f}% menos)" if saved > 0.005 else " (sin cambios)"
-    progress(1.0, f"{total} archivos comprimidos")
+    progress(1.0, f"{len(outputs)} archivos comprimidos")
+    head = (
+        f"{total} archivos"
+        if len(outputs) == total
+        else f"{len(outputs)} de {total} archivos"
+    )
     return ToolResult(
         outputs=outputs,
-        summary=(
-            f"{total} archivos · {total_original:.2f} MB → {total_final:.2f} MB{tail}"
-        ),
-        items=items,
+        summary=f"{head} · {total_original:.2f} MB → {total_final:.2f} MB{tail}",
+        items=batch.items,
     )

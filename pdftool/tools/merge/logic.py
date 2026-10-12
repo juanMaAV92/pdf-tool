@@ -5,13 +5,10 @@ from pathlib import Path
 import fitz
 
 from pdftool.core.atomic import atomic_output
+from pdftool.core.batch import noop_progress
 from pdftool.core.naming import unique_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.merge.params import MergeParams
-
-
-def _noop(_p: float, _m: str) -> None:
-    pass
 
 
 def output_path_for_merge(
@@ -32,7 +29,7 @@ def output_path_for_merge(
 
 
 def merge(
-    inputs: list[Path], params: MergeParams, progress: Progress = _noop
+    inputs: list[Path], params: MergeParams, progress: Progress = noop_progress
 ) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")

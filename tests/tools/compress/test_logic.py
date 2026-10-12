@@ -204,3 +204,50 @@ def test_compress_writes_to_output_dir(tmp_path, big_pdf):
 
     assert res.outputs[0].parent == destino
     assert res.outputs[0].exists()
+
+
+def test_corrupt_file_does_not_abort_the_batch(tmp_path, small_pdf):
+    """Un PDF dañado queda reportado; el resto del lote se procesa."""
+    import shutil
+
+    good1 = shutil.copy2(small_pdf, tmp_path / "uno.pdf")
+    corrupt = tmp_path / "roto.pdf"
+    corrupt.write_bytes(b"esto no es un pdf" * 100)
+    good2 = shutil.copy2(small_pdf, tmp_path / "dos.pdf")
+
+    result = compress(
+        [Path(good1), corrupt, Path(good2)], CompressParams(target_mb=0.0001)
+    )
+
+    assert [item.ok for item in result.items] == [True, False, True]
+    assert result.items[1].output_path is None
+    assert len(result.outputs) == 2
+    assert result.summary.startswith("2 de 3 archivos")
+
+
+def test_failed_file_leaves_no_partial_output(tmp_path, big_pdf, monkeypatch):
+    """Si un intento falla tras escribir una salida intermedia, se retira."""
+    import pdftool.tools.compress.logic as logic
+
+    def boom(*_a, **_k):
+        raise RuntimeError("fallo a mitad")
+
+    monkeypatch.setattr(logic, "_rerender", boom)
+    with pytest.raises(RuntimeError):
+        compress([big_pdf], CompressParams(target_mb=0.0001))
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["big.pdf"]
+
+
+def test_cancellation_stops_the_batch(tmp_path, small_pdf):
+    import shutil
+
+    from pdftool.core.jobs import JobCancelled
+
+    a = shutil.copy2(small_pdf, tmp_path / "a.pdf")
+    b = shutil.copy2(small_pdf, tmp_path / "b.pdf")
+
+    def cancel(_p, _m):
+        raise JobCancelled()
+
+    with pytest.raises(JobCancelled):
+        compress([Path(a), Path(b)], CompressParams(target_mb=50.0), progress=cancel)

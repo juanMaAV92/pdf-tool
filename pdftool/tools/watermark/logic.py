@@ -5,15 +5,12 @@ from pathlib import Path
 import fitz
 
 from pdftool.core.atomic import atomic_output
+from pdftool.core.batch import noop_progress
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.watermark.params import WatermarkParams
 
 _ANGLE = 45
-
-
-def _noop(_p: float, _m: str) -> None:
-    pass
 
 
 def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> Path:
@@ -22,7 +19,7 @@ def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> 
 
 
 def watermark(
-    inputs: list[Path], params: WatermarkParams, progress: Progress = _noop
+    inputs: list[Path], params: WatermarkParams, progress: Progress = noop_progress
 ) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")

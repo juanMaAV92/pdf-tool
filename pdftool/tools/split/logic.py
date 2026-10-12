@@ -5,16 +5,13 @@ from pathlib import Path
 import fitz
 
 from pdftool.core.atomic import atomic_output
+from pdftool.core.batch import noop_progress
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.split.params import SplitParams
 
 # Rango 1-indexed e inclusivo. None = extremo abierto (inicio o final del PDF).
 Range = tuple[int | None, int | None]
-
-
-def _noop(_p: float, _m: str) -> None:
-    pass
 
 
 def parse_ranges(spec: str) -> list[Range]:
@@ -102,7 +99,7 @@ def _ranges_for(params: SplitParams, page_count: int) -> list[tuple[int, int]]:
 
 
 def split(
-    inputs: list[Path], params: SplitParams, progress: Progress = _noop
+    inputs: list[Path], params: SplitParams, progress: Progress = noop_progress
 ) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")

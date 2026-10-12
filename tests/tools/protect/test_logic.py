@@ -195,3 +195,19 @@ def test_protect_writes_to_output_dir(tmp_path):
 
     assert res.outputs[0] == destino / "a_protegido.pdf"
     assert res.outputs[0].exists()
+
+
+def test_cancellation_stops_the_batch(tmp_path):
+    from pdftool.core.jobs import JobCancelled
+
+    a = _pdf(tmp_path / "a.pdf")
+    b = _pdf(tmp_path / "b.pdf")
+    calls = []
+
+    def cancel(p, m):
+        calls.append(m)
+        raise JobCancelled()
+
+    with pytest.raises(JobCancelled):
+        protect([a, b], ProtectParams(mode="protect", password="x"), progress=cancel)
+    assert len(calls) == 1
