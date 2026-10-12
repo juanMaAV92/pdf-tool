@@ -105,6 +105,43 @@ def _build_home(tools, on_open):
     )
 
 
+class _UpdateBanner(ft.Banner):
+    """Aviso de nueva versión: colores del tema y siempre se puede cerrar."""
+
+    def __init__(self, page) -> None:
+        self._app_page = page
+        self._url: str | None = None
+        super().__init__(
+            content=ft.Text(
+                "Hay una nueva versión disponible. ¿Descargarla ahora?",
+                color=ft.Colors.ON_SECONDARY_CONTAINER,
+            ),
+            leading=ft.Icon(
+                ft.Icons.SYSTEM_UPDATE, color=ft.Colors.ON_SECONDARY_CONTAINER
+            ),
+            bgcolor=ft.Colors.SECONDARY_CONTAINER,
+            actions=[
+                ft.TextButton("Descargar", on_click=self._download),
+                ft.TextButton("Ahora no", on_click=self._dismiss),
+            ],
+        )
+
+    def show(self, url: str) -> None:
+        self._url = url
+
+    def _download(self, _e) -> None:
+        if self._url:
+            self._app_page.launch_url(self._url)
+        self._dismiss(_e)
+
+    def _dismiss(self, _e) -> None:
+        self._app_page.close(self)
+
+
+def _build_update_banner(page) -> _UpdateBanner:
+    return _UpdateBanner(page)
+
+
 def build_app(page: ft.Page) -> None:
     registry.discover()
     tools = registry.get_tools()
@@ -175,16 +212,7 @@ def build_app(page: ft.Page) -> None:
         )
         footer.controls[1].items[0].text = label
 
-    update_banner = ft.Banner(
-        content=ft.Text("Hay una nueva versión disponible."),
-        actions=[
-            ft.TextButton(
-                "Descargar", on_click=lambda e: page.launch_url(e.control.data)
-            )
-        ],
-        bgcolor=ft.Colors.AMBER_100,
-        leading=ft.Icon(ft.Icons.SYSTEM_UPDATE),
-    )
+    update_banner = _build_update_banner(page)
 
     log_picker = make_log_picker()
     page.overlay.append(log_picker)
@@ -215,7 +243,7 @@ def build_app(page: ft.Page) -> None:
 
     def _on_update(url):
         if url:
-            update_banner.actions[0].data = url
+            update_banner.show(url)
             page.open(update_banner)
 
     run_job(

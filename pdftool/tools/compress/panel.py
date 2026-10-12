@@ -66,12 +66,14 @@ class CompressTool(MultiFileToolPanel):
         ]
 
     def make_params(self):
+        # En español se escribe «2,5»: se acepta la coma decimal.
+        text = (self._target_field.value or "").strip().replace(",", ".")
         try:
-            return CompressParams(
-                target_mb=float(self._target_field.value), mode=self._mode_dd.value
-            )
-        except (ValueError, ValidationError):
-            raise InvalidParams("Tamaño objetivo inválido")
+            return CompressParams(target_mb=float(text), mode=self._mode_dd.value)
+        except (ValueError, ValidationError) as exc:
+            raise InvalidParams(
+                "Escribe un tamaño mayor que 0, por ejemplo 5 o 2,5."
+            ) from exc
 
     def run_logic(self, inputs: list[Path], params, progress):
         return compress(inputs, params, progress=progress)

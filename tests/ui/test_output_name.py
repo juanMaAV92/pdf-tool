@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import flet as ft
 import pytest
 
 from pdftool.core.config import Settings
@@ -358,3 +359,14 @@ def test_rebuilding_a_panel_does_not_leak_pickers_in_the_overlay():
 
     assert tool._out_dir is primero
     assert len(page.overlay) == tras_el_primero
+
+
+def test_collision_warning_uses_a_theme_token_readable_in_light_mode(tmp_path):
+    from pdftool.ui.panel_base import OutputNameField
+
+    (tmp_path / "doc.pdf").write_text("x")
+    field = OutputNameField(lambda base: tmp_path / f"{base} (1).pdf")
+    field.value = "doc"
+    field.refresh()
+    assert field.helper_text.startswith("Ya existe")
+    assert field.helper_style.color == ft.Colors.TERTIARY
