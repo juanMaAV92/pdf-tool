@@ -20,7 +20,7 @@ def test_author_credit_is_visible_in_the_footer():
     credit = footer.controls[0]
 
     assert isinstance(credit, ft.TextButton)
-    assert credit.text == "Hecho por Juan Manuel Armero"
+    assert credit.text == "Hecho por @juanmaav92"
     assert credit.tooltip == "Visitar el sitio del autor"
     credit.on_click(None)
     assert called == ["author"]

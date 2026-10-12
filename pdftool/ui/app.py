@@ -16,7 +16,7 @@ from pdftool.ui.logs import LOG_LABEL, download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 from pdftool.ui.thumbnails import shutdown_thumbnail_executor
 
-AUTHOR_NAME = "Juan Manuel Armero"
+AUTHOR_HANDLE = "@juanmaav92"
 AUTHOR_SITE = "https://juanMaAV92.github.io"
 
 
@@ -31,7 +31,7 @@ def _build_footer(theme_label, on_theme, on_log, on_author):
     # Visible en todas las pantallas pero discreta: mismo tono apagado y
     # tamaño que la versión, sin competir con el resultado del panel.
     credit = ft.TextButton(
-        f"Hecho por {AUTHOR_NAME}",
+        f"Hecho por {AUTHOR_HANDLE}",
         icon=ft.Icons.OPEN_IN_NEW,
         tooltip="Visitar el sitio del autor",
         on_click=on_author,
