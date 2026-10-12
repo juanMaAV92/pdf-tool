@@ -8,7 +8,7 @@ import flet as ft
 from pdftool.core.plugin import ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.accessibility import NamedIconButton
-from pdftool.ui.panel_base import _WEB_MODE_MSG, BaseToolPanel
+from pdftool.ui.panel_base import WEB_MODE_MSG, BaseToolPanel
 from pdftool.ui.platform import open_file
 from pdftool.ui.thumbnails import MISSING, ThumbnailTask, get_cached, load_async
 
@@ -40,18 +40,19 @@ class MultiFileToolPanel(BaseToolPanel):
             disabled=True,
             on_click=self._clear_all,
         )
-        return ft.Row(
-            [
-                ft.FilledTonalButton(
-                    self.pick_label,
-                    icon=self.pick_icon,
-                    on_click=lambda _e: self._picker.pick_files(
-                        allow_multiple=True, allowed_extensions=self.allowed_extensions
-                    ),
-                ),
-                self._clear_btn,
-            ]
+        self._pick_btn = ft.FilledTonalButton(
+            self.pick_label,
+            icon=self.pick_icon,
+            on_click=lambda _e: self._picker.pick_files(
+                allow_multiple=True, allowed_extensions=self.allowed_extensions
+            ),
         )
+        return ft.Row([self._pick_btn, self._clear_btn])
+
+    def _lock_inputs(self, locked: bool) -> None:
+        self._pick_btn.disabled = locked
+        if hasattr(self, "_file_list"):
+            self._refresh()
 
     def build_body(self) -> ft.Control:
         # La lista rellena el cuerpo y scrollea sola cuando no cabe; el footer
@@ -131,13 +132,13 @@ class MultiFileToolPanel(BaseToolPanel):
                     NamedIconButton(
                         ft.Icons.ARROW_UPWARD,
                         f"Subir {path.name}",
-                        disabled=index == 0,
+                        disabled=index == 0 or self._running,
                         on_click=lambda _e, i=index: self._move(i, -1),
                     ),
                     NamedIconButton(
                         ft.Icons.ARROW_DOWNWARD,
                         f"Bajar {path.name}",
-                        disabled=index == len(self._files) - 1,
+                        disabled=index == len(self._files) - 1 or self._running,
                         on_click=lambda _e, i=index: self._move(i, 1),
                     ),
                 ]
@@ -145,6 +146,7 @@ class MultiFileToolPanel(BaseToolPanel):
                 NamedIconButton(
                     ft.Icons.CLOSE,
                     f"Quitar {path.name} de la lista",
+                    disabled=self._running,
                     on_click=lambda _e, i=index: self._remove(i),
                 ),
             ]
@@ -161,7 +163,7 @@ class MultiFileToolPanel(BaseToolPanel):
                 )
         self.on_inputs_changed()
         self._sync_ready_state()
-        self._clear_btn.disabled = not self._files
+        self._clear_btn.disabled = not self._files or self._running
         n = len(self._files)
         self._counter.value = (
             "" if n == 0 else "1 archivo" if n == 1 else f"{n} archivos"
@@ -226,7 +228,7 @@ class MultiFileToolPanel(BaseToolPanel):
                 self._files.append(path)
                 added += 1
         if added == 0 and e.files:
-            self._set_status(_WEB_MODE_MSG)
+            self._set_status(WEB_MODE_MSG)
         else:
             self._hide_result_actions()
             self._set_status("")

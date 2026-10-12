@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import flet as ft
 from pydantic import ValidationError
 
@@ -29,6 +27,7 @@ class WatermarkTool(SingleFileToolPanel):
         category="Editar",
         order=50,
     )
+    logic = staticmethod(watermark)
     run_label = "Añadir marca de agua"
     run_icon = ft.Icons.BRANDING_WATERMARK
     pick_label = "Elegir PDF"
@@ -74,6 +73,3 @@ class WatermarkTool(SingleFileToolPanel):
             )
         except (ValueError, ValidationError) as exc:
             raise InvalidParams("Revisa el texto, tamaño y opacidad.") from exc
-
-    def run_logic(self, inputs: list[Path], params, progress):
-        return watermark(inputs, params, progress=progress)

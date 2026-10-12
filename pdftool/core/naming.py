@@ -3,6 +3,40 @@ from __future__ import annotations
 from collections.abc import Iterable
 from pathlib import Path
 
+from pdftool.core.errors import UserError
+
+_FORBIDDEN_NAME_CHARS = set('/\\:?|<>*"\x00')
+
+# Nombres que Windows no permite como archivo, con o sin extensión.
+_WINDOWS_RESERVED_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{i}" for i in range(1, 10)}
+    | {f"LPT{i}" for i in range(1, 10)}
+)
+
+
+def parse_output_name(value: str | None) -> str | None:
+    """Sanitiza el nombre de salida escrito por el usuario.
+
+    None si quedó vacío (→ nombre default); sin extensión .pdf (se añade sola
+    en la lógica). Lanza `UserError` si trae separadores de ruta o un nombre
+    reservado por Windows.
+    """
+    name = (value or "").strip()
+    if name.lower().endswith(".pdf"):
+        name = name[:-4].strip()
+    if not name:
+        return None
+    if any(c in _FORBIDDEN_NAME_CHARS for c in name):
+        raise UserError(
+            'Nombre de salida inválido: no puede contener / \\ : ? | < > * "'
+        )
+    if name.upper() in _WINDOWS_RESERVED_NAMES:
+        raise UserError(
+            f"Nombre de salida inválido: «{name}» está reservado por Windows."
+        )
+    return name
+
 
 def unique_path(candidate: Path, taken: Iterable[Path] = ()) -> Path:
     """Primera ruta libre a partir de `candidate`, con sufijo « (n)».

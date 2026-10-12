@@ -100,3 +100,17 @@ def test_collision_is_resolved_in_the_destination_not_the_origin(tmp_path):
     (destino / "doc_marca.pdf").write_bytes(b"en destino")
     out = output_path(tmp_path / "doc.pdf", "marca", out_dir=destino)
     assert out == destino / "doc_marca (1).pdf"
+
+
+def test_parse_output_name_lives_in_the_core():
+    import pytest
+
+    from pdftool.core.errors import UserError
+    from pdftool.core.naming import parse_output_name
+
+    assert parse_output_name(" informe.pdf ") == "informe"
+    assert parse_output_name("") is None
+    with pytest.raises(UserError, match="reservado por Windows"):
+        parse_output_name("CON")
+    with pytest.raises(UserError, match="no puede contener"):
+        parse_output_name("a/b")

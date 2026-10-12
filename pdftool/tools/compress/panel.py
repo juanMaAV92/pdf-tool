@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import flet as ft
 from pydantic import ValidationError
 
@@ -31,6 +29,7 @@ class CompressTool(MultiFileToolPanel):
         category="Optimizar",
         order=30,
     )
+    logic = staticmethod(compress)
     run_label = "Comprimir"
     run_icon = ft.Icons.PLAY_ARROW
     pick_label = "Añadir PDFs"
@@ -76,6 +75,3 @@ class CompressTool(MultiFileToolPanel):
                 "Escribe un tamaño mayor que 0, por ejemplo 5 o 2,5.",
                 field=self._target_field,
             ) from exc
-
-    def run_logic(self, inputs: list[Path], params, progress):
-        return compress(inputs, params, progress=progress)

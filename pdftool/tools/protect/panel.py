@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import flet as ft
 from pydantic import ValidationError
 
-from pdftool.core.plugin import ToolMeta
+from pdftool.core.plugin import ToolMeta, ToolResult
 from pdftool.core.registry import register
 from pdftool.tools.protect.logic import protect
 from pdftool.tools.protect.params import ProtectParams
@@ -23,6 +21,7 @@ class ProtectTool(MultiFileToolPanel):
         category="Seguridad",
         order=60,
     )
+    logic = staticmethod(protect)
     run_label = "Proteger"
     run_icon = ft.Icons.LOCK
     pick_label = "Añadir PDFs"
@@ -60,6 +59,12 @@ class ProtectTool(MultiFileToolPanel):
         self.run_btn.icon = ft.Icons.LOCK if protecting else ft.Icons.LOCK_OPEN
         self._page.update()
 
+    def on_result(self, result: ToolResult) -> None:
+        super().on_result(result)
+        # No dejar la contraseña escrita en un panel que se conserva al navegar.
+        self._pw_field.value = ""
+        self._confirm_field.value = ""
+
     def make_params(self):
         password = self._pw_field.value or ""
         try:
@@ -73,6 +78,3 @@ class ProtectTool(MultiFileToolPanel):
                 "Las contraseñas no coinciden.", field=self._confirm_field
             )
         return params
-
-    def run_logic(self, inputs: list[Path], params, progress):
-        return protect(inputs, params, progress=progress)

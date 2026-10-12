@@ -358,3 +358,26 @@ def test_cancel_after_publishing_keeps_the_finished_file(big_pdf):
         compress([big_pdf], CompressParams(target_mb=0.0001), progress=cancel_when_done)
     outputs = [p for p in big_pdf.parent.iterdir() if p.name != "big.pdf"]
     assert len(outputs) == 1
+
+
+def test_attempts_live_next_to_the_destination_and_are_cleaned(
+    tmp_path, big_pdf, monkeypatch
+):
+    """Los intentos usan el disco del destino (no el del sistema) y no quedan."""
+    import pdftool.tools.compress.logic as logic
+
+    workdirs = []
+    real_init = logic._Candidates.__init__
+
+    def spy(self, workdir):
+        workdirs.append(workdir)
+        real_init(self, workdir)
+
+    monkeypatch.setattr(logic._Candidates, "__init__", spy)
+    out_dir = tmp_path / "salida"
+    out_dir.mkdir()
+    result = compress([big_pdf], CompressParams(target_mb=0.0001, output_dir=out_dir))
+
+    assert workdirs[0].parent == out_dir
+    assert workdirs[0].name.startswith(".pdf-tool-")
+    assert [p.name for p in out_dir.iterdir()] == [result.outputs[0].name]
