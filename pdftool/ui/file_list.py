@@ -97,7 +97,7 @@ class MultiFileToolPanel(BaseToolPanel):
         if box is None or png is None:
             return
         box.content = self._thumb_image(png)
-        self._page.update()
+        # Sin page.update aquí: el loader llama a on_flush por lotes.
 
     def _refresh(self) -> None:
         if self._thumb_task is not None:
@@ -178,6 +178,7 @@ class MultiFileToolPanel(BaseToolPanel):
                     pending,
                     self._on_thumb_ready,
                     is_current=lambda: self._thumb_generation == generation,
+                    on_flush=self._page.update,
                 )
         self.on_inputs_changed()
         self._sync_ready_state()

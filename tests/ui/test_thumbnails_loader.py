@@ -64,9 +64,9 @@ def test_missing_sentinel_for_never_tried():
 
 def test_lru_evicts_oldest(monkeypatch):
     monkeypatch.setattr(thumbs, "_CACHE_MAX", 2)
-    thumbs._store(("a", 0, 56), b"1")
-    thumbs._store(("b", 0, 56), b"2")
-    thumbs._store(("c", 0, 56), b"3")  # expulsa "a"
+    thumbs._store(thumbs._key(Path("a")), b"1")
+    thumbs._store(thumbs._key(Path("b")), b"2")
+    thumbs._store(thumbs._key(Path("c")), b"3")  # expulsa "a"
 
     assert thumbs.get_cached(Path("a")) is thumbs.MISSING
     assert thumbs.get_cached(Path("b")) == b"2"
@@ -83,3 +83,72 @@ def test_stale_generation_never_notifies(monkeypatch):
     t.join(timeout=5)
 
     assert ready == []
+
+
+def test_cache_is_invalidated_when_the_file_changes(tmp_path, monkeypatch):
+    rendered = []
+    monkeypatch.setattr(thumbs, "render_thumbnail", _fake_render(rendered))
+    pdf = tmp_path / "doc.pdf"
+    pdf.write_bytes(b"version 1")
+    thumbs.load_async([pdf], lambda p, b: None, is_current=lambda: True).join(5)
+    assert thumbs.get_cached(pdf) == b"png-falso"
+
+    pdf.write_bytes(b"version 2, mas larga")
+
+    assert thumbs.get_cached(pdf) is thumbs.MISSING
+    thumbs.load_async([pdf], lambda p, b: None, is_current=lambda: True).join(5)
+    assert len(rendered) == 2
+
+
+def test_any_page_can_be_requested(monkeypatch):
+    calls = []
+
+    def fake(path, page_index=0, height_px=56):
+        calls.append(page_index)
+        return b"p%d" % page_index
+
+    monkeypatch.setattr(thumbs, "render_thumbnail", fake)
+    ready = []
+    doc = Path("/tmp/doc.pdf")
+    thumbs.load_async(
+        [(doc, 0), (doc, 3)], lambda item, b: ready.append((item, b)), lambda: True
+    ).join(5)
+
+    assert sorted(calls) == [0, 3]
+    assert sorted(ready) == [((doc, 0), b"p0"), ((doc, 3), b"p3")]
+    assert thumbs.get_cached(doc, 3) == b"p3"
+
+
+def test_rendering_uses_every_worker(monkeypatch):
+    import threading
+    import time
+
+    threads = set()
+
+    def slow(path, page_index=0, height_px=56):
+        threads.add(threading.current_thread().name)
+        time.sleep(0.05)
+        return b"x"
+
+    monkeypatch.setattr(thumbs, "render_thumbnail", slow)
+    paths = [Path(f"/tmp/{i}.pdf") for i in range(8)]
+    thumbs.load_async(paths, lambda p, b: None, lambda: True).join(5)
+
+    assert len(threads) == thumbs._MAX_WORKERS
+
+
+def test_ui_flushes_are_batched(monkeypatch):
+    monkeypatch.setattr(thumbs, "render_thumbnail", _fake_render([]))
+    events = []
+    paths = [Path(f"/tmp/{i}.pdf") for i in range(40)]
+
+    thumbs.load_async(
+        paths,
+        lambda p, b: events.append("ready"),
+        lambda: True,
+        on_flush=lambda: events.append("flush"),
+    ).join(5)
+
+    assert events.count("ready") == 40
+    assert 1 <= events.count("flush") < 40
+    assert events[-1] == "flush"

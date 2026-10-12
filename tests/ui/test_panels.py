@@ -556,7 +556,7 @@ def test_no_thumbnails_by_default(monkeypatch):
     launched = []
     monkeypatch.setattr(
         "pdftool.ui.file_list.load_async",
-        lambda paths, on_ready, is_current: launched.append(paths),
+        lambda paths, on_ready, is_current, **kw: launched.append(paths),
     )
     tool = _build(_MultiStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
@@ -569,7 +569,7 @@ def test_thumbnails_flag_creates_placeholders_and_loads(monkeypatch):
     launched = []
     monkeypatch.setattr(
         "pdftool.ui.file_list.load_async",
-        lambda paths, on_ready, is_current: launched.append(list(paths)),
+        lambda paths, on_ready, is_current, **kw: launched.append(list(paths)),
     )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.png"]))
@@ -580,7 +580,8 @@ def test_thumbnails_flag_creates_placeholders_and_loads(monkeypatch):
 
 def test_thumb_ready_swaps_placeholder_for_image(monkeypatch):
     monkeypatch.setattr(
-        "pdftool.ui.file_list.load_async", lambda paths, on_ready, is_current: None
+        "pdftool.ui.file_list.load_async",
+        lambda paths, on_ready, is_current, **kw: None,
     )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
@@ -594,7 +595,8 @@ def test_thumb_ready_swaps_placeholder_for_image(monkeypatch):
 
 def test_thumb_ready_none_keeps_icon_and_gone_row_is_noop(monkeypatch):
     monkeypatch.setattr(
-        "pdftool.ui.file_list.load_async", lambda paths, on_ready, is_current: None
+        "pdftool.ui.file_list.load_async",
+        lambda paths, on_ready, is_current, **kw: None,
     )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
