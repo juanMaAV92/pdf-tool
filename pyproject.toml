@@ -17,7 +17,7 @@ pydantic = "^2.6.0"
 platformdirs = "^4.2.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.0.0"
+pytest = "^9.0.3"
 ruff = "^0.16.8"
 mypy = "^2.3.1"
 pytest-cov = "^7.1.0"
@@ -29,14 +29,19 @@ pdftool = "pdftool.main:main"
 target-version = "py311"
 
 [tool.ruff.lint]
-# Base segura: errores de sintaxis/pyflakes e imports deterministas. Reglas más
-# opinativas se incorporarán cuando se pague la deuda que señalen.
-select = ["E4", "E7", "E9", "F", "I"]
+# Base (sintaxis, pyflakes, imports) + bugbear, pyupgrade, simplificaciones,
+# reglas propias de ruff y complejidad ciclomática.
+select = ["E4", "E7", "E9", "F", "I", "B", "UP", "SIM", "RUF", "C90"]
+# «×» es el signo correcto en textos como «60000×60000 px».
+allowed-confusables = ["×"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.mypy]
-# Flet y PyMuPDF no publican stubs completos. El núcleo no depende de su UI y
-# sí concentra los contratos que deben permanecer compatibles entre herramientas.
-files = ["pdftool/core"]
+# Flet y PyMuPDF no publican stubs completos (ignore_missing_imports); aun así
+# se comprueba todo el paquete: núcleo, herramientas y UI.
+files = ["pdftool"]
 ignore_missing_imports = true
 check_untyped_defs = true
 warn_unused_configs = true
