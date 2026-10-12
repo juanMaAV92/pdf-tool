@@ -950,3 +950,11 @@ def test_invalid_field_is_marked_and_cleared_on_the_next_run():
     tool.run_btn.on_click(None)
     assert not tool._target_field.error_text
     assert "work" in calls
+
+
+def test_returning_to_a_panel_refreshes_output_dir_dependents():
+    tool = _build(_MultiStub())
+    calls = []
+    tool.on_output_dir_changed = lambda: calls.append(1)
+    tool.build_panel(tool._ctx)
+    assert calls == [1]

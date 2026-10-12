@@ -344,3 +344,17 @@ def test_best_effort_summary_explains_the_outcome(big_pdf):
     result = compress([big_pdf], CompressParams(target_mb=0.0001))
     assert "no se alcanzó el objetivo" in result.summary
     assert "versión más pequeña" in result.summary
+
+
+def test_cancel_after_publishing_keeps_the_finished_file(big_pdf):
+    """«Los archivos ya terminados se conservan»: también el último."""
+    from pdftool.core.jobs import JobCancelled
+
+    def cancel_when_done(_pct, msg):
+        if msg.startswith("Listo"):
+            raise JobCancelled()
+
+    with pytest.raises(JobCancelled):
+        compress([big_pdf], CompressParams(target_mb=0.0001), progress=cancel_when_done)
+    outputs = [p for p in big_pdf.parent.iterdir() if p.name != "big.pdf"]
+    assert len(outputs) == 1

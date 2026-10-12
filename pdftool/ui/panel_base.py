@@ -344,8 +344,10 @@ class BaseToolPanel(PdfTool):
         if root is not None and self._ctx.page is ctx.page:
             self._ctx = ctx
             # El destino es global (vive en Settings): otra herramienta pudo
-            # cambiarlo mientras este panel estaba oculto.
+            # cambiarlo mientras este panel estaba oculto. `sync` no avisa, así
+            # que se refresca lo que depende de él (p. ej. el nombre previsto).
             self._out_dir.sync()
+            self.on_output_dir_changed()
             return root
         # Página nueva (otra sesión): nada del panel anterior debe notificar.
         self._invalidate_active_job()

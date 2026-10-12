@@ -10,6 +10,7 @@ import fitz
 
 from pdftool.core.atomic import atomic_copy
 from pdftool.core.batch import noop_progress, run_batch
+from pdftool.core.jobs import JobCancelled
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.compress.params import CompressParams
@@ -244,10 +245,14 @@ def compress(
             _, summary, original, final = _compress_one(
                 path, out, target_mb, scoped, params.mode
             )
-        except BaseException:
-            # Si el archivo falla o se cancela tras publicar, no se deja un
-            # resultado que la UI no va a reportar. `out` lo eligió
-            # `output_path`, así que no existía antes de este archivo.
+        except JobCancelled:
+            # Cancelar conserva lo ya terminado, como en el resto de
+            # herramientas («Los archivos ya terminados se conservan»).
+            raise
+        except Exception:
+            # Un fallo tras publicar no debe dejar un resultado que la UI no
+            # va a reportar. `out` lo eligió `output_path`, así que no existía
+            # antes de este archivo.
             out.unlink(missing_ok=True)
             raise
         sizes.append((original, final))
