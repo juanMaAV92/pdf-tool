@@ -211,3 +211,26 @@ def test_failing_on_error_is_logged(job_log):
     handle.join(timeout=5)
 
     assert any(r.exc_info and r.exc_info[0] is ZeroDivisionError for r in job_log)
+
+
+def test_progress_is_throttled_but_keeps_first_and_final_updates():
+    times = iter([0.0, 0.03, 0.06, 0.12, 0.15, 0.16])
+    seen = []
+    done = threading.Event()
+
+    def work(progress):
+        for pct in (0.1, 0.2, 0.3, 0.4, 0.5, 1.0):
+            progress(pct, f"{pct}")
+        return "ok"
+
+    handle = run_job(
+        work,
+        on_progress=lambda p, m: seen.append(p),
+        on_done=lambda r: done.set(),
+        on_error=lambda e: done.set(),
+        progress_interval=0.1,
+        clock=lambda: next(times),
+    )
+    handle.join(timeout=5)
+    assert done.is_set()
+    assert seen == [0.1, 0.4, 1.0]
