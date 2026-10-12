@@ -80,8 +80,9 @@ def _rerender(src: Path, dst: Path, *, max_dimension: int, jpg_quality: int) -> 
                 rect = src_page.rect
                 if rect.width == 0 or rect.height == 0:
                     continue
+                # Sin zoom mínimo: el lado mayor nunca pasa de `max_dimension`,
+                # así una página enorme no se convierte en decenas de MP.
                 zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
-                zoom = max(zoom, 0.5)
                 pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
                 img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
                 new_page = doc.new_page(width=rect.width, height=rect.height)

@@ -5,6 +5,9 @@ from pathlib import Path
 import fitz
 
 THUMBNAIL_HEIGHT_PX = 56
+# Tope de proporción: una página degenerada (p. ej. 14400×1 pt) pediría un
+# pixmap de cientos de miles de píxeles de ancho al escalar solo por el alto.
+_MAX_ASPECT = 4
 
 
 def render_thumbnail(
@@ -24,7 +27,10 @@ def render_thumbnail(
             page = doc[page_index]
             if page.rect.height <= 0 or page.rect.width <= 0:
                 return None
-            zoom = height_px / page.rect.height
+            zoom = min(
+                height_px / page.rect.height,
+                height_px * _MAX_ASPECT / page.rect.width,
+            )
             pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
             return pix.tobytes("png")
     except Exception:  # corrupto/ilegible: estado esperado, no excepción

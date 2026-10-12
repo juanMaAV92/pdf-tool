@@ -251,3 +251,21 @@ def test_cancellation_stops_the_batch(tmp_path, small_pdf):
 
     with pytest.raises(JobCancelled):
         compress([Path(a), Path(b)], CompressParams(target_mb=50.0), progress=cancel)
+
+
+def test_rerender_bounds_the_pixmap_of_a_huge_page(tmp_path):
+    """El zoom mínimo de 0.5 convertía una página enorme en decenas de MP."""
+    from pdftool.tools.compress.logic import _rerender
+
+    src = tmp_path / "poster.pdf"
+    with fitz.open() as doc:
+        doc.new_page(width=14400, height=14400)
+        doc.save(str(src))
+    dst = tmp_path / "out.pdf"
+
+    _rerender(src, dst, max_dimension=600, jpg_quality=25)
+
+    with fitz.open(str(dst)) as doc:
+        xref = doc[0].get_images()[0][0]
+        pix = fitz.Pixmap(doc, xref)
+        assert max(pix.width, pix.height) <= 600

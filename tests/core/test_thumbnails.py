@@ -69,3 +69,18 @@ def test_corrupt_file_returns_none(tmp_path):
 
 def test_page_out_of_range_returns_none(tmp_path):
     assert render_thumbnail(_pdf(tmp_path / "a.pdf"), page_index=5) is None
+
+
+def test_degenerate_page_does_not_produce_a_huge_pixmap(tmp_path):
+    """Una página de 14400×1 pt pedía un pixmap de ~800000 px de ancho."""
+    path = tmp_path / "tira.pdf"
+    with fitz.open() as doc:
+        doc.new_page(width=14400, height=1)
+        doc.save(str(path))
+
+    png = render_thumbnail(path)
+
+    assert png is not None
+    pix = fitz.Pixmap(png)
+    assert pix.width <= 4 * THUMBNAIL_HEIGHT_PX
+    assert pix.height <= THUMBNAIL_HEIGHT_PX
