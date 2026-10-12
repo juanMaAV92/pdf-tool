@@ -46,10 +46,18 @@ def _texts(control):
     return found
 
 
-def test_home_shows_category_headings_before_their_tools():
-    texts = _texts(_build_home(TOOLS, lambda i: None))
-    assert texts.index("Organizar") < texts.index("Unir") < texts.index("Optimizar")
-    assert texts.index("Optimizar") < texts.index("Comprimir")
+def test_home_is_one_compact_grid_with_the_category_on_each_card():
+    """Una fila por categoría dejaba media pantalla vacía y obligaba a hacer
+    scroll: todas las tarjetas comparten una cuadrícula que se ajusta."""
+    home = _build_home(TOOLS, lambda i: None)
+    grids = [c for c in home.controls if isinstance(c, ft.Row) and c.wrap]
+    assert len(grids) == 1
+    cards = grids[0].controls
+    assert len(cards) == len(TOOLS)
+    for card, tool in zip(cards, TOOLS, strict=True):
+        texts = _texts(card)
+        assert tool.meta.name in texts
+        assert tool.meta.category in texts
 
 
 def test_sidebar_scrolls_and_groups_tools():

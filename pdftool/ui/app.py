@@ -60,7 +60,20 @@ def _tool_card(index, tool, on_open):
     return ft.OutlinedButton(
         content=ft.Column(
             [
-                ft.Icon(tool.meta.icon, size=30),
+                # La categoría va en la esquina, en la misma línea que el icono:
+                # agrupa sin añadir altura (la barra lateral ya muestra grupos).
+                ft.Row(
+                    [
+                        ft.Icon(tool.meta.icon, size=30),
+                        ft.Text(
+                            tool.meta.category,
+                            size=12,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                ),
                 ft.Text(tool.meta.name, weight=ft.FontWeight.BOLD, size=15),
                 ft.Text(
                     tool.meta.description, size=12, color=ft.Colors.ON_SURFACE_VARIANT
@@ -100,22 +113,21 @@ def _group_by_category(tools):
 
 
 def _build_home(tools, on_open):
-    sections: list[ft.Control] = []
-    for category, items in _group_by_category(tools):
-        sections.append(ft.Text(category, size=16, weight=ft.FontWeight.W_600))
-        sections.append(
-            ft.Row(
-                [_tool_card(i, t, on_open) for i, t in items],
-                wrap=True,
-                spacing=16,
-                run_spacing=16,
-            )
-        )
+    # Una sola cuadrícula que se ajusta al ancho: las herramientas ya llegan
+    # ordenadas por tarea, así que las de una misma categoría quedan juntas.
+    # (Una fila por categoría dejaba la pantalla medio vacía y forzaba scroll.)
+    cards = ft.Row(
+        [_tool_card(i, t, on_open) for i, t in enumerate(tools)],
+        wrap=True,
+        spacing=16,
+        run_spacing=16,
+    )
     return ft.Column(
         [
             ft.Text("Herramientas PDF", size=28, weight=ft.FontWeight.BOLD),
             ft.Text("Elige una herramienta para empezar."),
-            *sections,
+            ft.Container(height=8),
+            cards,
         ],
         spacing=14,
         scroll=ft.ScrollMode.AUTO,

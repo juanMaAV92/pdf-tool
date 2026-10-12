@@ -25,6 +25,7 @@ def test_home_card_is_standard_button_and_opens_selected_tool():
             icon=ft.Icons.COMPRESS,
             name="Comprimir PDF",
             description="Reduce el tamaño.",
+            category="Optimizar",
         )
     )
     card = _tool_card(2, tool, opened.append)
