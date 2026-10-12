@@ -2,6 +2,7 @@
 
 Delega en pdftool.main:main, que es también el script `pdftool` de Poetry.
 """
+
 from pdftool.main import main
 
 main()

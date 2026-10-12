@@ -6,32 +6,41 @@ on:
     tags:
       - "v*"
 
-# Necesario para que el job de release pueda crear el GitHub Release.
+# Solo lectura por defecto: los jobs de build ejecutan código de terceros
+# (Flutter, pub, PyPI, choco). Solo el job `release` puede escribir.
 permissions:
-  contents: write
+  contents: read
 
-# flet 0.24.1 imprime emojis; en Windows (cp1252) eso revienta sin UTF-8.
+# Flet imprime emojis; en Windows (cp1252) eso revienta sin UTF-8.
 env:
   PYTHONUTF8: "1"
 
 jobs:
-  # 1) Gate: si los tests fallan, no se construye ni publica nada.
+  # 1) Gate: si los tests fallan o el tag no es una versión, no se construye nada.
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Validate tag
+        # El nombre del tag llega por variable de entorno (no interpolado en el
+        # script) y debe ser exactamente vX.Y.Z.
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::El tag debe tener la forma vX.Y.Z"
+            exit 1
+          }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install Poetry
-        run: pipx install poetry
+        run: pipx install poetry==2.4.1
       - name: Install dependencies
         run: poetry install
       - name: Check formatting
         run: poetry run ruff format --check pdftool tests
       - name: Lint
         run: poetry run ruff check pdftool tests
-      - name: Check core types
+      - name: Check types
         run: poetry run mypy
       - name: Run tests
         run: poetry run pytest -q --cov=pdftool --cov-report=term-missing --cov-fail-under=85
@@ -41,30 +50,28 @@ jobs:
     needs: test
     runs-on: macos-14 # Apple Silicon
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           # flet 0.28.x se migró a Flutter 3.29; este pin lo mantiene compatible
           # (y Flutter 3.29 ya usa el generador de Visual Studio 2022 de los runners).
           flutter-version: 3.29.3
           channel: stable
       - name: Install Poetry
-        run: pipx install poetry
+        run: pipx install poetry==2.4.1
       - name: Derive version from tag
-        id: ver
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - name: Stamp version (pyproject + __init__)
         run: |
-          VERSION="${{ steps.ver.outputs.version }}"
           poetry version "$VERSION"
           sed -i '' "s/^__version__ = .*/__version__ = \"$VERSION\"/" pdftool/__init__.py
       - name: Export runtime requirements for the bundle
         run: |
-          poetry self add poetry-plugin-export
-          poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt
+          poetry self add poetry-plugin-export==1.10.1
+          poetry export --without dev -f requirements.txt -o requirements.txt
       - name: Install deps (for flet CLI)
         run: poetry install
       - name: Build macOS app
@@ -72,7 +79,7 @@ jobs:
         # Python embebido solo para la arch del runner (Apple Silicon), y en un
         # Mac Intel la ventana abre pero el backend Python no arranca -> pantalla
         # en blanco. El universal mete ambas arches en el mismo .app/.dmg.
-        run: poetry run flet build macos --arch arm64 x86_64 --build-version "${{ steps.ver.outputs.version }}" --product "pdf-tool" --org "com.juanmaav" -v
+        run: poetry run flet build macos --arch arm64 x86_64 --build-version "$VERSION" --product "pdf-tool" --org "com.juanmaav" -v
       - name: Verify universal binary (arm64 + x86_64)
         run: |
           APP=$(ls -d build/macos/*.app | head -1)
@@ -84,14 +91,13 @@ jobs:
           echo "$ARCHS" | grep -q arm64 || { echo "::error::falta arm64 (build no universal)"; exit 1; }
       - name: Package .dmg (drag-to-Applications layout)
         run: |
-          VERSION="${{ steps.ver.outputs.version }}"
           APP=$(ls -d build/macos/*.app | head -1)
           echo "App bundle: $APP"
           mkdir -p dmg_stage
           cp -R "$APP" dmg_stage/
           ln -s /Applications dmg_stage/Applications
           hdiutil create -volname "pdf-tool" -srcfolder dmg_stage -ov -format UDZO "pdf-tool-${VERSION}-macos.dmg"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: macos-dmg
           path: "pdf-tool-*-macos.dmg"
@@ -104,65 +110,79 @@ jobs:
     # Fijamos windows-2022 (VS 2022), que este Flutter sí soporta.
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           # flet 0.28.x se migró a Flutter 3.29; este pin lo mantiene compatible
           # (y Flutter 3.29 ya usa el generador de Visual Studio 2022 de los runners).
           flutter-version: 3.29.3
           channel: stable
       - name: Install Poetry
-        run: pipx install poetry
+        run: pipx install poetry==2.4.1
       - name: Derive version from tag
-        id: ver
         shell: bash
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - name: Stamp version (pyproject + __init__ + Inno AppVersion)
         shell: pwsh
         run: |
-          $v = "${{ steps.ver.outputs.version }}"
+          $v = $env:VERSION
           poetry version $v
           (Get-Content pdftool/__init__.py) -replace '^__version__ = .*', "__version__ = `"$v`"" | Set-Content pdftool/__init__.py
           (Get-Content installer/windows.iss) -replace 'AppVersion=.*', "AppVersion=$v" | Set-Content installer/windows.iss
       - name: Export runtime requirements for the bundle
         shell: bash
         run: |
-          poetry self add poetry-plugin-export
-          poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt
+          poetry self add poetry-plugin-export==1.10.1
+          poetry export --without dev -f requirements.txt -o requirements.txt
       - name: Install deps (for flet CLI)
         run: poetry install
       - name: Build Windows app
-        run: poetry run flet build windows --build-version "${{ steps.ver.outputs.version }}" --product "pdf-tool" --org "com.juanmaav" -v
+        shell: pwsh
+        run: poetry run flet build windows --build-version "$env:VERSION" --product "pdf-tool" --org "com.juanmaav" -v
       - name: List build output (debug)
         shell: bash
         run: ls -la build/windows
       - name: Install Inno Setup
-        run: choco install innosetup -y --no-progress
+        run: choco install innosetup --version=6.7.1 -y --no-progress
       - name: Compile installer
         shell: pwsh
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/windows.iss
-          $v = "${{ steps.ver.outputs.version }}"
-          Move-Item "installer/Output/pdf-tool-setup.exe" "pdf-tool-$v-windows-setup.exe"
-      - uses: actions/upload-artifact@v4
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Move-Item "installer/Output/pdf-tool-setup.exe" "pdf-tool-$($env:VERSION)-windows-setup.exe"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: windows-setup
           path: "pdf-tool-*-windows-setup.exe"
 
-  # 3) Publica el GitHub Release (en BORRADOR) con ambos instaladores adjuntos.
+  # 3) Publica el GitHub Release (en BORRADOR) con ambos instaladores, sus
+  #    checksums y una attestation de procedencia.
   release:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # crear el release
+      id-token: write # firmar la attestation (OIDC)
+      attestations: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: dist
           merge-multiple: true
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum pdf-tool-* > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: |
+            dist/pdf-tool-*-macos.dmg
+            dist/pdf-tool-*-windows-setup.exe
       - name: Create draft release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           draft: true
           tag_name: ${{ github.ref_name }}
@@ -170,19 +190,31 @@ jobs:
           files: |
             dist/pdf-tool-*-macos.dmg
             dist/pdf-tool-*-windows-setup.exe
+            dist/SHA256SUMS.txt
           body: |
             ## Instalación
+
+            Descarga los instaladores **solo desde esta página**. Para comprobar
+            que un archivo no fue alterado, compara su huella con
+            `SHA256SUMS.txt`:
+            - macOS (Terminal): `shasum -a 256 pdf-tool-*-macos.dmg`
+            - Windows (PowerShell): `Get-FileHash .\pdf-tool-*-windows-setup.exe`
+
+            Con GitHub CLI también puedes verificar que el archivo se construyó
+            en este repositorio: `gh attestation verify <archivo> --repo ${{ github.repository }}`
 
             ### macOS (`.dmg`)
             1. Abre el `.dmg` y arrastra **pdf-tool** a la carpeta *Aplicaciones*.
             2. La primera vez: **clic derecho** sobre la app → **Abrir** → **Abrir**.
-               (La app no está firmada; este paso solo se hace una vez.)
-               Si dice que está "dañada", abre Terminal y ejecuta:
+               (La app aún no está firmada por Apple; este paso solo se hace una vez.)
+               Si dice que está "dañada" y la huella coincide con `SHA256SUMS.txt`,
+               abre Terminal y ejecuta:
                `xattr -dr com.apple.quarantine /Applications/pdf-tool.app`
 
             ### Windows (`-setup.exe`)
-            1. Ejecuta el instalador. Si aparece **SmartScreen**:
-               **Más información** → **Ejecutar de todas formas**.
+            1. Ejecuta el instalador. Si aparece **SmartScreen** y la huella
+               coincide con `SHA256SUMS.txt`: **Más información** → **Ejecutar
+               de todas formas**.
             2. El instalador actualiza en sitio sobre versiones previas.
 
             Tus ajustes (tema, etc.) se conservan al actualizar.

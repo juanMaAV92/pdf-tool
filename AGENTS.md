@@ -13,6 +13,9 @@ poetry install          # instalar dependencias
 poetry run pdftool      # abrir la app de escritorio
 poetry run pytest       # correr la suite de tests
 poetry run pytest -v    # tests con detalle
+poetry run ruff format pdftool tests && poetry run ruff check pdftool tests && poetry run mypy
+                        # lo mismo que exige CI (mypy revisa todo el paquete)
+pipx install pre-commit && pre-commit install   # opcional: lo anterior en cada commit
 ```
 
 > **No actives venvs a mano** (`source .../activate`). Usa siempre `poetry run`; el entorno del proyecto lo gestiona Poetry. Activar otro venv provoca el error `[Errno 2] ... 'python'` al lanzar Flet.
@@ -33,7 +36,7 @@ pdftool/
 │   ├── logger.py           # log rotativo con rutas y nombres redactados
 │   ├── naming.py           # destinos y colisiones de nombres
 │   ├── thumbnails.py       # render puro de miniaturas
-│   └── updater.py          # is_newer(), check_for_update() vía GitHub Releases (nunca lanza)
+│   └── updater.py          # GITHUB_REPO, check_for_update() vía GitHub Releases (nunca lanza)
 ├── ui/
 │   ├── app.py              # host: NavigationRail + contenido + menú + banner update
 │   ├── panel_base.py       # BaseToolPanel / SingleFileToolPanel: plantilla de panel
@@ -93,7 +96,8 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    `SingleFileToolPanel` (`pdftool/ui/panel_base.py`) para un archivo. Define
    `meta: ToolMeta` (con `order` para su posición en la navegación),
    `run_label`/`run_icon`/`pick_label` e implementa los hooks
-   `extra_controls()`, `make_params()` y `run_logic(inputs, params, progress)`.
+   `extra_controls()` y `make_params()`, y declara la lógica con
+   `logic = staticmethod(<función de logic.py>)`.
    `make_params()` lanza `InvalidParams("mensaje", field=campo)` para marcar el
    error también en el campo. En lotes, `reorderable = True` solo si el orden
    cambia el resultado (como en Unir).
@@ -126,7 +130,9 @@ sigue funcionando; dos herramientas con el mismo `meta.id` son un error.
 
 - macOS: `poetry run flet build macos` → `.app` → envolver en `.dmg`.
 - Windows: `poetry run flet build windows` → compilar `installer/windows.iss` con Inno Setup → `pdf-tool-setup.exe` (actualiza en sitio, mismo `AppId`).
-- Distribución por **GitHub Releases** con tag `vX.Y.Z`. El workflow de release toma la versión del tag; el repo del chequeo de actualizaciones está en `GITHUB_REPO` (`ui/app.py`).
+- Distribución por **GitHub Releases** con tag `vX.Y.Z`. El workflow de release toma la versión del tag; el repo del chequeo de actualizaciones está en `GITHUB_REPO` (`core/updater.py`).
+- La release publica `SHA256SUMS.txt` y una attestation de procedencia (`gh attestation verify`). Las actions van fijadas por SHA (Dependabot las actualiza) y Poetry, el plugin de export e Inno Setup por versión.
+- CI corre `pip-audit` sobre las dependencias de ejecución. Una vulnerabilidad sin arreglo compatible se ignora explícitamente en `ci.yml`, con el motivo.
 - Los ajustes del usuario viven fuera del binario (`platformdirs`), así que sobreviven a las actualizaciones.
 
 ## Notas

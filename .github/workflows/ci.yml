@@ -3,26 +3,51 @@ name: CI
 on:
   push:
     branches: [main]
+  # Sin filtro de rama base: los PR apilados (contra otra rama de trabajo)
+  # también pasan las comprobaciones.
   pull_request:
-    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install Poetry
-        run: pipx install poetry
+        run: pipx install poetry==2.4.1
       - name: Install dependencies
         run: poetry install
       - name: Check formatting
         run: poetry run ruff format --check pdftool tests
       - name: Lint
         run: poetry run ruff check pdftool tests
-      - name: Check core types
+      - name: Check types
         run: poetry run mypy
       - name: Run tests
         run: poetry run pytest -q --cov=pdftool --cov-report=term-missing --cov-fail-under=85
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry==2.4.1
+      - name: Export runtime requirements
+        run: |
+          poetry self add poetry-plugin-export==1.10.1
+          poetry export --without dev -f requirements.txt -o requirements.txt
+      - name: Audit dependencies
+        # PYSEC-2026-4114 (oauthlib): el arreglo está en 4.0, pero flet 0.28.2
+        # exige oauthlib<4. La app no usa las funciones OAuth de flet. Revisar
+        # al actualizar flet.
+        run: >-
+          pipx run pip-audit==2.10.1 -r requirements.txt --require-hashes
+          --disable-pip --ignore-vuln PYSEC-2026-4114

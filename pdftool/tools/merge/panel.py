@@ -4,12 +4,13 @@ from pathlib import Path
 
 import flet as ft
 
+from pdftool.core.naming import parse_output_name
 from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
 from pdftool.tools.merge.logic import merge, output_path_for_merge
 from pdftool.tools.merge.params import MergeParams
 from pdftool.ui.file_list import MultiFileToolPanel
-from pdftool.ui.panel_base import OutputNameField, parse_output_name
+from pdftool.ui.panel_base import OutputNameField
 
 
 @register
@@ -22,11 +23,12 @@ class MergeTool(MultiFileToolPanel):
         category="Organizar",
         order=10,
     )
+    logic = staticmethod(merge)
     run_label = "Unir"
     run_icon = ft.Icons.MERGE_TYPE
     pick_label = "Añadir PDFs"
     pick_icon = ft.Icons.UPLOAD_FILE
-    allowed_extensions = ["pdf"]
+    allowed_extensions = ("pdf",)
     min_files = 2
     show_thumbnails = True
     reorderable = True
@@ -49,6 +51,3 @@ class MergeTool(MultiFileToolPanel):
 
     def make_params(self):
         return MergeParams(output_name=parse_output_name(self._name_field.value))
-
-    def run_logic(self, inputs: list[Path], params, progress):
-        return merge(inputs, params, progress=progress)

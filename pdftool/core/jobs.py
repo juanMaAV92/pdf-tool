@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass, field
-from typing import Callable
 
 _MAX_WORKERS = 2
 _executor_lock = threading.Lock()
@@ -92,6 +92,58 @@ def shutdown_job_executor() -> None:
         executor.shutdown(wait=False, cancel_futures=True)
 
 
+def _notify(callback: Callable, value: object) -> None:
+    # Un fallo aquí es un bug de la UI: sin este registro se perdería en un
+    # Future que nadie lee y el panel quedaría en «Procesando…».
+    try:
+        callback(value)
+    except Exception:
+        _log.exception("Error en el callback de un trabajo")
+
+
+@dataclass(eq=False)
+class _Job:
+    """Estado de una ejecución: callbacks, vigencia y ritmo del progreso."""
+
+    handle: JobHandle
+    work: Callable
+    on_progress: Callable
+    on_done: Callable
+    on_error: Callable
+    is_current: Callable[[], bool] | None
+    progress_interval: float
+    clock: Callable[[], float]
+    _last_progress: float | None = None
+
+    def still_current(self) -> bool:
+        if self.handle.cancelled:
+            return False
+        return self.is_current is None or self.is_current()
+
+    def progress(self, pct: float, message: str) -> None:
+        if not self.still_current():
+            raise JobCancelled()
+        now = self.clock()
+        previous = self._last_progress
+        if previous is None or pct >= 1.0 or now - previous >= self.progress_interval:
+            self._last_progress = now
+            self.on_progress(pct, message)
+
+    def run(self) -> None:
+        try:
+            result = self.work(self.progress)
+        except JobCancelled:
+            return
+        except Exception as exc:  # se reenvía a on_error
+            if self.still_current():
+                _notify(self.on_error, exc)
+        else:
+            if self.still_current():
+                _notify(self.on_done, result)
+        finally:
+            _unregister(self.handle)
+
+
 def run_job(
     work: Callable,
     on_progress: Callable,
@@ -115,48 +167,21 @@ def run_job(
     """
     handle = JobHandle()
     _register(handle)
-
-    def _still_current() -> bool:
-        return not handle.cancelled and (is_current is None or is_current())
-
-    last_sent: list[float | None] = [None]
-
-    def _progress(pct: float, message: str) -> None:
-        if not _still_current():
-            raise JobCancelled()
-        now = clock()
-        previous = last_sent[0]
-        if previous is None or pct >= 1.0 or now - previous >= progress_interval:
-            last_sent[0] = now
-            on_progress(pct, message)
-
-    def _notify(callback: Callable, value: object) -> None:
-        # Un fallo aquí es un bug de la UI: sin este registro se perdería en un
-        # Future que nadie lee y el panel quedaría en «Procesando…».
-        try:
-            callback(value)
-        except Exception:
-            _log.exception("Error en el callback de un trabajo")
-
-    def _target() -> None:
-        try:
-            result = work(_progress)
-        except JobCancelled:
-            return
-        except Exception as exc:  # se reenvía a on_error
-            if _still_current():
-                _notify(on_error, exc)
-        else:
-            if _still_current():
-                _notify(on_done, result)
-        finally:
-            _unregister(handle)
-
+    job = _Job(
+        handle,
+        work,
+        on_progress,
+        on_done,
+        on_error,
+        is_current,
+        progress_interval,
+        clock,
+    )
     try:
-        future = _get_executor().submit(_target)
+        future = _get_executor().submit(job.run)
     except RuntimeError as exc:
         _unregister(handle)
-        if _still_current():
+        if job.still_current():
             on_error(exc)
     else:
         handle._set_future(future)

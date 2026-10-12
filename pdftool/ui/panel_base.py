@@ -8,57 +8,28 @@ from typing import Any
 
 import flet as ft
 
+from pdftool.core.errors import UserError
 from pdftool.core.jobs import JobHandle
-from pdftool.core.plugin import PdfTool, ToolContext, ToolResult
+from pdftool.core.naming import parse_output_name
+from pdftool.core.plugin import BaseParams, PdfTool, ToolContext, ToolResult
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.output_dir import OutputDirField
 from pdftool.ui.platform import open_file, open_folder
 
-_WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
+WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
 
 
-class InvalidParams(Exception):
+class InvalidParams(UserError):
     """Params inválidos; el panel muestra str(exc) en el status.
 
-    Si se indica `field`, el mensaje también se marca en ese campo.
+    Si se indica `field`, el mensaje también se marca en ese campo. Cualquier
+    `UserError` lanzado por `make_params` se trata igual, sin campo.
     """
 
     def __init__(self, message: str, field: ft.TextField | None = None) -> None:
         super().__init__(message)
         self.field = field
-
-
-_FORBIDDEN_NAME_CHARS = set('/\\:?|<>*"\x00')
-
-# Nombres que Windows no permite como archivo, con o sin extensión.
-_WINDOWS_RESERVED_NAMES = frozenset(
-    {"CON", "PRN", "AUX", "NUL"}
-    | {f"COM{i}" for i in range(1, 10)}
-    | {f"LPT{i}" for i in range(1, 10)}
-)
-
-
-def parse_output_name(value: str | None) -> str | None:
-    """Sanitiza el nombre de salida escrito por el usuario.
-
-    None si quedó vacío (→ nombre default); sin extensión .pdf (se añade sola
-    en la lógica). Lanza InvalidParams si trae separadores de ruta.
-    """
-    name = (value or "").strip()
-    if name.lower().endswith(".pdf"):
-        name = name[:-4].strip()
-    if not name:
-        return None
-    if any(c in _FORBIDDEN_NAME_CHARS for c in name):
-        raise InvalidParams(
-            'Nombre de salida inválido: no puede contener / \\ : ? | < > * "'
-        )
-    if name.upper() in _WINDOWS_RESERVED_NAMES:
-        raise InvalidParams(
-            f"Nombre de salida inválido: {name!r} está reservado por Windows."
-        )
-    return name
 
 
 _HELPER_OK_COLOR = ft.Colors.ON_SURFACE_VARIANT
@@ -98,7 +69,7 @@ class OutputNameField(ft.TextField):
     def _helper(self) -> tuple[str | None, str | None]:
         try:
             base = parse_output_name(self.value)
-        except InvalidParams:
+        except UserError:
             return None, None
         if base is None:
             return None, None
@@ -116,14 +87,19 @@ class BaseToolPanel(PdfTool):
     run_icon = ft.Icons.PLAY_ARROW
     pick_label: str = "Elegir PDF"
     pick_icon = ft.Icons.UPLOAD_FILE
-    allowed_extensions: list[str] = ["pdf"]
+    allowed_extensions: tuple[str, ...] = ("pdf",)
     # Las listas de lotes necesitan ocupar el espacio disponible cuando hay
     # archivos. Los paneles de un solo archivo no: un cuerpo vacío solo aleja la
     # acción principal de los controles que la preparan.
     expand_body_when_ready = True
+    # Función pura de la herramienta: run(inputs, params, progress) -> ToolResult.
+    logic: Callable[..., ToolResult] | None = None
 
     # Controles que `build_panel` crea una vez por página (ver ese método).
     _root: ft.Column | None = None
+    # True mientras corre un trabajo: las entradas quedan bloqueadas (cambiar
+    # archivos a mitad cancelaría el trabajo sin aviso; primero se cancela).
+    _running = False
     _out_dir: OutputDirField
     _ctx: ToolContext
     _page: Any  # ft.Page; los tests usan un sustituto mínimo
@@ -166,7 +142,7 @@ class BaseToolPanel(PdfTool):
         if reset_ui and hasattr(self, "progress"):
             self.progress.visible = False
             self.progress.value = 0
-            self.cancel_btn.visible = False
+            self._set_running(False)
             self.run_btn.disabled = not self.can_run()
 
     # ---- hooks de la herramienta ----
@@ -185,7 +161,10 @@ class BaseToolPanel(PdfTool):
         raise NotImplementedError
 
     def run_logic(self, inputs: list[Path], params, progress) -> ToolResult:
-        raise NotImplementedError
+        """Ejecuta la lógica pura declarada en `logic` (en segundo plano)."""
+        if self.logic is None:
+            raise NotImplementedError("Declara `logic = staticmethod(<función>)`")
+        return self.logic(inputs, params, progress=progress)
 
     def on_result(self, result: ToolResult) -> None:
         """Hook opcional tras un run correcto (p. ej. anotar la lista de archivos)."""
@@ -219,10 +198,18 @@ class BaseToolPanel(PdfTool):
         suffix = "archivo" if remaining == 1 else "archivos"
         return f"Añade {remaining} {suffix} más para continuar."
 
+    def _set_running(self, running: bool) -> None:
+        self._running = running
+        self.cancel_btn.visible = running
+        self._lock_inputs(running)
+
+    def _lock_inputs(self, locked: bool) -> None:
+        """Hook: (des)habilita los controles que cambian las entradas."""
+
     def _sync_ready_state(self) -> None:
         """Sincroniza acción, ayuda y densidad con las entradas actuales."""
         ready = self.can_run()
-        self.run_btn.disabled = not ready
+        self.run_btn.disabled = not ready or self._running
         self._empty_hint.value = "" if ready else self._empty_action_hint()
         self._empty_hint.visible = not ready
         self._body.expand = ready and self.expand_body_when_ready
@@ -321,7 +308,7 @@ class BaseToolPanel(PdfTool):
         self._hide_result_actions()
         self._logger().error("error · %.1fs", self._elapsed(), exc_info=exc)
         self.progress.visible = False
-        self.cancel_btn.visible = False
+        self._set_running(False)
         message, detail = humanize_error(exc)
         self._set_status(message, "error")
         if detail:
@@ -333,6 +320,78 @@ class BaseToolPanel(PdfTool):
         else:
             self._clear_error()
         self.run_btn.disabled = not self.can_run()
+        self._page.update()
+
+    # ---- ejecución ----
+    def _on_run_click(self, _e) -> None:
+        params = self._prepare_run()
+        if params is not None:
+            self._start_job(params)
+
+    def _prepare_run(self) -> BaseParams | None:
+        """Valida destino y parámetros; None (con el error a la vista) si no."""
+        if not self.can_run():
+            return None
+        self._clear_error()
+        self._clear_invalid()
+        self._hide_result_actions()
+        if self._out_dir.destination_missing():
+            self._set_status(
+                "La carpeta de destino ya no está disponible. Elige otra "
+                "o vuelve a «junto al original».",
+                "error",
+            )
+            self._page.update()
+            return None
+        try:
+            params: BaseParams = self.make_params()
+        except UserError as exc:
+            self._set_status(str(exc), "error")
+            self._mark_invalid(getattr(exc, "field", None), str(exc))
+            self._page.update()
+            return None
+        return params.model_copy(update={"output_dir": self._out_dir.value})
+
+    def _start_job(self, params: BaseParams) -> None:
+        self.run_btn.disabled = True
+        self._set_running(True)
+        self.progress.visible = True
+        self.progress.value = 0
+        self._set_status("Procesando…")
+        self._page.update()
+        inputs = self.collect_inputs()
+        self._invalidate_active_job(reset_ui=False)
+        generation = self._generation
+        self._run_started = time.monotonic()
+        self._logger().info("inicio · %d archivo(s)", len(inputs))
+        self._job = self._ctx.run_job(
+            work=lambda progress: self.run_logic(inputs, params, progress),
+            on_progress=lambda pct, msg: self._on_run_progress(generation, pct, msg),
+            on_done=lambda result: self._on_run_done(generation, result),
+            on_error=lambda exc: self._on_error(exc, generation),
+            is_current=lambda: self._generation == generation,
+        )
+
+    def _on_run_progress(self, generation: int, pct: float, msg: str) -> None:
+        if generation != self._generation:
+            return
+        self.progress.value = pct
+        self._set_status(msg)
+        self._page.update()
+
+    def _on_run_done(self, generation: int, result: ToolResult) -> None:
+        if generation != self._generation:
+            return
+        self._job = None
+        self._logger().info("ok · %.1fs", self._elapsed())
+        self._clear_error()
+        self.progress.visible = False
+        self._set_running(False)
+        failed = any(not item.ok for item in result.items or [])
+        self._set_status(result.summary, "partial" if failed else "success")
+        self._show_result_actions(result)
+        self.run_btn.disabled = not self.can_run()
+        self.on_result(result)
         self._page.update()
 
     # ---- común ----
@@ -433,75 +492,7 @@ class BaseToolPanel(PdfTool):
         if self._log_picker not in page.overlay:
             page.overlay.append(self._log_picker)
 
-        def do_run(_e) -> None:
-            if not self.can_run():
-                return
-            self._clear_error()
-            self._clear_invalid()
-            self._hide_result_actions()
-            if self._out_dir.destination_missing():
-                self._set_status(
-                    "La carpeta de destino ya no está disponible. Elige otra "
-                    "o vuelve a «junto al original».",
-                    "error",
-                )
-                page.update()
-                return
-            try:
-                params = self.make_params().model_copy(
-                    update={"output_dir": self._out_dir.value}
-                )
-            except InvalidParams as exc:
-                self._set_status(str(exc), "error")
-                self._mark_invalid(exc.field, str(exc))
-                page.update()
-                return
-            self.run_btn.disabled = True
-            self.cancel_btn.visible = True
-            self.progress.visible = True
-            self.progress.value = 0
-            self._set_status("Procesando…")
-            page.update()
-            inputs = self.collect_inputs()
-            self._invalidate_active_job(reset_ui=False)
-            run_generation = self._generation
-            self._run_started = time.monotonic()
-            self._logger().info("inicio · %d archivo(s)", len(inputs))
-
-            def is_current() -> bool:
-                return self._generation == run_generation
-
-            def set_progress(pct: float, msg: str) -> None:
-                if not is_current():
-                    return
-                self.progress.value = pct
-                self._set_status(msg)
-                page.update()
-
-            def on_done(result: ToolResult) -> None:
-                if not is_current():
-                    return
-                self._job = None
-                self._logger().info("ok · %.1fs", self._elapsed())
-                self._clear_error()
-                self.progress.visible = False
-                self.cancel_btn.visible = False
-                failed = any(not item.ok for item in result.items or [])
-                self._set_status(result.summary, "partial" if failed else "success")
-                self._show_result_actions(result)
-                self.run_btn.disabled = not self.can_run()
-                self.on_result(result)
-                page.update()
-
-            self._job = ctx.run_job(
-                work=lambda prog: self.run_logic(inputs, params, prog),
-                on_progress=set_progress,
-                on_done=on_done,
-                on_error=lambda exc: self._on_error(exc, run_generation),
-                is_current=is_current,
-            )
-
-        self.run_btn.on_click = do_run
+        self.run_btn.on_click = self._on_run_click
         self.open_btn.on_click = lambda _e: open_folder(Path(self.open_btn.data))
         self.open_file_btn.on_click = lambda _e: open_file(self.open_file_btn.data)
 
@@ -542,18 +533,18 @@ class SingleFileToolPanel(BaseToolPanel):
         self._file: Path | None = None
         self._file_label = ft.Text("Ningún archivo seleccionado", italic=True)
         self._picker.on_result = self._on_pick
-        return ft.Row(
-            [
-                ft.FilledTonalButton(
-                    self.pick_label,
-                    icon=self.pick_icon,
-                    on_click=lambda _e: self._picker.pick_files(
-                        allow_multiple=False, allowed_extensions=self.allowed_extensions
-                    ),
-                ),
-                self._file_label,
-            ]
+        self._pick_btn = ft.FilledTonalButton(
+            self.pick_label,
+            icon=self.pick_icon,
+            on_click=lambda _e: self._picker.pick_files(
+                allow_multiple=False,
+                allowed_extensions=list(self.allowed_extensions),
+            ),
         )
+        return ft.Row([self._pick_btn, self._file_label])
+
+    def _lock_inputs(self, locked: bool) -> None:
+        self._pick_btn.disabled = locked
 
     def build_body(self) -> ft.Control:
         return ft.Container(expand=True)  # empuja el footer al fondo
@@ -573,7 +564,7 @@ class SingleFileToolPanel(BaseToolPanel):
             except Exception as exc:  # p. ej. un PDF dañado al leer sus páginas
                 self._reject_pick(exc)
         elif e.files:
-            self._set_status(_WEB_MODE_MSG)
+            self._set_status(WEB_MODE_MSG)
             self._clear_error()
         self._page.update()
 

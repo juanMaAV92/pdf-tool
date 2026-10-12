@@ -2,6 +2,9 @@
 AppName=pdf-tool
 AppVersion=0.1.0
 DefaultDirName={autopf}\pdf-tool
+; Explícito: instala para todos los usuarios en Archivos de programa (pide UAC).
+; Cambiarlo movería la ruta de instalación y rompería la actualización en sitio.
+PrivilegesRequired=admin
 DefaultGroupName=pdf-tool
 OutputBaseFilename=pdf-tool-setup
 Compression=lzma

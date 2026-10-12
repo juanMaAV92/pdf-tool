@@ -129,10 +129,9 @@ def split(
             out = output_path(
                 src_path, _label(start, end, width), out_dir=params.output_dir
             )
-            with atomic_output(out) as temporary:
-                with fitz.open() as dst:
-                    dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)
-                    dst.save(str(temporary), garbage=4, deflate=True)
+            with atomic_output(out) as temporary, fitz.open() as dst:
+                dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)
+                dst.save(str(temporary), garbage=4, deflate=True)
             outputs.append(out)
             progress((i + 1) / total, f"Generado {out.name}")
 

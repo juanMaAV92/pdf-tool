@@ -34,6 +34,7 @@ class SplitTool(SingleFileToolPanel):
         category="Organizar",
         order=20,
     )
+    logic = staticmethod(split)
     run_label = "Dividir"
     run_icon = ft.Icons.CONTENT_CUT
     pick_label = "Elegir PDF"
@@ -133,6 +134,3 @@ class SplitTool(SingleFileToolPanel):
             except UserError as exc:
                 raise InvalidParams(str(exc), field=self._ranges_field) from exc
         return params
-
-    def run_logic(self, inputs: list[Path], params, progress):
-        return split(inputs, params, progress=progress)

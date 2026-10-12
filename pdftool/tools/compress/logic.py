@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import tempfile
 from collections.abc import Callable
@@ -167,12 +168,15 @@ def _compress_one(
         progress(1.0, "Ya está bajo el objetivo")
         return out, f"{original:.2f} MB (sin cambios)", original, original
 
-    with tempfile.TemporaryDirectory(prefix="pdf-tool-") as workdir:
+    # Los intentos van a una carpeta oculta junto al destino: usan el mismo
+    # disco que la salida (no el del sistema) y el ganador se publica con un
+    # `os.replace` atómico, sin copiarlo.
+    with tempfile.TemporaryDirectory(prefix=".pdf-tool-", dir=out.parent) as workdir:
         candidates = _Candidates(Path(workdir))
 
         def publish(note: str = "") -> tuple[Path, str, float, float]:
             assert candidates.best is not None
-            atomic_copy(candidates.best, out)
+            os.replace(candidates.best, out)
             final = candidates.best_mb
             progress(1.0, f"Listo: {final:.2f} MB")
             return out, f"{original:.2f} MB → {final:.2f} MB{note}", original, final

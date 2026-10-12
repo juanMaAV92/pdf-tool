@@ -958,3 +958,120 @@ def test_returning_to_a_panel_refreshes_output_dir_dependents():
     tool.on_output_dir_changed = lambda: calls.append(1)
     tool.build_panel(tool._ctx)
     assert calls == [1]
+
+
+def test_invalid_params_is_a_user_error():
+    from pdftool.core.errors import UserError
+    from pdftool.ui.panel_base import InvalidParams
+
+    assert issubclass(InvalidParams, UserError)
+
+
+def test_user_error_from_make_params_is_shown_as_validation_error():
+    from pdftool.core.errors import UserError
+
+    class _Bad(_RunnableStub):
+        def make_params(self):
+            raise UserError("Nombre de salida inválido.")
+
+    calls = {}
+    tool = _Bad()
+    tool.build_panel(
+        ToolContext(page=_FakePage(), run_job=lambda **kw: calls.update(kw))
+    )
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    tool.run_btn.on_click(None)
+
+    assert tool.status.value == "Nombre de salida inválido."
+    assert tool._status_icon.name == ft.Icons.ERROR_OUTLINE
+    assert calls == {}
+
+
+def test_run_logic_defaults_to_the_declared_logic():
+    seen = {}
+
+    def fake_logic(inputs, params, progress):
+        seen.update(inputs=inputs, params=params)
+        return ToolResult(outputs=[], summary="ok")
+
+    class _Declared(SingleFileToolPanel):
+        meta = ToolMeta(id="declared", name="D", description="d", icon="", category="c")
+        logic = staticmethod(fake_logic)
+
+        def make_params(self):
+            return BaseParams()
+
+    params = BaseParams()
+    result = _Declared().run_logic([Path("/tmp/a.pdf")], params, lambda p, m: None)
+    assert result.summary == "ok"
+    assert seen == {"inputs": [Path("/tmp/a.pdf")], "params": params}
+
+
+@pytest.mark.parametrize("tool", _tools(), ids=lambda t: t.meta.id)
+def test_real_tools_declare_their_logic(tool):
+    assert "run_logic" not in type(tool).__dict__
+    assert callable(type(tool).logic)
+
+
+# ── Entradas bloqueadas mientras corre un trabajo ────────────────────────────
+
+
+def _row_buttons(tool):
+    return [
+        c
+        for row in tool._file_list.controls
+        for c in row.controls
+        if isinstance(c, ft.IconButton) and "Quitar" in (c.tooltip or "")
+    ]
+
+
+def test_inputs_are_locked_while_a_job_runs():
+    tool = _RunnableMulti()
+    calls = {}
+    tool.build_panel(
+        ToolContext(page=_FakePage(), run_job=lambda **kw: calls.update(kw))
+    )
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    assert tool._pick_btn.disabled is False
+
+    tool.run_btn.on_click(None)
+
+    assert tool._pick_btn.disabled is True
+    assert tool._clear_btn.disabled is True
+    assert all(b.disabled for b in _row_buttons(tool))
+
+    calls["on_done"](ToolResult(outputs=[], summary="Listo"))
+
+    assert tool._pick_btn.disabled is False
+    assert tool._clear_btn.disabled is False
+    assert not any(b.disabled for b in _row_buttons(tool))
+
+
+def test_cancel_and_error_unlock_the_inputs():
+    for finish in ("cancel", "error"):
+        tool = _RunnableStub()
+        _ctx, calls, _handle = _running(tool)
+        assert tool._pick_btn.disabled is True
+        if finish == "cancel":
+            tool.cancel_btn.on_click(None)
+        else:
+            calls["on_error"](RuntimeError("boom"))
+        assert tool._pick_btn.disabled is False, finish
+
+
+def test_protect_clears_passwords_after_a_successful_run():
+    from pdftool.tools.protect.panel import ProtectTool
+
+    calls = {}
+    tool = ProtectTool()
+    tool.build_panel(
+        ToolContext(page=_FakePage(), run_job=lambda **kw: calls.update(kw))
+    )
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    tool._pw_field.value = tool._confirm_field.value = "secreta"
+    tool.run_btn.on_click(None)
+
+    calls["on_done"](ToolResult(outputs=[Path("/tmp/a_protegido.pdf")], summary="ok"))
+
+    assert tool._pw_field.value == ""
+    assert tool._confirm_field.value == ""

@@ -4,11 +4,12 @@ import flet as ft
 import pytest
 
 from pdftool.core.config import Settings
-from pdftool.core.naming import unique_path
+from pdftool.core.errors import UserError
+from pdftool.core.naming import parse_output_name, unique_path
 from pdftool.core.plugin import ToolContext
 from pdftool.tools.merge.panel import MergeTool
 from pdftool.ui.output_dir import OutputDirField, abbreviate_home
-from pdftool.ui.panel_base import InvalidParams, OutputNameField, parse_output_name
+from pdftool.ui.panel_base import OutputNameField
 
 
 def test_none_and_empty_and_blank_give_none():
@@ -34,7 +35,7 @@ def test_only_extension_gives_none():
     "bad", ["a/b", "a\\b", "a:b", "a\x00b", "a?b", "a|b", "a<b", "a>b", "a*b", 'a"b']
 )
 def test_path_characters_raise_invalid_params(bad):
-    with pytest.raises(InvalidParams):
+    with pytest.raises(UserError):
         parse_output_name(bad)
 
 
@@ -71,7 +72,7 @@ def test_merge_panel_empty_name_gives_default():
 def test_merge_panel_invalid_name_raises():
     tool = _build(MergeTool())
     tool._name_field.value = "a/b"
-    with pytest.raises(InvalidParams):
+    with pytest.raises(UserError):
         tool.make_params()
 
 
@@ -82,7 +83,7 @@ def test_merge_panel_invalid_name_raises():
     + [f"LPT{i}" for i in range(1, 10)],
 )
 def test_windows_reserved_names_raise_invalid_params(reserved):
-    with pytest.raises(InvalidParams, match="reservado por Windows"):
+    with pytest.raises(UserError, match="reservado por Windows"):
         parse_output_name(reserved)
 
 

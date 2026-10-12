@@ -98,14 +98,13 @@ def watermark(
 
     progress(0.0, "Aplicando marca de agua…")
     font = fitz.Font("helv")
-    with atomic_output(out) as temporary:
-        with fitz.open(str(input_path)) as doc:
-            total = doc.page_count
-            for pno in range(total):
-                page = doc[pno]
-                _tile_page(page, text, params, font, step_x, step_y, text_w)
-                progress((pno + 1) / total, f"Página {pno + 1}/{total}")
-            doc.save(str(temporary), garbage=4, deflate=True)
+    with atomic_output(out) as temporary, fitz.open(str(input_path)) as doc:
+        total = doc.page_count
+        for pno in range(total):
+            page = doc[pno]
+            _tile_page(page, text, params, font, step_x, step_y, text_w)
+            progress((pno + 1) / total, f"Página {pno + 1}/{total}")
+        doc.save(str(temporary), garbage=4, deflate=True)
 
     progress(1.0, f"Listo: {out.name}")
     return ToolResult(outputs=[out], summary=f"Marca '{text}' aplicada → {out.name}")

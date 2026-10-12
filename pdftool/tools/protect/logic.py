@@ -24,29 +24,27 @@ def _protect_one(
     if params.mode == "protect":
         progress(0.0, "Protegiendo PDF…")
         out = _output(input_path, "protegido", params.output_dir)
-        with atomic_output(out) as temporary:
-            with fitz.open(str(input_path)) as doc:
-                if doc.needs_pass:
-                    raise UserError(
-                        "El PDF ya está protegido; quítale la contraseña primero."
-                    )
-                doc.save(
-                    str(temporary),
-                    encryption=fitz.PDF_ENCRYPT_AES_256,
-                    owner_pw=params.password,
-                    user_pw=params.password,
+        with atomic_output(out) as temporary, fitz.open(str(input_path)) as doc:
+            if doc.needs_pass:
+                raise UserError(
+                    "El PDF ya está protegido; quítale la contraseña primero."
                 )
+            doc.save(
+                str(temporary),
+                encryption=fitz.PDF_ENCRYPT_AES_256,
+                owner_pw=params.password,
+                user_pw=params.password,
+            )
         progress(1.0, "Listo")
         return out, f"→ {out.name}"
 
     # mode == "remove"
     progress(0.0, "Quitando contraseña…")
     out = _output(input_path, "sin_clave", params.output_dir)
-    with atomic_output(out) as temporary:
-        with fitz.open(str(input_path)) as doc:
-            if doc.needs_pass and not doc.authenticate(params.password):
-                raise UserError("Contraseña incorrecta.")
-            doc.save(str(temporary), encryption=fitz.PDF_ENCRYPT_NONE)
+    with atomic_output(out) as temporary, fitz.open(str(input_path)) as doc:
+        if doc.needs_pass and not doc.authenticate(params.password):
+            raise UserError("Contraseña incorrecta.")
+        doc.save(str(temporary), encryption=fitz.PDF_ENCRYPT_NONE)
     progress(1.0, "Listo")
     return out, f"→ {out.name}"
 

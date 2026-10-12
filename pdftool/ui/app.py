@@ -10,20 +10,24 @@ from pdftool.core import registry
 from pdftool.core.config import load_settings, save_settings
 from pdftool.core.jobs import run_job, shutdown_job_executor
 from pdftool.core.plugin import ToolContext
-from pdftool.core.updater import check_for_update
+from pdftool.core.updater import GITHUB_REPO, check_for_update
 from pdftool.ui.accessibility import icon_content
 from pdftool.ui.logs import LOG_LABEL, download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 from pdftool.ui.thumbnails import shutdown_thumbnail_executor
 
-GITHUB_REPO = "juanMaAV92/pdf-tool"
-GITHUB_PROFILE = "https://github.com/juanMaAV92"
 AUTHOR_SITE = "https://juanMaAV92.github.io"
 
 
 def _build_footer(theme_label, on_theme, on_log, on_author):
-    """Utilidades globales secundarias; el resultado pertenece al panel."""
-    return ft.Row(
+    """Utilidades globales secundarias; el resultado pertenece al panel.
+
+    Devuelve (pie, ítem del tema): el ítem se reetiqueta al cambiar el tema.
+    """
+    theme_item = ft.PopupMenuItem(
+        text=theme_label, icon=ft.Icons.BRIGHTNESS_6, on_click=on_theme
+    )
+    footer = ft.Row(
         [
             ft.Text(
                 f"v{__version__}",
@@ -35,9 +39,7 @@ def _build_footer(theme_label, on_theme, on_log, on_author):
                 content=icon_content(ft.Icons.MORE_HORIZ, "Opciones de la aplicación"),
                 tooltip="Opciones de la aplicación",
                 items=[
-                    ft.PopupMenuItem(
-                        text=theme_label, icon=ft.Icons.BRIGHTNESS_6, on_click=on_theme
-                    ),
+                    theme_item,
                     ft.PopupMenuItem(
                         text=LOG_LABEL, icon=ft.Icons.DOWNLOAD, on_click=on_log
                     ),
@@ -51,6 +53,7 @@ def _build_footer(theme_label, on_theme, on_log, on_author):
         ],
         alignment=ft.MainAxisAlignment.END,
     )
+    return footer, theme_item
 
 
 def _tool_card(index, tool, on_open):
@@ -254,13 +257,12 @@ def build_app(page: ft.Page) -> None:
     )
     page.overlay.append(log_picker)
 
-    footer = _build_footer(
+    footer, theme_item = _build_footer(
         "Cambiar tema",
         toggle_theme,
         download_log_button(log_picker).on_click,
         lambda _e: page.launch_url(AUTHOR_SITE),
     )
-    theme_item = footer.controls[1].items[0]
     refresh_theme_label()
 
     page.add(
