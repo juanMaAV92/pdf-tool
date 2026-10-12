@@ -4,13 +4,14 @@ import os
 import re
 import tempfile
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 
 import fitz
 
 from pdftool.core.atomic import atomic_copy
-from pdftool.core.batch import noop_progress, run_batch
+from pdftool.core.batch import Outcome, noop_progress, run_batch
 from pdftool.core.jobs import JobCancelled
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
@@ -76,6 +77,12 @@ def _simple_compress(src: Path, dst: Path) -> None:
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
 
 
+# Páginas que se acumulan en memoria antes de volcar el PDF de salida a disco.
+# Sin este volcado, el documento entero (todas sus imágenes JPEG) vive en RAM
+# hasta el final: ~0,3 MB por página en un A4.
+_RERENDER_CHUNK = 50
+
+
 def _rerender(
     src: Path,
     dst: Path,
@@ -84,24 +91,53 @@ def _rerender(
     jpg_quality: int,
     progress: Progress = noop_progress,
 ) -> None:
-    with fitz.open(src) as source, fitz.open() as doc:
+    with fitz.open(src) as source:
         total = len(source)
-        for page_num in range(total):
-            src_page = source[page_num]
-            rect = src_page.rect
-            if rect.width == 0 or rect.height == 0:
-                continue
-            # Sin zoom mínimo: el lado mayor nunca pasa de `max_dimension`,
-            # así una página enorme no se convierte en decenas de MP.
-            zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
-            pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-            img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
-            new_page = doc.new_page(width=rect.width, height=rect.height)
-            new_page.insert_image(new_page.rect, stream=img_bytes)
-            # Un punto de progreso (y de cancelación) por página: un intento
-            # sobre un PDF largo puede durar decenas de segundos.
-            progress((page_num + 1) / total, f"página {page_num + 1} de {total}")
-        doc.save(str(dst), garbage=4, deflate=True)
+        doc = fitz.open()
+        flushed = False
+        try:
+            for page_num in range(total):
+                src_page = source[page_num]
+                rect = src_page.rect
+                if rect.width > 0 and rect.height > 0:
+                    # Sin zoom mínimo: el lado mayor nunca pasa de `max_dimension`,
+                    # así una página enorme no se convierte en decenas de MP.
+                    zoom = min(
+                        max_dimension / rect.width, max_dimension / rect.height, 2.0
+                    )
+                    pix = src_page.get_pixmap(
+                        matrix=fitz.Matrix(zoom, zoom), alpha=False
+                    )
+                    img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
+                    new_page = doc.new_page(width=rect.width, height=rect.height)
+                    new_page.insert_image(new_page.rect, stream=img_bytes)
+                done = page_num + 1
+                if done % _RERENDER_CHUNK == 0 and done < total:
+                    # Volcar a disco y reabrir libera las imágenes ya escritas.
+                    if flushed:
+                        doc.saveIncr()
+                    else:
+                        doc.save(str(dst))
+                        flushed = True
+                    doc.close()
+                    doc = fitz.open(str(dst))
+                # Un punto de progreso (y de cancelación) por página: un intento
+                # sobre un PDF largo puede durar decenas de segundos.
+                progress(done / total, f"página {done} de {total}")
+            if not flushed:
+                doc.save(str(dst), garbage=4, deflate=True)
+                return
+            doc.saveIncr()
+        finally:
+            doc.close()
+    # Los volcados incrementales dejan versiones intermedias: se compacta.
+    compact = dst.with_name(f".{dst.name}.compact")
+    try:
+        with fitz.open(str(dst)) as doc:
+            doc.save(str(compact), garbage=4, deflate=True)
+        os.replace(compact, dst)
+    finally:
+        compact.unlink(missing_ok=True)
 
 
 def _preserve_compress(
@@ -138,8 +174,12 @@ class _Candidates:
         self._count = 0
         self.best: Path | None = None
         self.best_mb = float("inf")
+        # Si el ganador convirtió páginas en imagen (pierden texto y enlaces).
+        self.best_rasterized = False
 
-    def attempt(self, make: Callable[[Path], None]) -> float:
+    def attempt(
+        self, make: Callable[[Path], None], *, rasterizes: bool = False
+    ) -> float:
         self._count += 1
         candidate = self._workdir / f"intento-{self._count}.pdf"
         make(candidate)
@@ -148,9 +188,48 @@ class _Candidates:
             if self.best is not None:
                 self.best.unlink(missing_ok=True)
             self.best, self.best_mb = candidate, size
+            self.best_rasterized = rasterizes
         else:
             candidate.unlink(missing_ok=True)
         return size
+
+
+RASTERIZED_WARNING = (
+    "Algunas páginas se convirtieron en imagen: puede haberse perdido texto "
+    "seleccionable, enlaces o anotaciones. Si los necesitas, usa «Conservar "
+    "texto y enlaces»."
+)
+
+
+@dataclass(frozen=True)
+class _Compressed:
+    message: str
+    original_mb: float
+    final_mb: float
+    rasterized: bool
+
+    @property
+    def saved_pct(self) -> float:
+        if self.original_mb <= 0:
+            return 0.0
+        return max(0.0, (self.original_mb - self.final_mb) / self.original_mb * 100)
+
+    def outcome(self, out: Path) -> Outcome:
+        return Outcome(
+            out,
+            self.message,
+            warnings=(RASTERIZED_WARNING,) if self.rasterized else (),
+            metrics={
+                "original_mb": self.original_mb,
+                "final_mb": self.final_mb,
+                "saved_pct": self.saved_pct,
+            },
+        )
+
+
+def _saved_label(original: float, final: float) -> str:
+    saved = (original - final) / original * 100 if original > 0 else 0.0
+    return f" · {saved:.0f} % menos" if saved >= 0.5 else ""
 
 
 def _compress_one(
@@ -159,14 +238,16 @@ def _compress_one(
     target_mb: float,
     progress: Progress,
     mode: str = "max",
-) -> tuple[Path, str, float, float]:
+) -> _Compressed:
     original = _size_mb(input_path)
     progress(0.0, f"Tamaño original: {original:.2f} MB")
 
     if original <= target_mb:
         atomic_copy(input_path, out)
         progress(1.0, "Ya está bajo el objetivo")
-        return out, f"{original:.2f} MB (sin cambios)", original, original
+        return _Compressed(
+            f"{original:.2f} MB (sin cambios)", original, original, False
+        )
 
     # Los intentos van a una carpeta oculta junto al destino: usan el mismo
     # disco que la salida (no el del sistema) y el ganador se publica con un
@@ -174,12 +255,18 @@ def _compress_one(
     with tempfile.TemporaryDirectory(prefix=".pdf-tool-", dir=out.parent) as workdir:
         candidates = _Candidates(Path(workdir))
 
-        def publish(note: str = "") -> tuple[Path, str, float, float]:
+        def publish(note: str = "") -> _Compressed:
             assert candidates.best is not None
             os.replace(candidates.best, out)
             final = candidates.best_mb
             progress(1.0, f"Listo: {final:.2f} MB")
-            return out, f"{original:.2f} MB → {final:.2f} MB{note}", original, final
+            return _Compressed(
+                f"{original:.2f} MB → {final:.2f} MB"
+                f"{_saved_label(original, final)}{note}",
+                original,
+                final,
+                candidates.best_rasterized,
+            )
 
         progress(0.05, "Optimizando la estructura del PDF…")
         if (
@@ -228,7 +315,8 @@ def _compress_one(
                     max_dimension=attempt["max_dimension"],
                     jpg_quality=attempt["jpg_quality"],
                     progress=step_progress,
-                )
+                ),
+                rasterizes=True,
             )
             if size <= target_mb:
                 return publish()
@@ -241,14 +329,11 @@ def compress(
     inputs: list[Path], params: CompressParams, progress: Progress = noop_progress
 ) -> ToolResult:
     target_mb = params.target_mb
-    sizes: list[tuple[float, float]] = []
 
-    def one(path: Path, scoped: Progress) -> tuple[Path, str]:
+    def one(path: Path, scoped: Progress) -> Outcome:
         out = output_path_for(path, target_mb, params.output_dir)
         try:
-            _, summary, original, final = _compress_one(
-                path, out, target_mb, scoped, params.mode
-            )
+            done = _compress_one(path, out, target_mb, scoped, params.mode)
         except JobCancelled:
             # Cancelar conserva lo ya terminado, como en el resto de
             # herramientas («Los archivos ya terminados se conservan»).
@@ -259,20 +344,34 @@ def compress(
             # antes de este archivo.
             out.unlink(missing_ok=True)
             raise
-        sizes.append((original, final))
-        return out, summary
+        return done.outcome(out)
 
     batch = run_batch(inputs, one, progress, all_failed="Ningún PDF pudo comprimirse.")
     outputs, total = batch.outputs, batch.total
+    done_items = [item for item in batch.items if item.ok]
+    total_original = sum(item.metrics["original_mb"] for item in done_items)
+    total_final = sum(item.metrics["final_mb"] for item in done_items)
+    saved_pct = (
+        max(0.0, (total_original - total_final) / total_original * 100)
+        if total_original
+        else 0.0
+    )
+    metrics = {
+        "original_mb": total_original,
+        "final_mb": total_final,
+        "saved_pct": saved_pct,
+    }
+    warnings = sorted({w for item in done_items for w in item.warnings})
 
     if total == 1:
-        return ToolResult(outputs=outputs, summary=batch.items[0].message)
+        return ToolResult(
+            outputs=outputs,
+            summary=batch.items[0].message,
+            warnings=warnings,
+            metrics=metrics,
+        )
 
-    total_original = sum(original for original, _ in sizes)
-    total_final = sum(final for _, final in sizes)
-    saved = total_original - total_final
-    pct = (saved / total_original * 100) if total_original else 0.0
-    tail = f" ({pct:.0f}% menos)" if saved > 0.005 else " (sin cambios)"
+    tail = f" ({saved_pct:.0f} % menos)" if saved_pct >= 0.5 else " (sin cambios)"
     progress(1.0, f"{len(outputs)} archivos comprimidos")
     head = (
         f"{total} archivos"
@@ -283,4 +382,6 @@ def compress(
         outputs=outputs,
         summary=f"{head} · {total_original:.2f} MB → {total_final:.2f} MB{tail}",
         items=batch.items,
+        warnings=warnings,
+        metrics=metrics,
     )

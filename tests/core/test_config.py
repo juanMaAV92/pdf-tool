@@ -49,3 +49,49 @@ def test_load_invalid_theme_returns_defaults(tmp_path):
     path.write_text('{"theme_mode":"sepia"}', encoding="utf-8")
 
     assert load_settings(path) == Settings()
+
+
+def test_one_invalid_field_does_not_discard_the_others(tmp_path):
+    path = tmp_path / "settings.json"
+    path.write_text('{"theme_mode":"sepia","output_dir":"/salida"}', encoding="utf-8")
+
+    loaded = load_settings(path)
+
+    assert loaded.theme_mode == "system"
+    assert loaded.output_dir == "/salida"
+
+
+def test_corrupt_file_is_backed_up_before_it_is_replaced(tmp_path):
+    path = tmp_path / "settings.json"
+    path.write_text("{no es json", encoding="utf-8")
+
+    assert load_settings(path) == Settings()
+    assert (tmp_path / "settings.json.bak").read_text(encoding="utf-8") == "{no es json"
+
+
+def test_saved_settings_carry_a_schema_version(tmp_path):
+    import json
+
+    path = tmp_path / "settings.json"
+    save_settings(Settings(), path)
+    assert json.loads(path.read_text(encoding="utf-8"))["schema_version"] == 1
+
+
+def test_files_from_before_versioning_still_load(tmp_path):
+    path = tmp_path / "settings.json"
+    path.write_text('{"theme_mode":"dark"}', encoding="utf-8")
+    loaded = load_settings(path)
+    assert loaded.theme_mode == "dark"
+    assert loaded.schema_version == 1
+
+
+def test_tools_have_their_own_settings_space(tmp_path):
+    path = tmp_path / "settings.json"
+    settings = Settings()
+    settings.tool("compress")["target_mb"] = 2.5
+    save_settings(settings, path)
+
+    loaded = load_settings(path)
+
+    assert loaded.tool("compress") == {"target_mb": 2.5}
+    assert loaded.tool("merge") == {}

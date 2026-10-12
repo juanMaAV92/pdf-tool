@@ -15,6 +15,11 @@ def _open_with_system(path: Path) -> None:
         subprocess.run(["xdg-open", str(path)], check=False)
 
 
+def shortcut_label(key: str) -> str:
+    """Atajo legible en la plataforma actual: «⌘O» en macOS, «Ctrl+O» en el resto."""
+    return f"⌘{key}" if sys.platform == "darwin" else f"Ctrl+{key}"
+
+
 def open_folder(path: Path) -> None:
     """Abre el gestor de archivos del sistema en `path`."""
     _open_with_system(path)

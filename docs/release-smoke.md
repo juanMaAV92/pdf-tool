@@ -39,7 +39,8 @@ la release o en el issue asociado.
 - Reintentar muestra progreso sin el resumen anterior; cambiar entradas retira
   los botones de apertura antiguos.
 - En claro y oscuro, la versión sigue visible; **Opciones de la aplicación**
-  permite cambiar tema, descargar el log y visitar la página del autor.
+  permite cambiar tema y guardar el informe de diagnóstico; «Hecho por
+  @juanmaav92» se ve en el pie y abre la página del autor.
 - Ante un error técnico, **Ver detalle técnico** y **Descargar log** siguen
   disponibles junto al mensaje, sin tener que buscar el menú general.
 

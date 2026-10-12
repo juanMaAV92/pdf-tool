@@ -408,9 +408,10 @@ def test_open_file_button_hides_on_new_pick():
 def test_result_actions_are_grouped_below_summary():
     tool = _build(_RunnableStub())
     assert tool._result_actions.visible is False
-    assert tool._feedback.controls[:3] == [
+    assert tool._feedback.controls[:4] == [
         tool.progress,
         tool._status_row,
+        tool._warnings,
         tool._result_actions,
     ]
     assert tool._status_row.controls == [tool._status_icon, tool.status]
@@ -555,7 +556,7 @@ def test_no_thumbnails_by_default(monkeypatch):
     launched = []
     monkeypatch.setattr(
         "pdftool.ui.file_list.load_async",
-        lambda paths, on_ready, is_current: launched.append(paths),
+        lambda paths, on_ready, is_current, **kw: launched.append(paths),
     )
     tool = _build(_MultiStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
@@ -568,7 +569,7 @@ def test_thumbnails_flag_creates_placeholders_and_loads(monkeypatch):
     launched = []
     monkeypatch.setattr(
         "pdftool.ui.file_list.load_async",
-        lambda paths, on_ready, is_current: launched.append(list(paths)),
+        lambda paths, on_ready, is_current, **kw: launched.append(list(paths)),
     )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.png"]))
@@ -579,7 +580,8 @@ def test_thumbnails_flag_creates_placeholders_and_loads(monkeypatch):
 
 def test_thumb_ready_swaps_placeholder_for_image(monkeypatch):
     monkeypatch.setattr(
-        "pdftool.ui.file_list.load_async", lambda paths, on_ready, is_current: None
+        "pdftool.ui.file_list.load_async",
+        lambda paths, on_ready, is_current, **kw: None,
     )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
@@ -593,7 +595,8 @@ def test_thumb_ready_swaps_placeholder_for_image(monkeypatch):
 
 def test_thumb_ready_none_keeps_icon_and_gone_row_is_noop(monkeypatch):
     monkeypatch.setattr(
-        "pdftool.ui.file_list.load_async", lambda paths, on_ready, is_current: None
+        "pdftool.ui.file_list.load_async",
+        lambda paths, on_ready, is_current, **kw: None,
     )
     tool = _build(_ThumbStub())
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
@@ -1075,3 +1078,146 @@ def test_protect_clears_passwords_after_a_successful_run():
 
     assert tool._pw_field.value == ""
     assert tool._confirm_field.value == ""
+
+
+def test_result_warnings_are_shown_below_the_summary():
+    tool = _done(
+        _RunnableMulti(),
+        ToolResult(
+            outputs=[Path("/tmp/x.pdf")],
+            summary="Listo",
+            warnings=["Algunas páginas se convirtieron en imagen."],
+        ),
+    )
+    assert tool._warnings.visible is True
+    assert "convirtieron en imagen" in tool._warnings.value
+    assert tool._warnings in tool._feedback.controls
+
+    tool._on_pick(_FakeEvent(["/tmp/c.pdf"]))
+    assert tool._warnings.visible is False
+
+
+def test_rows_with_warnings_show_an_explained_icon():
+    tool = _done(
+        _RunnableMulti(),
+        ToolResult(
+            outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/b_x.pdf")],
+            summary="2 archivos",
+            items=[
+                FileResult(
+                    Path("/tmp/a.pdf"),
+                    Path("/tmp/a_x.pdf"),
+                    True,
+                    "→ a_x.pdf",
+                    warnings=("Se convirtieron en imagen.",),
+                ),
+                FileResult(Path("/tmp/b.pdf"), Path("/tmp/b_x.pdf"), True, "→ b_x.pdf"),
+            ],
+        ),
+    )
+
+    def warning_icons(row):
+        return [
+            c
+            for c in row.controls
+            if isinstance(c, ft.Icon) and c.name == ft.Icons.WARNING_AMBER_ROUNDED
+        ]
+
+    first, second = tool._file_list.controls
+    (icon,) = warning_icons(first)
+    assert icon.tooltip == "Se convirtieron en imagen."
+    assert icon.semantics_label == "Aviso: Se convirtieron en imagen."
+    assert warning_icons(second) == []
+
+
+def test_file_list_is_a_lazy_list_view():
+    tool = _build(_MultiStub())
+    assert isinstance(tool._file_list, ft.ListView)
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+    assert tool._file_list.expand is True
+
+
+def test_adding_many_files_deduplicates_quickly():
+    import time
+
+    tool = _build(_MultiStub())
+    paths = [f"/tmp/doc_{i}.pdf" for i in range(3000)]
+    tool._refresh = lambda: None  # mide solo la deduplicación
+    started = time.monotonic()
+    tool._on_pick(_FakeEvent(paths + paths))
+    elapsed = time.monotonic() - started
+    assert len(tool.collect_inputs()) == 3000
+    assert elapsed < 0.2
+
+
+# ── Atajos de teclado ────────────────────────────────────────────────────────
+
+
+class _Key:
+    def __init__(self, key, ctrl=False, meta=False):
+        self.key, self.ctrl, self.meta = key, ctrl, meta
+        self.shift = self.alt = False
+
+
+def test_shortcuts_open_the_picker_and_run():
+    from pdftool.ui.app import _handle_shortcut
+
+    tool = _RunnableStub()
+    calls = {}
+    tool.build_panel(
+        ToolContext(page=_FakePage(), run_job=lambda **kw: calls.update(kw))
+    )
+    picked = []
+    tool._picker.pick_files = lambda **kw: picked.append(kw)
+
+    assert _handle_shortcut(_Key("O", ctrl=True), tool) is True
+    assert len(picked) == 1
+
+    assert _handle_shortcut(_Key("Enter", meta=True), tool) is True
+    assert calls == {}  # sin archivo, Ejecutar está deshabilitado: no hace nada
+
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    _handle_shortcut(_Key("Enter", ctrl=True), tool)
+    assert "work" in calls
+
+
+def test_shortcuts_need_a_modifier_and_a_tool():
+    from pdftool.ui.app import _handle_shortcut
+
+    tool = _build(_RunnableStub())
+    picked = []
+    tool._picker.pick_files = lambda **kw: picked.append(kw)
+
+    assert _handle_shortcut(_Key("O"), tool) is False
+    assert _handle_shortcut(_Key("O", ctrl=True), None) is False
+    assert picked == []
+
+
+def test_open_shortcut_is_ignored_while_running():
+    tool = _RunnableStub()
+    _running(tool)
+    picked = []
+    tool._picker.pick_files = lambda **kw: picked.append(kw)
+    tool.shortcut_open()
+    assert picked == []
+
+
+def test_buttons_advertise_their_shortcuts():
+    from pdftool.ui.platform import shortcut_label
+
+    tool = _build(_RunnableStub())
+    assert shortcut_label("O") in tool._pick_btn.tooltip
+    assert shortcut_label("Enter") in tool.run_btn.tooltip
+
+
+def test_compress_options_wrap_instead_of_overflowing():
+    """A la anchura mínima, objetivo + modo + ayuda no caben en una fila."""
+    from pdftool.tools.compress.panel import CompressTool
+
+    tool = _build(CompressTool())
+    row = next(
+        c
+        for c in tool.extra_controls()
+        if isinstance(c, ft.Row) and any(x is tool._mode_dd for x in c.controls)
+    )
+    assert row.wrap is True

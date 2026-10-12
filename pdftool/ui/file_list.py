@@ -9,7 +9,7 @@ from pdftool.core.plugin import ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.accessibility import NamedIconButton
 from pdftool.ui.panel_base import WEB_MODE_MSG, BaseToolPanel
-from pdftool.ui.platform import open_file
+from pdftool.ui.platform import open_file, shortcut_label
 from pdftool.ui.thumbnails import MISSING, ThumbnailTask, get_cached, load_async
 
 
@@ -29,6 +29,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
         self._failed: list[bool] = []  # fila cuyo archivo falló en el run
+        self._row_warnings: list[tuple[str, ...]] = []  # avisos por fila
         self._row_paths: list[Path | None] = []  # ruta por fila exitosa tras un run
         self._thumb_boxes: dict[str, ft.Container] = {}
         self._thumb_task: ThumbnailTask | None = None
@@ -43,6 +44,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._pick_btn = ft.FilledTonalButton(
             self.pick_label,
             icon=self.pick_icon,
+            tooltip=f"{self.pick_label} ({shortcut_label('O')})",
             on_click=lambda _e: self._picker.pick_files(
                 allow_multiple=True,
                 allowed_extensions=list(self.allowed_extensions),
@@ -58,7 +60,9 @@ class MultiFileToolPanel(BaseToolPanel):
     def build_body(self) -> ft.Control:
         # La lista rellena el cuerpo y scrollea sola cuando no cabe; el footer
         # (ejecutar, progreso, status) queda siempre visible.
-        self._file_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO, expand=True)
+        # ListView construye solo las filas visibles: con cientos de archivos
+        # el scroll sigue siendo fluido.
+        self._file_list = ft.ListView(spacing=4, expand=True)
         return self._file_list
 
     @staticmethod
@@ -96,7 +100,7 @@ class MultiFileToolPanel(BaseToolPanel):
         if box is None or png is None:
             return
         box.content = self._thumb_image(png)
-        self._page.update()
+        # Sin page.update aquí: el loader llama a on_flush por lotes.
 
     def _refresh(self) -> None:
         if self._thumb_task is not None:
@@ -110,6 +114,9 @@ class MultiFileToolPanel(BaseToolPanel):
             result = self._results[index] if index < len(self._results) else None
             row_path = self._row_paths[index] if index < len(self._row_paths) else None
             failed = index < len(self._failed) and self._failed[index]
+            warnings = (
+                self._row_warnings[index] if index < len(self._row_warnings) else ()
+            )
             controls: list[ft.Control] = [ft.Text(f"{index + 1}.", width=28)]
             if self.show_thumbnails:
                 controls.append(self._thumb_control(path))
@@ -121,6 +128,19 @@ class MultiFileToolPanel(BaseToolPanel):
                     no_wrap=True,
                     color=ft.Colors.ERROR if failed else ft.Colors.ON_SURFACE_VARIANT,
                 ),
+            ]
+            if warnings:
+                text = " ".join(warnings)
+                controls.append(
+                    ft.Icon(
+                        ft.Icons.WARNING_AMBER_ROUNDED,
+                        size=20,
+                        color=ft.Colors.TERTIARY,
+                        tooltip=text,
+                        semantics_label=f"Aviso: {text}",
+                    )
+                )
+            controls += [
                 NamedIconButton(
                     ft.Icons.OPEN_IN_NEW,
                     f"Abrir resultado de {path.name}",
@@ -161,6 +181,7 @@ class MultiFileToolPanel(BaseToolPanel):
                     pending,
                     self._on_thumb_ready,
                     is_current=lambda: self._thumb_generation == generation,
+                    on_flush=self._page.update,
                 )
         self.on_inputs_changed()
         self._sync_ready_state()
@@ -175,6 +196,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._results = []
         self._row_paths = []
         self._failed = []
+        self._row_warnings = []
 
     def _move(self, index: int, delta: int) -> None:
         new_index = index + delta
@@ -221,11 +243,13 @@ class MultiFileToolPanel(BaseToolPanel):
             return
         self._invalidate_active_job()
         added = 0
+        known = set(self._files)  # O(1) por archivo, también con miles
         for f in e.files:
             if not f.path:  # navegador (modo web): sin ruta local
                 continue
             path = Path(f.path)
-            if path not in self._files:
+            if path not in known:
+                known.add(path)
                 self._files.append(path)
                 added += 1
         if added == 0 and e.files:
@@ -242,6 +266,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._results = [item.message for item in items]
         self._row_paths = [item.output_path if item.ok else None for item in items]
         self._failed = [not item.ok for item in items]
+        self._row_warnings = [item.warnings for item in items]
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

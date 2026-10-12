@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -18,6 +18,10 @@ class FileResult:
     output_path: Path | None
     ok: bool
     message: str
+    # Avisos para el usuario (p. ej. «se rasterizaron páginas») y cifras del
+    # resultado (p. ej. original_mb, final_mb, saved_pct) sin parsear texto.
+    warnings: tuple[str, ...] = ()
+    metrics: Mapping[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -38,6 +42,9 @@ class ToolResult:
     # Resultados por entrada para herramientas por lote. None si no aplica
     # (p. ej. una herramienta de archivo único).
     items: list[FileResult] | None = None
+    # Avisos del run completo (se muestran bajo el resumen) y cifras agregadas.
+    warnings: list[str] = field(default_factory=list)
+    metrics: dict[str, float] = field(default_factory=dict)
 
 
 class BaseParams(BaseModel):

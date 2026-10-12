@@ -130,3 +130,22 @@ def test_all_failed_is_a_user_error(tmp_path):
 
     with pytest.raises(UserError):
         run_batch([a, b], one, all_failed="Ningún PDF pudo procesarse.")
+
+
+def test_process_one_can_report_warnings_and_metrics(tmp_path):
+    from pdftool.core.batch import Outcome
+
+    a, b = _files(tmp_path, "a.pdf", "b.pdf")
+
+    def one(path, progress):
+        return Outcome(
+            path.with_suffix(".out"),
+            "hecho",
+            warnings=("ojo",) if path == a else (),
+            metrics={"final_mb": 1.0},
+        )
+
+    res = run_batch([a, b], one, all_failed="nada")
+    assert res.items[0].warnings == ("ojo",)
+    assert res.items[1].warnings == ()
+    assert res.items[0].metrics == {"final_mb": 1.0}
