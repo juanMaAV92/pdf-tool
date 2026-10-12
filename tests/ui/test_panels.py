@@ -408,9 +408,10 @@ def test_open_file_button_hides_on_new_pick():
 def test_result_actions_are_grouped_below_summary():
     tool = _build(_RunnableStub())
     assert tool._result_actions.visible is False
-    assert tool._feedback.controls[:3] == [
+    assert tool._feedback.controls[:4] == [
         tool.progress,
         tool._status_row,
+        tool._warnings,
         tool._result_actions,
     ]
     assert tool._status_row.controls == [tool._status_icon, tool.status]
@@ -1075,3 +1076,53 @@ def test_protect_clears_passwords_after_a_successful_run():
 
     assert tool._pw_field.value == ""
     assert tool._confirm_field.value == ""
+
+
+def test_result_warnings_are_shown_below_the_summary():
+    tool = _done(
+        _RunnableMulti(),
+        ToolResult(
+            outputs=[Path("/tmp/x.pdf")],
+            summary="Listo",
+            warnings=["Algunas páginas se convirtieron en imagen."],
+        ),
+    )
+    assert tool._warnings.visible is True
+    assert "convirtieron en imagen" in tool._warnings.value
+    assert tool._warnings in tool._feedback.controls
+
+    tool._on_pick(_FakeEvent(["/tmp/c.pdf"]))
+    assert tool._warnings.visible is False
+
+
+def test_rows_with_warnings_show_an_explained_icon():
+    tool = _done(
+        _RunnableMulti(),
+        ToolResult(
+            outputs=[Path("/tmp/a_x.pdf"), Path("/tmp/b_x.pdf")],
+            summary="2 archivos",
+            items=[
+                FileResult(
+                    Path("/tmp/a.pdf"),
+                    Path("/tmp/a_x.pdf"),
+                    True,
+                    "→ a_x.pdf",
+                    warnings=("Se convirtieron en imagen.",),
+                ),
+                FileResult(Path("/tmp/b.pdf"), Path("/tmp/b_x.pdf"), True, "→ b_x.pdf"),
+            ],
+        ),
+    )
+
+    def warning_icons(row):
+        return [
+            c
+            for c in row.controls
+            if isinstance(c, ft.Icon) and c.name == ft.Icons.WARNING_AMBER_ROUNDED
+        ]
+
+    first, second = tool._file_list.controls
+    (icon,) = warning_icons(first)
+    assert icon.tooltip == "Se convirtieron en imagen."
+    assert icon.semantics_label == "Aviso: Se convirtieron en imagen."
+    assert warning_icons(second) == []

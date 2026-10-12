@@ -107,6 +107,7 @@ class BaseToolPanel(PdfTool):
     status: ft.Text
     _status_icon: ft.Icon
     _status_row: ft.Row
+    _warnings: ft.Text
     _counter: ft.Text
     _error_toggle: ft.TextButton
     _error_detail: ft.Text
@@ -269,6 +270,8 @@ class BaseToolPanel(PdfTool):
         self.open_file_btn.data = result.outputs[0]
 
     def _hide_result_actions(self) -> None:
+        self._warnings.visible = False
+        self._warnings.value = ""
         self._result_actions.visible = False
         self.open_btn.visible = False
         self.open_file_btn.visible = False
@@ -390,6 +393,8 @@ class BaseToolPanel(PdfTool):
         failed = any(not item.ok for item in result.items or [])
         self._set_status(result.summary, "partial" if failed else "success")
         self._show_result_actions(result)
+        self._warnings.value = "\n".join(result.warnings)
+        self._warnings.visible = bool(result.warnings)
         self.run_btn.disabled = not self.can_run()
         self.on_result(result)
         self._page.update()
@@ -421,6 +426,11 @@ class BaseToolPanel(PdfTool):
             [self._status_icon, self.status],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.START,
+        )
+        # Avisos del resultado (p. ej. páginas rasterizadas): bajo el resumen,
+        # sin diálogo ni clic extra.
+        self._warnings = ft.Text(
+            "", size=14, color=ft.Colors.ON_SURFACE_VARIANT, visible=False
         )
         self._counter = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
         self._error_toggle = ft.TextButton(
@@ -457,6 +467,7 @@ class BaseToolPanel(PdfTool):
             [
                 self.progress,
                 self._status_row,
+                self._warnings,
                 self._result_actions,
                 self._error_actions,
                 self._error_detail,

@@ -381,3 +381,41 @@ def test_attempts_live_next_to_the_destination_and_are_cleaned(
     assert workdirs[0].parent == out_dir
     assert workdirs[0].name.startswith(".pdf-tool-")
     assert [p.name for p in out_dir.iterdir()] == [result.outputs[0].name]
+
+
+_RASTER = "convirtieron en imagen"
+
+
+def test_rasterizing_is_reported_with_size_metrics(big_pdf):
+    result = compress([big_pdf], CompressParams(target_mb=0.0001))
+    assert any(_RASTER in w for w in result.warnings)
+    m = result.metrics
+    assert m["original_mb"] > m["final_mb"] > 0
+    assert m["saved_pct"] == pytest.approx(
+        (m["original_mb"] - m["final_mb"]) / m["original_mb"] * 100
+    )
+    assert f"{m['saved_pct']:.0f} % menos" in result.summary
+
+
+def test_preserve_mode_never_warns_about_rasterizing(big_pdf):
+    result = compress([big_pdf], CompressParams(target_mb=0.0001, mode="preserve"))
+    assert not any(_RASTER in w for w in result.warnings)
+
+
+def test_file_already_under_target_has_no_warnings(small_pdf):
+    result = compress([small_pdf], CompressParams(target_mb=50.0))
+    assert result.warnings == []
+    assert result.metrics["saved_pct"] == 0
+
+
+def test_batch_rows_carry_their_own_warnings(tmp_path, big_pdf, small_pdf):
+    import shutil
+
+    big = Path(shutil.copy2(big_pdf, tmp_path / "grande.pdf"))
+    small = Path(shutil.copy2(small_pdf, tmp_path / "chico.pdf"))
+    target = (big.stat().st_size / (1024 * 1024)) / 4
+    result = compress([big, small], CompressParams(target_mb=target))
+    big_row, small_row = result.items
+    assert any(_RASTER in w for w in big_row.warnings)
+    assert small_row.warnings == ()
+    assert "saved_pct" in big_row.metrics

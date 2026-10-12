@@ -29,6 +29,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
         self._failed: list[bool] = []  # fila cuyo archivo falló en el run
+        self._row_warnings: list[tuple[str, ...]] = []  # avisos por fila
         self._row_paths: list[Path | None] = []  # ruta por fila exitosa tras un run
         self._thumb_boxes: dict[str, ft.Container] = {}
         self._thumb_task: ThumbnailTask | None = None
@@ -110,6 +111,9 @@ class MultiFileToolPanel(BaseToolPanel):
             result = self._results[index] if index < len(self._results) else None
             row_path = self._row_paths[index] if index < len(self._row_paths) else None
             failed = index < len(self._failed) and self._failed[index]
+            warnings = (
+                self._row_warnings[index] if index < len(self._row_warnings) else ()
+            )
             controls: list[ft.Control] = [ft.Text(f"{index + 1}.", width=28)]
             if self.show_thumbnails:
                 controls.append(self._thumb_control(path))
@@ -121,6 +125,19 @@ class MultiFileToolPanel(BaseToolPanel):
                     no_wrap=True,
                     color=ft.Colors.ERROR if failed else ft.Colors.ON_SURFACE_VARIANT,
                 ),
+            ]
+            if warnings:
+                text = " ".join(warnings)
+                controls.append(
+                    ft.Icon(
+                        ft.Icons.WARNING_AMBER_ROUNDED,
+                        size=20,
+                        color=ft.Colors.TERTIARY,
+                        tooltip=text,
+                        semantics_label=f"Aviso: {text}",
+                    )
+                )
+            controls += [
                 NamedIconButton(
                     ft.Icons.OPEN_IN_NEW,
                     f"Abrir resultado de {path.name}",
@@ -175,6 +192,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._results = []
         self._row_paths = []
         self._failed = []
+        self._row_warnings = []
 
     def _move(self, index: int, delta: int) -> None:
         new_index = index + delta
@@ -242,6 +260,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._results = [item.message for item in items]
         self._row_paths = [item.output_path if item.ok else None for item in items]
         self._failed = [not item.ok for item in items]
+        self._row_warnings = [item.warnings for item in items]
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

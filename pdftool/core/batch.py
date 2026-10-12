@@ -8,16 +8,27 @@ fallo de archivo.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from pdftool.core.errors import UserError, user_message
 from pdftool.core.jobs import JobCancelled
 from pdftool.core.plugin import FileResult, Progress
 
-# Procesa una entrada y devuelve (salida, mensaje corto para el usuario).
-ProcessOne = Callable[[Path, Progress], tuple[Path, str]]
+
+@dataclass(frozen=True)
+class Outcome:
+    """Resultado de un archivo con avisos y cifras, además del mensaje."""
+
+    output: Path
+    message: str
+    warnings: tuple[str, ...] = ()
+    metrics: Mapping[str, float] = field(default_factory=dict)
+
+
+# Procesa una entrada y devuelve (salida, mensaje corto) o un `Outcome`.
+ProcessOne = Callable[[Path, Progress], "tuple[Path, str] | Outcome"]
 
 _log = logging.getLogger("pdftool.batch")
 
@@ -75,7 +86,7 @@ def run_batch(
             progress((_i + pct) / total, label)
 
         try:
-            out, message = process_one(path, scoped)
+            done = process_one(path, scoped)
         except JobCancelled:
             raise
         except Exception as exc:  # este archivo falla; el lote continúa
@@ -86,8 +97,14 @@ def run_batch(
                 _log.warning("archivo %d/%d falló", index + 1, total, exc_info=exc)
             items.append(FileResult(path, None, False, message))
             continue
-        outputs.append(out)
-        items.append(FileResult(path, out, True, message))
+        if not isinstance(done, Outcome):
+            done = Outcome(*done)
+        outputs.append(done.output)
+        items.append(
+            FileResult(
+                path, done.output, True, done.message, done.warnings, done.metrics
+            )
+        )
 
     if not outputs:
         raise UserError(all_failed)
