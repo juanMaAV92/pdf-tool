@@ -208,29 +208,52 @@ class _Sidebar(ft.Container):
             button.style = _nav_style(i == index)
 
 
-class _UpdateBanner(ft.Banner):
-    """Aviso de nueva versión: colores del tema y siempre se puede cerrar."""
+class _UpdateBanner(ft.Container):
+    """Aviso de nueva versión como barra dentro de la ventana, encima del contenido.
+
+    No es un `ft.Banner`: abierto con `page.open` se dibujaba como capa encima,
+    oscurecido y tapando el título. Aquí empuja el contenido hacia abajo, y los
+    pares PRIMARY_CONTAINER / ON_PRIMARY_CONTAINER dan buen contraste en tema claro
+    y oscuro. Siempre se puede cerrar.
+    """
 
     def __init__(self, page) -> None:
         self._app_page = page
         self._url: str | None = None
+        self.text = ft.Text(
+            "Hay una nueva versión disponible. ¿Descargarla ahora?",
+            color=ft.Colors.ON_PRIMARY_CONTAINER,
+            weight=ft.FontWeight.W_500,
+            expand=True,
+        )
+        self.download_button = ft.FilledButton("Descargar", on_click=self._download)
+        self.dismiss_button = ft.TextButton(
+            "Ahora no",
+            on_click=self._dismiss,
+            style=ft.ButtonStyle(color=ft.Colors.ON_PRIMARY_CONTAINER),
+        )
         super().__init__(
-            content=ft.Text(
-                "Hay una nueva versión disponible. ¿Descargarla ahora?",
-                color=ft.Colors.ON_SECONDARY_CONTAINER,
+            content=ft.Row(
+                [
+                    ft.Icon(
+                        ft.Icons.SYSTEM_UPDATE, color=ft.Colors.ON_PRIMARY_CONTAINER
+                    ),
+                    self.text,
+                    self.dismiss_button,
+                    self.download_button,
+                ],
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            leading=ft.Icon(
-                ft.Icons.SYSTEM_UPDATE, color=ft.Colors.ON_SECONDARY_CONTAINER
-            ),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER,
-            actions=[
-                ft.TextButton("Descargar", on_click=self._download),
-                ft.TextButton("Ahora no", on_click=self._dismiss),
-            ],
+            bgcolor=ft.Colors.PRIMARY_CONTAINER,
+            padding=ft.padding.symmetric(horizontal=20, vertical=10),
+            visible=False,
         )
 
     def show(self, url: str) -> None:
         self._url = url
+        self.visible = True
+        self._app_page.update()
 
     def _download(self, _e) -> None:
         if self._url:
@@ -238,7 +261,8 @@ class _UpdateBanner(ft.Banner):
         self._dismiss(_e)
 
     def _dismiss(self, _e) -> None:
-        self._app_page.close(self)
+        self.visible = False
+        self._app_page.update()
 
 
 def _build_update_banner(page) -> _UpdateBanner:
@@ -383,6 +407,7 @@ def build_app(page: ft.Page) -> None:
     page.add(
         ft.Column(
             [
+                update_banner,
                 ft.Row([sidebar, ft.VerticalDivider(width=1), content], expand=True),
                 ft.Divider(height=1),
                 footer,
@@ -394,7 +419,6 @@ def build_app(page: ft.Page) -> None:
 
     def _on_update(url: str) -> None:
         update_banner.show(url)
-        page.open(update_banner)
 
     _start_update_check(
         _on_update, lambda: check_for_update(current=__version__, repo=GITHUB_REPO)
