@@ -256,6 +256,22 @@ def _configure_window(page) -> None:
     page.window.min_height = 560
 
 
+def _handle_shortcut(event, tool) -> bool:
+    """⌘/Ctrl+O añade archivos y ⌘/Ctrl+Enter ejecuta en la herramienta abierta.
+
+    Devuelve True si el evento era un atajo (aunque no hubiera nada que hacer).
+    """
+    if tool is None or not (event.ctrl or event.meta):
+        return False
+    if event.key.upper() == "O":
+        tool.shortcut_open()
+        return True
+    if event.key == "Enter":
+        tool.shortcut_run()
+        return True
+    return False
+
+
 def _notify(page, message: str) -> None:
     page.open(ft.SnackBar(ft.Text(message)))
 
@@ -283,15 +299,21 @@ def build_app(page: ft.Page) -> None:
     ctx = ToolContext(page=page, run_job=run_job, settings=settings)
     content = ft.Container(expand=True, padding=24)
 
+    current: list = [None]  # herramienta abierta (None = Inicio)
+
     def open_tool(index: int) -> None:
         content.content = tools[index].build_panel(ctx)
+        current[0] = tools[index]
         sidebar.select(index)
         page.update()
 
     def open_home() -> None:
         content.content = _build_home(tools, open_tool)
+        current[0] = None
         sidebar.select(None)
         page.update()
+
+    page.on_keyboard_event = lambda e: _handle_shortcut(e, current[0])
 
     sidebar = _Sidebar(tools, on_home=open_home, on_tool=open_tool)
 

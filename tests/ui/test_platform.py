@@ -41,3 +41,12 @@ def test_open_file_linux(monkeypatch):
     )
     platform.open_file(Path("/tmp/x.pdf"))
     assert calls["args"][0] == ["xdg-open", "/tmp/x.pdf"]
+
+
+def test_shortcut_label_uses_the_platform_modifier(monkeypatch):
+    import pdftool.ui.platform as plat
+
+    monkeypatch.setattr(plat.sys, "platform", "darwin")
+    assert plat.shortcut_label("O") == "⌘O"
+    monkeypatch.setattr(plat.sys, "platform", "win32")
+    assert plat.shortcut_label("Enter") == "Ctrl+Enter"

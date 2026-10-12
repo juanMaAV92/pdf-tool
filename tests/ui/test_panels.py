@@ -1148,3 +1148,63 @@ def test_adding_many_files_deduplicates_quickly():
     elapsed = time.monotonic() - started
     assert len(tool.collect_inputs()) == 3000
     assert elapsed < 0.2
+
+
+# ── Atajos de teclado ────────────────────────────────────────────────────────
+
+
+class _Key:
+    def __init__(self, key, ctrl=False, meta=False):
+        self.key, self.ctrl, self.meta = key, ctrl, meta
+        self.shift = self.alt = False
+
+
+def test_shortcuts_open_the_picker_and_run():
+    from pdftool.ui.app import _handle_shortcut
+
+    tool = _RunnableStub()
+    calls = {}
+    tool.build_panel(
+        ToolContext(page=_FakePage(), run_job=lambda **kw: calls.update(kw))
+    )
+    picked = []
+    tool._picker.pick_files = lambda **kw: picked.append(kw)
+
+    assert _handle_shortcut(_Key("O", ctrl=True), tool) is True
+    assert len(picked) == 1
+
+    assert _handle_shortcut(_Key("Enter", meta=True), tool) is True
+    assert calls == {}  # sin archivo, Ejecutar está deshabilitado: no hace nada
+
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    _handle_shortcut(_Key("Enter", ctrl=True), tool)
+    assert "work" in calls
+
+
+def test_shortcuts_need_a_modifier_and_a_tool():
+    from pdftool.ui.app import _handle_shortcut
+
+    tool = _build(_RunnableStub())
+    picked = []
+    tool._picker.pick_files = lambda **kw: picked.append(kw)
+
+    assert _handle_shortcut(_Key("O"), tool) is False
+    assert _handle_shortcut(_Key("O", ctrl=True), None) is False
+    assert picked == []
+
+
+def test_open_shortcut_is_ignored_while_running():
+    tool = _RunnableStub()
+    _running(tool)
+    picked = []
+    tool._picker.pick_files = lambda **kw: picked.append(kw)
+    tool.shortcut_open()
+    assert picked == []
+
+
+def test_buttons_advertise_their_shortcuts():
+    from pdftool.ui.platform import shortcut_label
+
+    tool = _build(_RunnableStub())
+    assert shortcut_label("O") in tool._pick_btn.tooltip
+    assert shortcut_label("Enter") in tool.run_btn.tooltip

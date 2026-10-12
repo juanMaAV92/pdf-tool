@@ -431,7 +431,11 @@ def test_rerender_in_chunks_keeps_every_page(tmp_path, monkeypatch):
     seen = []
 
     logic._rerender(
-        src, dst, max_dimension=400, jpg_quality=40, progress=lambda p, m: seen.append(p)
+        src,
+        dst,
+        max_dimension=400,
+        jpg_quality=40,
+        progress=lambda p, m: seen.append(p),
     )
 
     with fitz.open(str(dst)) as doc:

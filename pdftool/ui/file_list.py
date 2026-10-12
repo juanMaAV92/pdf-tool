@@ -9,7 +9,7 @@ from pdftool.core.plugin import ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.accessibility import NamedIconButton
 from pdftool.ui.panel_base import WEB_MODE_MSG, BaseToolPanel
-from pdftool.ui.platform import open_file
+from pdftool.ui.platform import open_file, shortcut_label
 from pdftool.ui.thumbnails import MISSING, ThumbnailTask, get_cached, load_async
 
 
@@ -44,6 +44,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._pick_btn = ft.FilledTonalButton(
             self.pick_label,
             icon=self.pick_icon,
+            tooltip=f"{self.pick_label} ({shortcut_label('O')})",
             on_click=lambda _e: self._picker.pick_files(
                 allow_multiple=True,
                 allowed_extensions=list(self.allowed_extensions),

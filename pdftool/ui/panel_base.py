@@ -15,7 +15,7 @@ from pdftool.core.plugin import BaseParams, PdfTool, ToolContext, ToolResult
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.output_dir import OutputDirField
-from pdftool.ui.platform import open_file, open_folder
+from pdftool.ui.platform import open_file, open_folder, shortcut_label
 
 WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
 
@@ -116,6 +116,7 @@ class BaseToolPanel(PdfTool):
     open_btn: ft.FilledButton
     open_file_btn: ft.FilledButton
     run_btn: ft.FilledButton
+    _pick_btn: ft.FilledTonalButton  # lo crea `build_input` de la subclase
     cancel_btn: ft.OutlinedButton
     _result_actions: ft.Row
     _feedback: ft.Column
@@ -325,6 +326,17 @@ class BaseToolPanel(PdfTool):
         self.run_btn.disabled = not self.can_run()
         self._page.update()
 
+    # ---- atajos de teclado (los enruta el host) ----
+    def shortcut_open(self) -> None:
+        """⌘/Ctrl+O: el mismo efecto que pulsar el botón de añadir/elegir."""
+        if not self._running and self._pick_btn.on_click is not None:
+            self._pick_btn.on_click(None)
+
+    def shortcut_run(self) -> None:
+        """⌘/Ctrl+Enter: ejecuta solo si el botón está disponible."""
+        if not self.run_btn.disabled:
+            self._on_run_click(None)
+
     # ---- ejecución ----
     def _on_run_click(self, _e) -> None:
         params = self._prepare_run()
@@ -455,7 +467,10 @@ class BaseToolPanel(PdfTool):
             "Abrir archivo", icon=ft.Icons.OPEN_IN_NEW, visible=False
         )
         self.run_btn = ft.FilledButton(
-            self.run_label, icon=self.run_icon, disabled=True
+            self.run_label,
+            icon=self.run_icon,
+            disabled=True,
+            tooltip=f"Ejecutar ({shortcut_label('Enter')})",
         )
         self.cancel_btn = ft.OutlinedButton(
             "Cancelar", icon=ft.Icons.STOP, visible=False, on_click=self._cancel_run
@@ -547,6 +562,7 @@ class SingleFileToolPanel(BaseToolPanel):
         self._pick_btn = ft.FilledTonalButton(
             self.pick_label,
             icon=self.pick_icon,
+            tooltip=f"{self.pick_label} ({shortcut_label('O')})",
             on_click=lambda _e: self._picker.pick_files(
                 allow_multiple=False,
                 allowed_extensions=list(self.allowed_extensions),
