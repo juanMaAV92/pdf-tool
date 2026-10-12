@@ -296,6 +296,21 @@ def _handle_shortcut(event, tool) -> bool:
     return False
 
 
+def _install_shutdown_hooks(page, shutdown: Callable[[], None]) -> None:
+    """Engancha `shutdown` al cierre y a la desconexión de la página.
+
+    Como corrutinas: Flet ejecuta los manejadores síncronos en su pool de
+    hilos, que al cerrar la ventana ya está apagado, y el cierre acababa con
+    «cannot schedule new futures after shutdown». `shutdown` no bloquea.
+    """
+
+    async def on_shutdown(_e) -> None:
+        shutdown()
+
+    page.on_close = on_shutdown
+    page.on_disconnect = on_shutdown
+
+
 def _notify(page, message: str) -> None:
     page.open(ft.SnackBar(ft.Text(message)))
 
@@ -308,12 +323,11 @@ def build_app(page: ft.Page) -> None:
     # Libera los workers compartidos cuando Flet cierra la sesión de escritorio
     # o desconecta la vista web. Las tareas en curso ya tienen además su propio
     # token de generación y dejan de notificar a la UI obsoleta.
-    def shutdown_resources(_e=None) -> None:
+    def shutdown_resources() -> None:
         shutdown_job_executor()
         shutdown_thumbnail_executor()
 
-    page.on_close = shutdown_resources
-    page.on_disconnect = shutdown_resources
+    _install_shutdown_hooks(page, shutdown_resources)
 
     page.title = f"pdf-tool · v{__version__}"
     page.theme = build_theme()
