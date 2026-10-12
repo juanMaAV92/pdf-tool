@@ -269,3 +269,92 @@ def test_rerender_bounds_the_pixmap_of_a_huge_page(tmp_path):
         xref = doc[0].get_images()[0][0]
         pix = fitz.Pixmap(doc, xref)
         assert max(pix.width, pix.height) <= 600
+
+
+def _pages_pdf(path, n):
+    with fitz.open() as doc:
+        for i in range(n):
+            doc.new_page().insert_text((72, 72), f"pagina {i}")
+        doc.save(str(path))
+    return path
+
+
+def test_rerender_reports_progress_per_page(tmp_path):
+    from pdftool.tools.compress.logic import _rerender
+
+    src = _pages_pdf(tmp_path / "doc.pdf", 4)
+    seen = []
+    _rerender(
+        src,
+        tmp_path / "out.pdf",
+        max_dimension=600,
+        jpg_quality=25,
+        progress=lambda p, m: seen.append(p),
+    )
+    assert len(seen) >= 4
+    assert seen == sorted(seen)
+
+
+def test_cancelling_during_rerender_leaves_no_output(tmp_path, big_pdf):
+    from pdftool.core.jobs import JobCancelled
+
+    calls = []
+
+    def cancel_on_rerender(pct, msg):
+        calls.append(msg)
+        if "página" in msg:
+            raise JobCancelled()
+
+    with pytest.raises(JobCancelled):
+        compress(
+            [big_pdf], CompressParams(target_mb=0.0001), progress=cancel_on_rerender
+        )
+    assert sorted(p.name for p in big_pdf.parent.iterdir()) == ["big.pdf"]
+
+
+def test_progress_messages_avoid_technical_jargon(big_pdf):
+    seen = []
+    compress(
+        [big_pdf],
+        CompressParams(target_mb=0.0001),
+        progress=lambda p, m: seen.append(m),
+    )
+    joined = " ".join(seen).lower()
+    for jargon in ("dpi", "px", "intento", "mejor esfuerzo"):
+        assert jargon not in joined
+
+
+def test_only_the_final_result_is_written_to_the_destination(big_pdf, monkeypatch):
+    import pdftool.core.atomic as atomic
+
+    published = []
+    real_replace = atomic.os.replace
+
+    def counting_replace(src, dst):
+        if Path(dst).parent == big_pdf.parent:
+            published.append(Path(dst).name)
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(atomic.os, "replace", counting_replace)
+    result = compress([big_pdf], CompressParams(target_mb=0.0001))
+    assert published == [result.outputs[0].name]
+
+
+def test_best_effort_summary_explains_the_outcome(big_pdf):
+    result = compress([big_pdf], CompressParams(target_mb=0.0001))
+    assert "no se alcanzó el objetivo" in result.summary
+    assert "versión más pequeña" in result.summary
+
+
+def test_cancel_after_publishing_keeps_the_finished_file(big_pdf):
+    """«Los archivos ya terminados se conservan»: también el último."""
+    from pdftool.core.jobs import JobCancelled
+
+    def cancel_when_done(_pct, msg):
+        if msg.startswith("Listo"):
+            raise JobCancelled()
+
+    with pytest.raises(JobCancelled):
+        compress([big_pdf], CompressParams(target_mb=0.0001), progress=cancel_when_done)
+    outputs = [p for p in big_pdf.parent.iterdir() if p.name != "big.pdf"]
+    assert len(outputs) == 1

@@ -37,3 +37,28 @@ def test_download_opens_the_release_and_closes_the_banner():
     banner.actions[0].on_click(None)
     assert page.launched == ["https://github.com/x/y/releases/tag/v9.9.9"]
     assert page.closed == [banner]
+
+
+def test_update_check_runs_outside_the_job_pool():
+    import threading
+
+    from pdftool.ui.app import _start_update_check
+
+    found = []
+    done = threading.Event()
+
+    def check():
+        assert threading.current_thread().name == "pdftool-update-check"
+        return "https://github.com/x/y/releases/tag/v9"
+
+    thread = _start_update_check(lambda url: (found.append(url), done.set()), check)
+    thread.join(timeout=5)
+    assert found == ["https://github.com/x/y/releases/tag/v9"]
+
+
+def test_update_check_without_new_version_does_not_notify():
+    from pdftool.ui.app import _start_update_check
+
+    found = []
+    _start_update_check(found.append, lambda: None).join(timeout=5)
+    assert found == []

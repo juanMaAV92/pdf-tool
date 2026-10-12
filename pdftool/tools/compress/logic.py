@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import re
+import tempfile
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 import fitz
 
-from pdftool.core.atomic import atomic_copy, atomic_output
+from pdftool.core.atomic import atomic_copy
 from pdftool.core.batch import noop_progress, run_batch
+from pdftool.core.jobs import JobCancelled
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.compress.params import CompressParams
@@ -67,50 +71,85 @@ def output_path_for(
 
 
 def _simple_compress(src: Path, dst: Path) -> None:
-    with atomic_output(dst) as temporary:
-        with fitz.open(src) as doc:
-            doc.save(str(temporary), garbage=4, deflate=True, clean=True)
+    with fitz.open(src) as doc:
+        doc.save(str(dst), garbage=4, deflate=True, clean=True)
 
 
-def _rerender(src: Path, dst: Path, *, max_dimension: int, jpg_quality: int) -> None:
-    with atomic_output(dst) as temporary:
-        with fitz.open(src) as source, fitz.open() as doc:
-            for page_num in range(len(source)):
-                src_page = source[page_num]
-                rect = src_page.rect
-                if rect.width == 0 or rect.height == 0:
-                    continue
-                # Sin zoom mínimo: el lado mayor nunca pasa de `max_dimension`,
-                # así una página enorme no se convierte en decenas de MP.
-                zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
-                pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-                img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
-                new_page = doc.new_page(width=rect.width, height=rect.height)
-                new_page.insert_image(new_page.rect, stream=img_bytes)
-            doc.save(str(temporary), garbage=4, deflate=True)
+def _rerender(
+    src: Path,
+    dst: Path,
+    *,
+    max_dimension: int,
+    jpg_quality: int,
+    progress: Progress = noop_progress,
+) -> None:
+    with fitz.open(src) as source, fitz.open() as doc:
+        total = len(source)
+        for page_num in range(total):
+            src_page = source[page_num]
+            rect = src_page.rect
+            if rect.width == 0 or rect.height == 0:
+                continue
+            # Sin zoom mínimo: el lado mayor nunca pasa de `max_dimension`,
+            # así una página enorme no se convierte en decenas de MP.
+            zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
+            pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
+            new_page = doc.new_page(width=rect.width, height=rect.height)
+            new_page.insert_image(new_page.rect, stream=img_bytes)
+            # Un punto de progreso (y de cancelación) por página: un intento
+            # sobre un PDF largo puede durar decenas de segundos.
+            progress((page_num + 1) / total, f"página {page_num + 1} de {total}")
+        doc.save(str(dst), garbage=4, deflate=True)
 
 
 def _preserve_compress(
     src: Path, dst: Path, *, dpi_threshold: int, dpi_target: int, quality: int
 ) -> None:
     """Optimiza imágenes sin convertir las páginas completas en imágenes."""
-    with atomic_output(dst) as temporary:
-        with fitz.open(src) as doc:
-            rewrite_images = getattr(doc, "rewrite_images", None)
-            if rewrite_images is not None:
-                rewrite_images(
-                    dpi_threshold=dpi_threshold,
-                    dpi_target=dpi_target,
-                    quality=quality,
-                )
-            doc.save(
-                str(temporary),
-                garbage=4,
-                deflate=True,
-                deflate_images=True,
-                deflate_fonts=True,
-                clean=True,
+    with fitz.open(src) as doc:
+        rewrite_images = getattr(doc, "rewrite_images", None)
+        if rewrite_images is not None:
+            rewrite_images(
+                dpi_threshold=dpi_threshold,
+                dpi_target=dpi_target,
+                quality=quality,
             )
+        doc.save(
+            str(dst),
+            garbage=4,
+            deflate=True,
+            deflate_images=True,
+            deflate_fonts=True,
+            clean=True,
+        )
+
+
+class _Candidates:
+    """Conserva solo el intento más pequeño dentro de una carpeta temporal.
+
+    Los intentos no tocan la carpeta del usuario: solo el ganador se publica,
+    una vez, al final.
+    """
+
+    def __init__(self, workdir: Path) -> None:
+        self._workdir = workdir
+        self._count = 0
+        self.best: Path | None = None
+        self.best_mb = float("inf")
+
+    def attempt(self, make: Callable[[Path], None]) -> float:
+        self._count += 1
+        candidate = self._workdir / f"intento-{self._count}.pdf"
+        make(candidate)
+        size = _size_mb(candidate)
+        if size < self.best_mb:
+            if self.best is not None:
+                self.best.unlink(missing_ok=True)
+            self.best, self.best_mb = candidate, size
+        else:
+            candidate.unlink(missing_ok=True)
+        return size
 
 
 def _compress_one(
@@ -128,59 +167,70 @@ def _compress_one(
         progress(1.0, "Ya está bajo el objetivo")
         return out, f"{original:.2f} MB (sin cambios)", original, original
 
-    _simple_compress(input_path, out)
-    current = _size_mb(out)
-    progress(0.1, f"Compresión simple: {current:.2f} MB")
-    if current <= target_mb:
-        progress(1.0, "Listo (compresión simple)")
-        return out, f"{original:.2f} MB → {current:.2f} MB", original, current
+    with tempfile.TemporaryDirectory(prefix="pdf-tool-") as workdir:
+        candidates = _Candidates(Path(workdir))
 
-    if mode == "preserve":
-        for i, attempt in enumerate(_PRESERVE_ATTEMPTS):
-            progress(
-                (i + 1) / (len(_PRESERVE_ATTEMPTS) + 1),
-                f"Optimización de imágenes {i + 1}: "
-                f"{attempt['dpi_target']} dpi, {attempt['quality']}%",
-            )
-            _preserve_compress(input_path, out, **attempt)
-            current = _size_mb(out)
-            if current <= target_mb:
-                progress(1.0, f"Listo: {current:.2f} MB (contenido preservado)")
-                return (
-                    out,
-                    f"{original:.2f} MB → {current:.2f} MB (contenido preservado)",
-                    original,
-                    current,
+        def publish(note: str = "") -> tuple[Path, str, float, float]:
+            assert candidates.best is not None
+            atomic_copy(candidates.best, out)
+            final = candidates.best_mb
+            progress(1.0, f"Listo: {final:.2f} MB")
+            return out, f"{original:.2f} MB → {final:.2f} MB{note}", original, final
+
+        progress(0.05, "Optimizando la estructura del PDF…")
+        if (
+            candidates.attempt(lambda dst: _simple_compress(input_path, dst))
+            <= target_mb
+        ):
+            return publish()
+
+        if mode == "preserve":
+            n = len(_PRESERVE_ATTEMPTS)
+            for i, attempt in enumerate(_PRESERVE_ATTEMPTS):
+                progress(
+                    0.1 + 0.9 * i / n, f"Reduciendo imágenes (paso {i + 1} de {n})…"
                 )
+                size = candidates.attempt(
+                    partial(
+                        _preserve_compress,
+                        input_path,
+                        dpi_threshold=attempt["dpi_threshold"],
+                        dpi_target=attempt["dpi_target"],
+                        quality=attempt["quality"],
+                    )
+                )
+                if size <= target_mb:
+                    return publish(" (contenido preservado)")
+            return publish(
+                " (no se alcanzó el objetivo; se guardó la versión más pequeña "
+                "con el contenido preservado)"
+            )
 
-        progress(1.0, f"Mejor esfuerzo: {current:.2f} MB (contenido preservado)")
-        return (
-            out,
-            f"{original:.2f} MB → {current:.2f} MB "
-            "(no se alcanzó el objetivo; contenido preservado)",
-            original,
-            current,
+        n = len(_ATTEMPTS)
+        for i, attempt in enumerate(_ATTEMPTS):
+            base = 0.1 + 0.9 * i / n
+            step = f"Reduciendo calidad (paso {i + 1} de {n})"
+            progress(base, f"{step}…")
+
+            def step_progress(
+                pct: float, msg: str, _base: float = base, _step: str = step
+            ) -> None:
+                progress(_base + 0.9 / n * pct, f"{_step}: {msg}")
+
+            size = candidates.attempt(
+                partial(
+                    _rerender,
+                    input_path,
+                    max_dimension=attempt["max_dimension"],
+                    jpg_quality=attempt["jpg_quality"],
+                    progress=step_progress,
+                )
+            )
+            if size <= target_mb:
+                return publish()
+        return publish(
+            " (no se alcanzó el objetivo; se guardó la versión más pequeña posible)"
         )
-
-    n = len(_ATTEMPTS)
-    for i, attempt in enumerate(_ATTEMPTS):
-        progress(
-            (i + 1) / (n + 1),
-            f"Intento {i + 1}: {attempt['max_dimension']}px, {attempt['jpg_quality']}%",
-        )
-        _rerender(input_path, out, **attempt)
-        current = _size_mb(out)
-        if current <= target_mb:
-            progress(1.0, f"Listo: {current:.2f} MB")
-            return out, f"{original:.2f} MB → {current:.2f} MB", original, current
-
-    progress(1.0, f"Mejor esfuerzo: {current:.2f} MB")
-    return (
-        out,
-        f"{original:.2f} MB → {current:.2f} MB (no se alcanzó el objetivo)",
-        original,
-        current,
-    )
 
 
 def compress(
@@ -195,10 +245,14 @@ def compress(
             _, summary, original, final = _compress_one(
                 path, out, target_mb, scoped, params.mode
             )
-        except BaseException:
-            # Los intentos van publicando salidas intermedias; si el archivo
-            # falla o se cancela, no se deja un resultado a medias. `out` lo
-            # eligió `output_path`, así que no existía antes de este archivo.
+        except JobCancelled:
+            # Cancelar conserva lo ya terminado, como en el resto de
+            # herramientas («Los archivos ya terminados se conservan»).
+            raise
+        except Exception:
+            # Un fallo tras publicar no debe dejar un resultado que la UI no
+            # va a reportar. `out` lo eligió `output_path`, así que no existía
+            # antes de este archivo.
             out.unlink(missing_ok=True)
             raise
         sizes.append((original, final))

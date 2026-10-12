@@ -29,6 +29,7 @@ class CompressTool(MultiFileToolPanel):
         description="Reduce el tamaño de uno o varios PDFs a un objetivo en MB.",
         icon=ft.Icons.COMPRESS,
         category="Optimizar",
+        order=30,
     )
     run_label = "Comprimir"
     run_icon = ft.Icons.PLAY_ARROW
@@ -72,7 +73,8 @@ class CompressTool(MultiFileToolPanel):
             return CompressParams(target_mb=float(text), mode=self._mode_dd.value)
         except (ValueError, ValidationError) as exc:
             raise InvalidParams(
-                "Escribe un tamaño mayor que 0, por ejemplo 5 o 2,5."
+                "Escribe un tamaño mayor que 0, por ejemplo 5 o 2,5.",
+                field=self._target_field,
             ) from exc
 
     def run_logic(self, inputs: list[Path], params, progress):

@@ -16,9 +16,10 @@ class ImagesToPdfTool(MultiFileToolPanel):
     meta = ToolMeta(
         id="images2pdf",
         name="Imágenes a PDF",
-        description="Convierte cada imagen (JPG/PNG) en su propio PDF.",
-        icon=ft.Icons.PICTURE_AS_PDF,
+        description="Crea un PDF por cada imagen (JPG o PNG).",
+        icon=ft.Icons.PHOTO_LIBRARY,
         category="Convertir",
+        order=40,
     )
     run_label = "Convertir"
     run_icon = ft.Icons.PICTURE_AS_PDF

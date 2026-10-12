@@ -21,6 +21,7 @@ class ProtectTool(MultiFileToolPanel):
         description="Añade o quita la contraseña de uno o varios PDFs.",
         icon=ft.Icons.LOCK,
         category="Seguridad",
+        order=60,
     )
     run_label = "Proteger"
     run_icon = ft.Icons.LOCK
@@ -64,9 +65,13 @@ class ProtectTool(MultiFileToolPanel):
         try:
             params = ProtectParams(mode=self._mode_dd.value, password=password)
         except (ValueError, ValidationError) as exc:
-            raise InvalidParams("Escribe una contraseña.") from exc
+            raise InvalidParams(
+                "Escribe una contraseña.", field=self._pw_field
+            ) from exc
         if params.mode == "protect" and password != (self._confirm_field.value or ""):
-            raise InvalidParams("Las contraseñas no coinciden.")
+            raise InvalidParams(
+                "Las contraseñas no coinciden.", field=self._confirm_field
+            )
         return params
 
     def run_logic(self, inputs: list[Path], params, progress):

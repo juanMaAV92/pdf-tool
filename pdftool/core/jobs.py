@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass, field
 from typing import Callable
@@ -98,6 +99,8 @@ def run_job(
     on_error: Callable,
     *,
     is_current: Callable[[], bool] | None = None,
+    progress_interval: float = 0.1,
+    clock: Callable[[], float] = time.monotonic,
 ) -> JobHandle:
     """Ejecuta un trabajo en el executor compartido con cancelación cooperativa.
 
@@ -105,6 +108,10 @@ def run_job(
     acotada en concurrencia para no crear un hilo por cada interacción; cancelar
     un handle descarta una tarea pendiente y silencia los callbacks de una tarea
     que ya haya empezado.
+
+    `on_progress` se limita a una llamada cada `progress_interval` segundos
+    (cada una cuesta un repintado de la UI); la primera y la final (pct >= 1)
+    siempre pasan. La cancelación se comprueba en cada llamada igualmente.
     """
     handle = JobHandle()
     _register(handle)
@@ -112,10 +119,16 @@ def run_job(
     def _still_current() -> bool:
         return not handle.cancelled and (is_current is None or is_current())
 
+    last_sent: list[float | None] = [None]
+
     def _progress(pct: float, message: str) -> None:
         if not _still_current():
             raise JobCancelled()
-        on_progress(pct, message)
+        now = clock()
+        previous = last_sent[0]
+        if previous is None or pct >= 1.0 or now - previous >= progress_interval:
+            last_sent[0] = now
+            on_progress(pct, message)
 
     def _notify(callback: Callable, value: object) -> None:
         # Un fallo aquí es un bug de la UI: sin este registro se perdería en un

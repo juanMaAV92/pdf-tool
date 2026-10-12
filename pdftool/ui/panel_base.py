@@ -4,6 +4,7 @@ import logging
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import flet as ft
 
@@ -18,7 +19,14 @@ _WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio
 
 
 class InvalidParams(Exception):
-    """Params inválidos; el panel muestra str(exc) en el status."""
+    """Params inválidos; el panel muestra str(exc) en el status.
+
+    Si se indica `field`, el mensaje también se marca en ese campo.
+    """
+
+    def __init__(self, message: str, field: ft.TextField | None = None) -> None:
+        super().__init__(message)
+        self.field = field
 
 
 _FORBIDDEN_NAME_CHARS = set('/\\:?|<>*"\x00')
@@ -114,11 +122,38 @@ class BaseToolPanel(PdfTool):
     # acción principal de los controles que la preparan.
     expand_body_when_ready = True
 
+    # Controles que `build_panel` crea una vez por página (ver ese método).
+    _root: ft.Column | None = None
+    _out_dir: OutputDirField
+    _ctx: ToolContext
+    _page: Any  # ft.Page; los tests usan un sustituto mínimo
+    progress: ft.ProgressBar
+    status: ft.Text
+    _status_icon: ft.Icon
+    _status_row: ft.Row
+    _counter: ft.Text
+    _error_toggle: ft.TextButton
+    _error_detail: ft.Text
+    _log_btn: ft.Control
+    _error_actions: ft.Row
+    open_btn: ft.FilledButton
+    open_file_btn: ft.FilledButton
+    run_btn: ft.FilledButton
+    cancel_btn: ft.OutlinedButton
+    _result_actions: ft.Row
+    _feedback: ft.Column
+    _body: ft.Control
+    _empty_hint: ft.Text
+
     def __init__(self) -> None:
         super().__init__()
         # Un único FilePicker reutilizado entre renders (evita fugas en overlay).
         self._picker = ft.FilePicker()
-        self._log_picker = make_log_picker()  # ídem, para "Descargar log"
+        # Ídem, para el informe de diagnóstico; confirma dónde quedó guardado.
+        self._log_picker = make_log_picker(
+            on_saved=lambda path: self._notify(f"Informe guardado en «{path.name}».")
+        )
+        self._invalid_field: ft.TextField | None = None
         self._job: JobHandle | None = None
         self._generation = 0
 
@@ -131,6 +166,7 @@ class BaseToolPanel(PdfTool):
         if reset_ui and hasattr(self, "progress"):
             self.progress.visible = False
             self.progress.value = 0
+            self.cancel_btn.visible = False
             self.run_btn.disabled = not self.can_run()
 
     # ---- hooks de la herramienta ----
@@ -199,6 +235,20 @@ class BaseToolPanel(PdfTool):
         started = getattr(self, "_run_started", None)
         return 0.0 if started is None else time.monotonic() - started
 
+    def _notify(self, message: str, **snack) -> None:
+        self._page.open(ft.SnackBar(ft.Text(message), **snack))
+
+    def _mark_invalid(self, field: ft.TextField | None, message: str) -> None:
+        self._clear_invalid()
+        if field is not None:
+            field.error_text = message
+            self._invalid_field = field
+
+    def _clear_invalid(self) -> None:
+        if self._invalid_field is not None:
+            self._invalid_field.error_text = None
+            self._invalid_field = None
+
     # ---- estado (mensaje bajo la acción principal) ----
     def _set_status(self, text: str, kind: str = "info") -> None:
         icon, icon_color, text_color = _STATUS_STYLES[kind]
@@ -239,6 +289,15 @@ class BaseToolPanel(PdfTool):
         self.open_file_btn.data = None
         self.run_btn.style = None
 
+    def _cancel_run(self, _e) -> None:
+        """Detiene el trabajo en curso; lo ya publicado se queda en disco."""
+        if self._job is None:
+            return
+        self._logger().info("cancelado · %.1fs", self._elapsed())
+        self._invalidate_active_job()
+        self._set_status("Cancelado. Los archivos ya terminados se conservan.", "info")
+        self._page.update()
+
     # ---- errores (mensajes para el usuario) ----
     def _clear_error(self) -> None:
         self._error_toggle.visible = False
@@ -262,6 +321,7 @@ class BaseToolPanel(PdfTool):
         self._hide_result_actions()
         self._logger().error("error · %.1fs", self._elapsed(), exc_info=exc)
         self.progress.visible = False
+        self.cancel_btn.visible = False
         message, detail = humanize_error(exc)
         self._set_status(message, "error")
         if detail:
@@ -277,10 +337,22 @@ class BaseToolPanel(PdfTool):
 
     # ---- común ----
     def build_panel(self, ctx: ToolContext) -> ft.Control:
-        # Navegar fuera y volver a entrar invalida cualquier callback del panel
-        # anterior antes de reconstruir sus controles.
+        # El panel se construye una vez por página y se reutiliza: navegar a
+        # otra herramienta y volver conserva archivos, campos, resultado y el
+        # trabajo en curso (sus callbacks siguen actualizando estos controles).
+        root = self._root
+        if root is not None and self._ctx.page is ctx.page:
+            self._ctx = ctx
+            # El destino es global (vive en Settings): otra herramienta pudo
+            # cambiarlo mientras este panel estaba oculto. `sync` no avisa, así
+            # que se refresca lo que depende de él (p. ej. el nombre previsto).
+            self._out_dir.sync()
+            self.on_output_dir_changed()
+            return root
+        # Página nueva (otra sesión): nada del panel anterior debe notificar.
         self._invalidate_active_job()
-        page = ctx.page
+        self._ctx = ctx
+        page: Any = ctx.page
         self._page = page
 
         self.progress = ft.ProgressBar(value=0, visible=False)
@@ -316,6 +388,9 @@ class BaseToolPanel(PdfTool):
         self.run_btn = ft.FilledButton(
             self.run_label, icon=self.run_icon, disabled=True
         )
+        self.cancel_btn = ft.OutlinedButton(
+            "Cancelar", icon=ft.Icons.STOP, visible=False, on_click=self._cancel_run
+        )
         self._result_actions = ft.Row(
             [self.open_file_btn, self.open_btn], visible=False, wrap=True, spacing=8
         )
@@ -331,17 +406,14 @@ class BaseToolPanel(PdfTool):
             tight=True,
         )
 
-        # Una única instancia reutilizada entre renders: `build_panel` corre en
-        # cada navegación y cada OutputDirField trae su propio FilePicker, que
-        # se quedaría en page.overlay. Mismo motivo que self._picker.
+        # Una única instancia por panel: cada OutputDirField trae su propio
+        # FilePicker, que se quedaría en page.overlay. Mismo motivo que
+        # self._picker.
         if not hasattr(self, "_out_dir"):
             self._out_dir = OutputDirField(
                 ctx.settings, on_change=self.on_output_dir_changed
             )
         self._out_dir.attach(page)
-        # El destino es global (vive en Settings) y el widget sobrevive entre
-        # navegaciones: sin este re-sync, otra herramienta pudo cambiarlo
-        # mientras esta seguía cacheada con el valor viejo.
         self._out_dir.sync()
 
         input_bar = self.build_input(page)  # subclase; fija self._picker.on_result
@@ -349,7 +421,7 @@ class BaseToolPanel(PdfTool):
         self._body = body
         self._empty_hint = ft.Text(
             "",
-            size=12,
+            size=14,
             color=ft.Colors.ON_SURFACE_VARIANT,
             visible=False,
         )
@@ -365,6 +437,7 @@ class BaseToolPanel(PdfTool):
             if not self.can_run():
                 return
             self._clear_error()
+            self._clear_invalid()
             self._hide_result_actions()
             if self._out_dir.destination_missing():
                 self._set_status(
@@ -380,9 +453,11 @@ class BaseToolPanel(PdfTool):
                 )
             except InvalidParams as exc:
                 self._set_status(str(exc), "error")
+                self._mark_invalid(exc.field, str(exc))
                 page.update()
                 return
             self.run_btn.disabled = True
+            self.cancel_btn.visible = True
             self.progress.visible = True
             self.progress.value = 0
             self._set_status("Procesando…")
@@ -410,6 +485,7 @@ class BaseToolPanel(PdfTool):
                 self._logger().info("ok · %.1fs", self._elapsed())
                 self._clear_error()
                 self.progress.visible = False
+                self.cancel_btn.visible = False
                 failed = any(not item.ok for item in result.items or [])
                 self._set_status(result.summary, "partial" if failed else "success")
                 self._show_result_actions(result)
@@ -432,7 +508,7 @@ class BaseToolPanel(PdfTool):
         # Tres zonas: superior fija · cuerpo flexible · footer anclado.
         # `body` es el único hijo con expand=True: todo lo posterior queda
         # pegado al fondo sin importar cuántos archivos haya en la lista.
-        return ft.Column(
+        self._root = ft.Column(
             [
                 ft.Text(self.meta.name, size=24, weight=ft.FontWeight.BOLD),
                 ft.Text(self.meta.description),
@@ -446,6 +522,7 @@ class BaseToolPanel(PdfTool):
                 ft.Row(
                     [
                         self.run_btn,
+                        self.cancel_btn,
                         ft.Container(expand=True),
                         self._counter,
                     ]
@@ -455,6 +532,7 @@ class BaseToolPanel(PdfTool):
             spacing=16,
             expand=True,
         )
+        return self._root
 
 
 class SingleFileToolPanel(BaseToolPanel):
@@ -514,7 +592,7 @@ class SingleFileToolPanel(BaseToolPanel):
         self._set_status(humanize_error(exc)[0], "error")
 
     def collect_inputs(self) -> list[Path]:
-        return [self._file]
+        return [] if self._file is None else [self._file]
 
     def can_run(self) -> bool:
         return self._file is not None

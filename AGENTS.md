@@ -91,13 +91,23 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 3. `panel.py` — clase decorada con `@register` que hereda la plantilla de la
    UI: `MultiFileToolPanel` (`pdftool/ui/file_list.py`) para lotes o
    `SingleFileToolPanel` (`pdftool/ui/panel_base.py`) para un archivo. Define
-   `meta: ToolMeta`, `run_label`/`run_icon`/`pick_label` e implementa los hooks
-   `extra_controls()`, `make_params()` (lanza `InvalidParams` con un mensaje
-   claro) y `run_logic(inputs, params, progress)`. La base construye el panel y
-   ejecuta la lógica en segundo plano con `ctx.run_job`; no lo llames tú.
+   `meta: ToolMeta` (con `order` para su posición en la navegación),
+   `run_label`/`run_icon`/`pick_label` e implementa los hooks
+   `extra_controls()`, `make_params()` y `run_logic(inputs, params, progress)`.
+   `make_params()` lanza `InvalidParams("mensaje", field=campo)` para marcar el
+   error también en el campo. En lotes, `reorderable = True` solo si el orden
+   cambia el resultado (como en Unir).
+
+   La base construye el panel **una vez por página** y lo reutiliza al volver
+   a la herramienta: la lista, los campos, el resultado y el trabajo en curso
+   se conservan. También ejecuta la lógica en segundo plano con `ctx.run_job`
+   (con botón Cancelar); no lo llames tú salvo para lecturas propias del panel
+   (p. ej. Dividir lee el número de páginas así, nunca en el hilo de la UI).
 4. `__init__.py` — `from pdftool.tools.<id>.panel import <Tool>  # noqa: F401` para disparar el registro.
 
-`discover()` la encuentra automáticamente y aparece en la barra lateral.
+`discover()` la encuentra automáticamente y aparece en la barra lateral. Si una
+herramienta falla al importarse, se registra en el log y el resto de la app
+sigue funcionando; dos herramientas con el mismo `meta.id` son un error.
 
 ## Convenciones
 

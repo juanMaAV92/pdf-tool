@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import flet as ft
@@ -19,10 +20,16 @@ def _log_content() -> str:
     return "".join(chunks) if chunks else _EMPTY
 
 
-def make_log_picker() -> ft.FilePicker:
+LOG_LABEL = "Guardar informe de diagnóstico"
+
+
+def make_log_picker(
+    on_saved: Callable[[Path], None] | None = None,
+) -> ft.FilePicker:
     """FilePicker de "guardar como" que escribe el log en la ruta elegida.
 
-    El llamador debe añadirlo a page.overlay (una sola vez).
+    El llamador debe añadirlo a page.overlay (una sola vez). `on_saved` recibe
+    la ruta final para confirmar al usuario dónde quedó el informe.
     """
 
     def on_save(e: ft.FilePickerResultEvent) -> None:
@@ -32,17 +39,19 @@ def make_log_picker() -> ft.FilePicker:
         if target.suffix.lower() != ".txt":
             target = target.with_suffix(".txt")
         target.write_text(_log_content(), encoding="utf-8")
+        if on_saved is not None:
+            on_saved(target)
 
     return ft.FilePicker(on_result=on_save)
 
 
 def download_log_button(picker: ft.FilePicker) -> ft.Control:
-    """Botón "Descargar log": abre el diálogo de guardado sobre `picker`."""
+    """Botón del informe de diagnóstico: abre el diálogo de guardado."""
     return ft.TextButton(
-        "Descargar log",
+        LOG_LABEL,
         icon=ft.Icons.DOWNLOAD,
         on_click=lambda _e: picker.save_file(
-            dialog_title="Guardar log",
+            dialog_title=LOG_LABEL,
             file_name="pdf-tool-log.txt",
             allowed_extensions=["txt"],
         ),

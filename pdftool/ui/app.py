@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import threading
+from collections.abc import Callable
+
 import flet as ft
 
 from pdftool import __version__
@@ -9,7 +12,7 @@ from pdftool.core.jobs import run_job, shutdown_job_executor
 from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import check_for_update
 from pdftool.ui.accessibility import icon_content
-from pdftool.ui.logs import download_log_button, make_log_picker
+from pdftool.ui.logs import LOG_LABEL, download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 from pdftool.ui.thumbnails import shutdown_thumbnail_executor
 
@@ -36,7 +39,7 @@ def _build_footer(theme_label, on_theme, on_log, on_author):
                         text=theme_label, icon=ft.Icons.BRIGHTNESS_6, on_click=on_theme
                     ),
                     ft.PopupMenuItem(
-                        text="Descargar log", icon=ft.Icons.DOWNLOAD, on_click=on_log
+                        text=LOG_LABEL, icon=ft.Icons.DOWNLOAD, on_click=on_log
                     ),
                     ft.PopupMenuItem(
                         text="Acerca del autor",
@@ -142,6 +145,44 @@ def _build_update_banner(page) -> _UpdateBanner:
     return _UpdateBanner(page)
 
 
+def _start_update_check(
+    on_found: Callable[[str], None], check: Callable[[], str | None]
+) -> threading.Thread:
+    """Busca una versión nueva en un hilo propio.
+
+    No usa el pool de trabajos: con solo dos workers, una red lenta no debe
+    retrasar la primera tarea del usuario. `check` nunca lanza (ver updater).
+    """
+
+    def target() -> None:
+        url = check()
+        if url:
+            on_found(url)
+
+    thread = threading.Thread(target=target, name="pdftool-update-check", daemon=True)
+    thread.start()
+    return thread
+
+
+_MODE_NAMES = {"system": "Sistema", "light": "Claro", "dark": "Oscuro"}
+
+
+def _theme_label(mode: str) -> str:
+    return f"Tema: {_MODE_NAMES[mode]} · cambiar a {_MODE_NAMES[next_mode(mode)]}"
+
+
+def _configure_window(page) -> None:
+    page.window.width = 980
+    page.window.height = 680
+    # Por debajo de esto la barra lateral y el pie de acciones se solapan.
+    page.window.min_width = 760
+    page.window.min_height = 560
+
+
+def _notify(page, message: str) -> None:
+    page.open(ft.SnackBar(ft.Text(message)))
+
+
 def build_app(page: ft.Page) -> None:
     registry.discover()
     tools = registry.get_tools()
@@ -160,8 +201,7 @@ def build_app(page: ft.Page) -> None:
     page.title = f"pdf-tool · v{__version__}"
     page.theme = build_theme()
     page.theme_mode = resolve_mode(settings.theme_mode)
-    page.window.width = 980
-    page.window.height = 680
+    _configure_window(page)
 
     ctx = ToolContext(page=page, run_job=run_job, settings=settings)
     content = ft.Container(expand=True, padding=24)
@@ -205,16 +245,13 @@ def build_app(page: ft.Page) -> None:
         page.update()
 
     def refresh_theme_label() -> None:
-        names = {"system": "sistema", "light": "claro", "dark": "oscuro"}
-        label = (
-            f"Tema: {names[settings.theme_mode]} → "
-            f"{names[next_mode(settings.theme_mode)]}"
-        )
-        footer.controls[1].items[0].text = label
+        theme_item.text = _theme_label(settings.theme_mode)
 
     update_banner = _build_update_banner(page)
 
-    log_picker = make_log_picker()
+    log_picker = make_log_picker(
+        on_saved=lambda path: _notify(page, f"Informe guardado en «{path.name}».")
+    )
     page.overlay.append(log_picker)
 
     footer = _build_footer(
@@ -223,6 +260,7 @@ def build_app(page: ft.Page) -> None:
         download_log_button(log_picker).on_click,
         lambda _e: page.launch_url(AUTHOR_SITE),
     )
+    theme_item = footer.controls[1].items[0]
     refresh_theme_label()
 
     page.add(
@@ -237,18 +275,10 @@ def build_app(page: ft.Page) -> None:
     )
     open_home()
 
-    # Chequeo de actualización (no bloquea: corre en hilo).
-    def _check(_progress=None):
-        return check_for_update(current=__version__, repo=GITHUB_REPO)
+    def _on_update(url: str) -> None:
+        update_banner.show(url)
+        page.open(update_banner)
 
-    def _on_update(url):
-        if url:
-            update_banner.show(url)
-            page.open(update_banner)
-
-    run_job(
-        _check,
-        on_progress=lambda *_: None,
-        on_done=_on_update,
-        on_error=lambda *_: None,
+    _start_update_check(
+        _on_update, lambda: check_for_update(current=__version__, repo=GITHUB_REPO)
     )
