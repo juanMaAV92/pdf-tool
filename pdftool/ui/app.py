@@ -16,19 +16,36 @@ from pdftool.ui.logs import LOG_LABEL, download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 from pdftool.ui.thumbnails import shutdown_thumbnail_executor
 
+AUTHOR_NAME = "Juan Manuel Armero"
 AUTHOR_SITE = "https://juanMaAV92.github.io"
 
 
 def _build_footer(theme_label, on_theme, on_log, on_author):
-    """Utilidades globales secundarias; el resultado pertenece al panel.
+    """Pie: firma del autor a la izquierda; versión y utilidades a la derecha.
 
     Devuelve (pie, ítem del tema): el ítem se reetiqueta al cambiar el tema.
     """
     theme_item = ft.PopupMenuItem(
         text=theme_label, icon=ft.Icons.BRIGHTNESS_6, on_click=on_theme
     )
+    # Visible en todas las pantallas pero discreta: mismo tono apagado y
+    # tamaño que la versión, sin competir con el resultado del panel.
+    credit = ft.TextButton(
+        f"Hecho por {AUTHOR_NAME}",
+        icon=ft.Icons.OPEN_IN_NEW,
+        tooltip="Visitar el sitio del autor",
+        on_click=on_author,
+        style=ft.ButtonStyle(
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            icon_size=14,
+            text_style=ft.TextStyle(size=12),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+        ),
+    )
     footer = ft.Row(
         [
+            credit,
+            ft.Container(expand=True),
             ft.Text(
                 f"v{__version__}",
                 size=11,
@@ -43,15 +60,9 @@ def _build_footer(theme_label, on_theme, on_log, on_author):
                     ft.PopupMenuItem(
                         text=LOG_LABEL, icon=ft.Icons.DOWNLOAD, on_click=on_log
                     ),
-                    ft.PopupMenuItem(
-                        text="Acerca del autor",
-                        icon=ft.Icons.OPEN_IN_NEW,
-                        on_click=on_author,
-                    ),
                 ],
             ),
         ],
-        alignment=ft.MainAxisAlignment.END,
     )
     return footer, theme_item
 
