@@ -1221,3 +1221,17 @@ def test_compress_options_wrap_instead_of_overflowing():
         if isinstance(c, ft.Row) and any(x is tool._mode_dd for x in c.controls)
     )
     assert row.wrap is True
+
+
+def test_compress_options_are_top_aligned():
+    """El texto de ayuda del objetivo alarga su campo: centrados en vertical,
+    el campo y el desplegable quedaban a alturas distintas."""
+    from pdftool.tools.compress.panel import CompressTool
+
+    tool = _build(CompressTool())
+    row = next(
+        c
+        for c in tool.extra_controls()
+        if isinstance(c, ft.Row) and any(x is tool._mode_dd for x in c.controls)
+    )
+    assert row.vertical_alignment == ft.CrossAxisAlignment.START
