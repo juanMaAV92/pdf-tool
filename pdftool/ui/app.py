@@ -89,26 +89,100 @@ def _tool_card(index, tool, on_open):
     )
 
 
+def _group_by_category(tools):
+    """[(categoría, [(índice, herramienta), …]), …] respetando el orden de
+    `tools` (ya ordenadas por `meta.order`); cada categoría aparece donde lo
+    hace su primera herramienta."""
+    groups: dict[str, list] = {}
+    for index, tool in enumerate(tools):
+        groups.setdefault(tool.meta.category, []).append((index, tool))
+    return list(groups.items())
+
+
 def _build_home(tools, on_open):
-    # Cuadrícula única que envuelve varias tarjetas por fila (compacta, sin scroll
-    # con pocas herramientas). Cuando haya muchas por categoría, se puede agrupar.
-    cards = ft.Row(
-        [_tool_card(i, t, on_open) for i, t in enumerate(tools)],
-        wrap=True,
-        spacing=16,
-        run_spacing=16,
-    )
+    sections: list[ft.Control] = []
+    for category, items in _group_by_category(tools):
+        sections.append(ft.Text(category, size=16, weight=ft.FontWeight.W_600))
+        sections.append(
+            ft.Row(
+                [_tool_card(i, t, on_open) for i, t in items],
+                wrap=True,
+                spacing=16,
+                run_spacing=16,
+            )
+        )
     return ft.Column(
         [
             ft.Text("Herramientas PDF", size=28, weight=ft.FontWeight.BOLD),
             ft.Text("Elige una herramienta para empezar."),
-            ft.Container(height=8),
-            cards,
+            *sections,
         ],
         spacing=14,
         scroll=ft.ScrollMode.AUTO,
         expand=True,
     )
+
+
+def _nav_style(selected: bool) -> ft.ButtonStyle:
+    return ft.ButtonStyle(
+        bgcolor=ft.Colors.SECONDARY_CONTAINER if selected else None,
+        color=ft.Colors.ON_SECONDARY_CONTAINER if selected else ft.Colors.ON_SURFACE,
+        alignment=ft.alignment.center_left,
+        padding=ft.padding.symmetric(horizontal=12, vertical=10),
+        shape=ft.RoundedRectangleBorder(radius=10),
+    )
+
+
+def _nav_button(icon, label: str, on_click) -> ft.TextButton:
+    return ft.TextButton(
+        content=ft.Row(
+            [ft.Icon(icon, size=20), ft.Text(label, size=14)],
+            spacing=12,
+        ),
+        tooltip=label,
+        style=_nav_style(False),
+        on_click=on_click,
+    )
+
+
+class _Sidebar(ft.Container):
+    """Navegación lateral: Inicio y herramientas agrupadas por categoría.
+
+    Sustituye al NavigationRail, que no tiene scroll: con más herramientas las
+    entradas dejarían de caber en la ventana. Botones normales, así que se
+    recorre con el teclado como el resto de la app.
+    """
+
+    def __init__(self, tools, on_home, on_tool) -> None:
+        self.home_button = _nav_button(
+            ft.Icons.GRID_VIEW, "Inicio", lambda _e: on_home()
+        )
+        self.tool_buttons: list[ft.TextButton] = [
+            _nav_button(tool.meta.icon, tool.meta.name, lambda _e, i=index: on_tool(i))
+            for index, tool in enumerate(tools)
+        ]
+        controls: list[ft.Control] = [self.home_button]
+        for category, items in _group_by_category(tools):
+            controls.append(
+                ft.Container(
+                    ft.Text(
+                        category,
+                        size=12,
+                        weight=ft.FontWeight.W_600,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
+                    padding=ft.padding.only(left=12, top=12, bottom=2),
+                )
+            )
+            controls.extend(self.tool_buttons[i] for i, _tool in items)
+        self.list = ft.ListView(controls, spacing=2, padding=8, expand=True)
+        super().__init__(content=self.list, width=208)
+
+    def select(self, index: int | None) -> None:
+        """Marca Inicio (None) o la herramienta `index` como actual."""
+        self.home_button.style = _nav_style(index is None)
+        for i, button in enumerate(self.tool_buttons):
+            button.style = _nav_style(i == index)
 
 
 class _UpdateBanner(ft.Banner):
@@ -211,34 +285,15 @@ def build_app(page: ft.Page) -> None:
 
     def open_tool(index: int) -> None:
         content.content = tools[index].build_panel(ctx)
-        rail.selected_index = index + 1
+        sidebar.select(index)
         page.update()
 
     def open_home() -> None:
         content.content = _build_home(tools, open_tool)
-        rail.selected_index = 0
+        sidebar.select(None)
         page.update()
 
-    def on_rail_change(e) -> None:
-        idx = e.control.selected_index
-        if idx == 0:
-            open_home()
-        else:
-            open_tool(idx - 1)
-
-    rail = ft.NavigationRail(
-        selected_index=0,
-        label_type=ft.NavigationRailLabelType.ALL,
-        min_width=80,
-        destinations=[
-            ft.NavigationRailDestination(icon=ft.Icons.GRID_VIEW, label="Inicio"),
-            *[
-                ft.NavigationRailDestination(icon=t.meta.icon, label=t.meta.name)
-                for t in tools
-            ],
-        ],
-        on_change=on_rail_change,
-    )
+    sidebar = _Sidebar(tools, on_home=open_home, on_tool=open_tool)
 
     def toggle_theme(_e) -> None:
         settings.theme_mode = next_mode(settings.theme_mode)
@@ -268,7 +323,7 @@ def build_app(page: ft.Page) -> None:
     page.add(
         ft.Column(
             [
-                ft.Row([rail, ft.VerticalDivider(width=1), content], expand=True),
+                ft.Row([sidebar, ft.VerticalDivider(width=1), content], expand=True),
                 ft.Divider(height=1),
                 footer,
             ],
