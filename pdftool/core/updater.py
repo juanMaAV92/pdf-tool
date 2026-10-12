@@ -26,7 +26,7 @@ def is_newer(latest: str, current: str) -> bool:
 
 def _default_get(url: str) -> dict:
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
+    with urllib.request.urlopen(req, timeout=5) as resp:  # URL https fija
         return json.loads(resp.read().decode("utf-8"))
 
 
@@ -43,5 +43,5 @@ def check_for_update(
         if is_newer(data["tag_name"], current):
             return data["html_url"]
         return None
-    except Exception:  # noqa: BLE001 - el chequeo de update nunca debe romper la app
+    except Exception:  # el chequeo de update nunca debe romper la app
         return None

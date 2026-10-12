@@ -1,19 +1,22 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import fitz
 
 from pdftool.core.atomic import atomic_output
+from pdftool.core.batch import noop_progress
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.watermark.params import WatermarkParams
 
 _ANGLE = 45
-
-
-def _noop(_p: float, _m: str) -> None:
-    pass
+# Tope de sellos por página: el mosaico crece con el área de la página y el
+# coste de insert_text crece de forma cuadrática con los sellos de una misma
+# página (2000 ≈ 5 s; 4000 ≈ 22 s). Con este tope A4, Letter y A3 no cambian ni
+# a 8 pt; solo páginas mayores con letra pequeña ganan separación.
+_MAX_STAMPS_PER_PAGE = 2_000
 
 
 def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> Path:
@@ -21,8 +24,30 @@ def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> 
     return output_path(input_path, "marca", out_dir=out_dir)
 
 
+def _stamp_count(rect: fitz.Rect, sx: float, sy: float, text_w: float) -> int:
+    """Sellos que pondrá el mosaico (mismos límites que el bucle de `watermark`)."""
+    cols = math.ceil((rect.width + sx + text_w) / sx)
+    rows = math.ceil((rect.height + sy / 2) / sy)
+    return cols * rows
+
+
+def _grid_steps(
+    rect: fitz.Rect, step_x: float, step_y: float, text_w: float
+) -> tuple[float, float]:
+    """Separación del mosaico, ampliada si la página pediría demasiados sellos."""
+    stamps = _stamp_count(rect, step_x, step_y, text_w)
+    if stamps <= _MAX_STAMPS_PER_PAGE:
+        return step_x, step_y
+    scale = math.sqrt(stamps / _MAX_STAMPS_PER_PAGE)
+    while _stamp_count(rect, step_x * scale, step_y * scale, text_w) > (
+        _MAX_STAMPS_PER_PAGE
+    ):
+        scale *= 1.05
+    return step_x * scale, step_y * scale
+
+
 def watermark(
-    inputs: list[Path], params: WatermarkParams, progress: Progress = _noop
+    inputs: list[Path], params: WatermarkParams, progress: Progress = noop_progress
 ) -> ToolResult:
     if not inputs:
         raise ValueError("inputs está vacío")
@@ -45,10 +70,11 @@ def watermark(
             for pno in range(total):
                 page = doc[pno]
                 rect = page.rect
-                y = step_y / 2
-                while y < rect.height + step_y:
+                sx, sy = _grid_steps(rect, step_x, step_y, text_w)
+                y = sy / 2
+                while y < rect.height + sy:
                     x = -text_w
-                    while x < rect.width + step_x:
+                    while x < rect.width + sx:
                         pivot = fitz.Point(x, y)
                         page.insert_text(
                             pivot,
@@ -59,8 +85,8 @@ def watermark(
                             morph=(pivot, rot),
                             overlay=True,
                         )
-                        x += step_x
-                    y += step_y
+                        x += sx
+                    y += sy
                 progress((pno + 1) / total, f"Página {pno + 1}/{total}")
             doc.save(str(temporary), garbage=4, deflate=True)
 

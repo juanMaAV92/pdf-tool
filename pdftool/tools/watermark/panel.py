@@ -68,8 +68,8 @@ class WatermarkTool(SingleFileToolPanel):
                 font_size=int(self._size_field.value),
                 color=_COLORS.get(self._color_dd.value, _COLORS["Gris"]),
             )
-        except (ValueError, ValidationError):
-            raise InvalidParams("Revisa el texto, tamaño y opacidad.")
+        except (ValueError, ValidationError) as exc:
+            raise InvalidParams("Revisa el texto, tamaño y opacidad.") from exc
 
     def run_logic(self, inputs: list[Path], params, progress):
         return watermark(inputs, params, progress=progress)

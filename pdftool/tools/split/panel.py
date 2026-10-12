@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import fitz
 import flet as ft
+from pydantic import ValidationError
 
+from pdftool.core.errors import UserError
 from pdftool.core.plugin import ToolMeta
 from pdftool.core.registry import register
-from pdftool.tools.split.logic import parse_ranges, resolve_ranges, split
+from pdftool.tools.split.logic import page_count, parse_ranges, resolve_ranges, split
 from pdftool.tools.split.params import SplitParams
 from pdftool.ui.accessibility import HelpButton
 from pdftool.ui.panel_base import InvalidParams, SingleFileToolPanel
@@ -42,9 +43,10 @@ class SplitTool(SingleFileToolPanel):
         self._ranges_field = ft.TextField(
             label="Rangos", hint_text="ej: 1-3, 5, 8-", width=240, disabled=False
         )
+        # Sin label propio: la fila ya se lee «Cada [10] páginas».
         self._every_field = ft.TextField(
-            label="Cada N páginas",
             value="10",
+            tooltip="Páginas por archivo",
             width=160,
             disabled=True,
             keyboard_type=ft.KeyboardType.NUMBER,
@@ -82,8 +84,10 @@ class SplitTool(SingleFileToolPanel):
         self._page.update()
 
     def after_pick(self, path: Path) -> None:
-        with fitz.open(str(path)) as doc:
-            self._pages = doc.page_count
+        # Se reinicia antes de leer: si el PDF no abre, los rangos no deben
+        # validarse contra las páginas del archivo anterior.
+        self._pages = 0
+        self._pages = page_count(path)
         self._file_label.value = f"{path.name} · {self._pages} páginas"
 
     def make_params(self):
@@ -93,13 +97,14 @@ class SplitTool(SingleFileToolPanel):
                 ranges=self._ranges_field.value or "",
                 every_n=int(self._every_field.value) if self._every_field.value else 1,
             )
-            if params.mode == "ranges":
-                # Valida sintaxis y límites antes de lanzar el job.
+        except (ValueError, ValidationError) as exc:
+            raise InvalidParams("Escribe un número de páginas mayor que 0.") from exc
+        if params.mode == "ranges":
+            # Valida sintaxis y límites antes de lanzar el job.
+            try:
                 resolve_ranges(parse_ranges(params.ranges), int(self._pages))
-        except ValueError as exc:
-            raise InvalidParams(str(exc))
-        except Exception:  # noqa: BLE001  (pydantic/int inválido)
-            raise InvalidParams("Parámetros inválidos")
+            except UserError as exc:
+                raise InvalidParams(str(exc)) from exc
         return params
 
     def run_logic(self, inputs: list[Path], params, progress):

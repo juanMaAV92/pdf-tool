@@ -5,13 +5,11 @@ from pathlib import Path
 import fitz
 
 from pdftool.core.atomic import atomic_output
+from pdftool.core.batch import noop_progress, run_batch
+from pdftool.core.errors import UserError
 from pdftool.core.naming import output_path
-from pdftool.core.plugin import FileResult, Progress, ToolResult
+from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.protect.params import ProtectParams
-
-
-def _noop(_p: float, _m: str) -> None:
-    pass
 
 
 def _output(input_path: Path, suffix: str, out_dir: Path | None = None) -> Path:
@@ -21,73 +19,48 @@ def _output(input_path: Path, suffix: str, out_dir: Path | None = None) -> Path:
 
 def _protect_one(
     input_path: Path, params: ProtectParams, progress: Progress
-) -> tuple[Path | None, str]:
-    """Procesa un archivo. Devuelve (salida, etiqueta) o (None, error corto)."""
-    try:
-        if params.mode == "protect":
-            progress(0.0, "Protegiendo PDF…")
-            out = _output(input_path, "protegido", params.output_dir)
-            with atomic_output(out) as temporary:
-                with fitz.open(str(input_path)) as doc:
-                    if doc.needs_pass:
-                        raise ValueError(
-                            "El PDF ya está protegido; quítale la contraseña primero."
-                        )
-                    doc.save(
-                        str(temporary),
-                        encryption=fitz.PDF_ENCRYPT_AES_256,
-                        owner_pw=params.password,
-                        user_pw=params.password,
-                    )
-            progress(1.0, "Listo")
-            return out, f"→ {out.name}"
-
-        # mode == "remove"
-        progress(0.0, "Quitando contraseña…")
-        out = _output(input_path, "sin_clave", params.output_dir)
+) -> tuple[Path, str]:
+    """Procesa un archivo. Devuelve (salida, etiqueta); un error lanza."""
+    if params.mode == "protect":
+        progress(0.0, "Protegiendo PDF…")
+        out = _output(input_path, "protegido", params.output_dir)
         with atomic_output(out) as temporary:
             with fitz.open(str(input_path)) as doc:
-                if doc.needs_pass and not doc.authenticate(params.password):
-                    raise ValueError("Contraseña incorrecta.")
-                doc.save(str(temporary), encryption=fitz.PDF_ENCRYPT_NONE)
+                if doc.needs_pass:
+                    raise UserError(
+                        "El PDF ya está protegido; quítale la contraseña primero."
+                    )
+                doc.save(
+                    str(temporary),
+                    encryption=fitz.PDF_ENCRYPT_AES_256,
+                    owner_pw=params.password,
+                    user_pw=params.password,
+                )
         progress(1.0, "Listo")
         return out, f"→ {out.name}"
-    except Exception as exc:  # este archivo falla; el lote continúa
-        return None, str(exc)
+
+    # mode == "remove"
+    progress(0.0, "Quitando contraseña…")
+    out = _output(input_path, "sin_clave", params.output_dir)
+    with atomic_output(out) as temporary:
+        with fitz.open(str(input_path)) as doc:
+            if doc.needs_pass and not doc.authenticate(params.password):
+                raise UserError("Contraseña incorrecta.")
+            doc.save(str(temporary), encryption=fitz.PDF_ENCRYPT_NONE)
+    progress(1.0, "Listo")
+    return out, f"→ {out.name}"
 
 
 def protect(
-    inputs: list[Path], params: ProtectParams, progress: Progress = _noop
+    inputs: list[Path], params: ProtectParams, progress: Progress = noop_progress
 ) -> ToolResult:
-    if not inputs:
-        raise ValueError("inputs está vacío")
-    paths = [Path(p) for p in inputs]
-    for path in paths:
-        if not path.exists():
-            raise FileNotFoundError(path)
-
-    total = len(paths)
-    outputs: list[Path] = []
-    labels: list[str] = []
-    items: list[FileResult] = []
-
-    for index, path in enumerate(paths):
-
-        def scoped(
-            pct: float, msg: str, _i: int = index, _name: str = path.name
-        ) -> None:
-            overall = (_i + pct) / total
-            label = f"[{_i + 1}/{total}] {_name}: {msg}" if total > 1 else msg
-            progress(overall, label)
-
-        out, label = _protect_one(path, params, scoped)
-        if out is not None:
-            outputs.append(out)
-        labels.append(label)
-        items.append(FileResult(path, out, out is not None, label))
-
-    if not outputs:
-        raise ValueError(labels[0] if total == 1 else "Ningún PDF pudo procesarse.")
+    batch = run_batch(
+        inputs,
+        lambda path, scoped: _protect_one(path, params, scoped),
+        progress,
+        all_failed="Ningún PDF pudo procesarse.",
+    )
+    outputs, total = batch.outputs, batch.total
 
     if total == 1:
         verb = "PDF protegido" if params.mode == "protect" else "Contraseña removida"
@@ -102,4 +75,4 @@ def protect(
         )
     else:
         summary = f"{len(outputs)} de {total} PDFs procesados"
-    return ToolResult(outputs=outputs, summary=summary, items=items)
+    return ToolResult(outputs=outputs, summary=summary, items=batch.items)

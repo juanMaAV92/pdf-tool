@@ -27,13 +27,24 @@ pdftool/
 │   ├── registry.py         # @register, get_tools(), discover()
 │   ├── jobs.py             # run_job(...) con JobHandle, cancelación y generaciones
 │   ├── atomic.py           # publicación atómica de PDFs y copias
+│   ├── batch.py            # run_batch(): bucle común de lotes (errores por archivo)
 │   ├── config.py           # Settings en el dir de datos del usuario
+│   ├── errors.py           # UserError y user_message(): mensajes para el usuario
+│   ├── logger.py           # log rotativo con rutas y nombres redactados
 │   ├── naming.py           # destinos y colisiones de nombres
 │   ├── thumbnails.py       # render puro de miniaturas
 │   └── updater.py          # is_newer(), check_for_update() vía GitHub Releases (nunca lanza)
 ├── ui/
-│   ├── theme.py            # build_theme(), resolve_mode(), next_mode() (claro/oscuro/sistema)
-│   └── app.py              # host: NavigationRail + contenido + toggle tema + banner update
+│   ├── app.py              # host: NavigationRail + contenido + menú + banner update
+│   ├── panel_base.py       # BaseToolPanel / SingleFileToolPanel: plantilla de panel
+│   ├── file_list.py        # MultiFileToolPanel: lista de lote, resultados, miniaturas
+│   ├── output_dir.py       # campo «Guardar en» (persistido en Settings)
+│   ├── errors.py           # humanize_error() para la UI (delega en core/errors)
+│   ├── accessibility.py    # NamedIconButton, HelpButton
+│   ├── thumbnails.py       # carga asíncrona y caché de miniaturas
+│   ├── logs.py             # «Descargar log»
+│   ├── platform.py         # abrir archivo / carpeta en el SO
+│   └── theme.py            # build_theme(), resolve_mode(), next_mode()
 └── tools/
     ├── compress/
     ├── images2pdf/
@@ -68,7 +79,22 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    Con `output_dir=None` la salida va junto al original, que es el default.
    Ninguna herramienta debe sobrescribir un archivo existente: `unique_path`
    añade « (1)», « (2)»… y es la única fuente de esa regla.
-3. `panel.py` — clase que hereda `PdfTool`, decorada con `@register`, define `meta: ToolMeta` y `build_panel(ctx)`. Usa `ctx.run_job(...)` para correr la lógica en segundo plano.
+
+   **Lotes (N→N):** no escribas el bucle a mano; usa
+   `run_batch(inputs, process_one, progress, all_failed=...)` de
+   `pdftool/core/batch.py`. Aísla el fallo de cada archivo en su `FileResult`,
+   escala el progreso (`[i/N] nombre: …`) y deja pasar la cancelación.
+
+   **Errores para el usuario:** lanza `UserError("mensaje en español")`
+   (`pdftool/core/errors.py`) cuando el mensaje deba verse tal cual. Cualquier
+   otra excepción se muestra como un mensaje genérico con el detalle plegado.
+3. `panel.py` — clase decorada con `@register` que hereda la plantilla de la
+   UI: `MultiFileToolPanel` (`pdftool/ui/file_list.py`) para lotes o
+   `SingleFileToolPanel` (`pdftool/ui/panel_base.py`) para un archivo. Define
+   `meta: ToolMeta`, `run_label`/`run_icon`/`pick_label` e implementa los hooks
+   `extra_controls()`, `make_params()` (lanza `InvalidParams` con un mensaje
+   claro) y `run_logic(inputs, params, progress)`. La base construye el panel y
+   ejecuta la lógica en segundo plano con `ctx.run_job`; no lo llames tú.
 4. `__init__.py` — `from pdftool.tools.<id>.panel import <Tool>  # noqa: F401` para disparar el registro.
 
 `discover()` la encuentra automáticamente y aparece en la barra lateral.
@@ -90,7 +116,7 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 
 - macOS: `poetry run flet build macos` → `.app` → envolver en `.dmg`.
 - Windows: `poetry run flet build windows` → compilar `installer/windows.iss` con Inno Setup → `pdf-tool-setup.exe` (actualiza en sitio, mismo `AppId`).
-- Distribución por **GitHub Releases** con tag `vX.Y.Z`. Ajustar `GITHUB_REPO` en `ui/app.py` y `AppVersion` en `installer/windows.iss` antes del primer release.
+- Distribución por **GitHub Releases** con tag `vX.Y.Z`. El workflow de release toma la versión del tag; el repo del chequeo de actualizaciones está en `GITHUB_REPO` (`ui/app.py`).
 - Los ajustes del usuario viven fuera del binario (`platformdirs`), así que sobreviven a las actualizaciones.
 
 ## Notas

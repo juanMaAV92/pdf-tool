@@ -170,3 +170,78 @@ def test_same_stem_from_different_folders_with_shared_output_dir(tmp_path):
 
     assert [o.name for o in res.outputs] == ["a.pdf", "a (1).pdf"]
     assert all(o.exists() for o in res.outputs)
+
+
+def test_cancellation_stops_the_batch(tmp_path):
+    from pdftool.core.jobs import JobCancelled
+
+    a = _img(tmp_path / "a.png", 10, 10)
+    b = _img(tmp_path / "b.png", 10, 10)
+    calls = []
+
+    def cancel(p, m):
+        calls.append(m)
+        raise JobCancelled()
+
+    with pytest.raises(JobCancelled):
+        images_to_pdf([a, b], ImagesToPdfParams(), progress=cancel)
+    assert len(calls) == 1
+
+
+def _png_header(path: Path, w: int, h: int) -> Path:
+    """Cabecera PNG válida con dimensiones arbitrarias (sin datos de imagen)."""
+    import struct
+    import zlib
+
+    ihdr = struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)
+    chunk = b"IHDR" + ihdr
+    data = (
+        b"\x89PNG\r\n\x1a\n"
+        + struct.pack(">I", len(ihdr))
+        + chunk
+        + struct.pack(">I", zlib.crc32(chunk))
+    )
+    path.write_bytes(data)
+    return path
+
+
+def test_oversized_image_is_rejected_before_decoding(tmp_path):
+    from pdftool.core.errors import UserError
+
+    bomb = _png_header(tmp_path / "bomba.png", 60000, 60000)
+    with pytest.raises(UserError, match="demasiado grande"):
+        images_to_pdf([bomb], ImagesToPdfParams())
+
+
+def test_image_pixel_limit_reads_jpeg_headers(tmp_path):
+    from pdftool.tools.images2pdf.logic import image_size
+
+    jpg = _img(tmp_path / "foto.jpg", 37, 21)
+    assert image_size(jpg) == (37, 21)
+    png = _img(tmp_path / "foto.png", 12, 34)
+    assert image_size(png) == (12, 34)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"\xff\xd8\xff\xe0\x00\x00",  # longitud 0: retrocedería para siempre
+        b"\xff\xd8\xff\xe0\x00\x01",  # longitud 1: ídem
+        b"\xff\xd8" + b"\xff" * 64,  # solo bytes de relleno
+    ],
+)
+def test_malformed_jpeg_header_does_not_hang(tmp_path, data):
+    import threading
+
+    from pdftool.tools.images2pdf.logic import image_size
+
+    path = tmp_path / "raro.jpg"
+    path.write_bytes(data)
+    box = {}
+    worker = threading.Thread(
+        target=lambda: box.update(size=image_size(path)), daemon=True
+    )
+    worker.start()
+    worker.join(timeout=2)
+    assert not worker.is_alive(), "image_size quedó en bucle"
+    assert box["size"] is None

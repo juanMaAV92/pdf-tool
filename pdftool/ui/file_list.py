@@ -25,6 +25,7 @@ class MultiFileToolPanel(BaseToolPanel):
             previous_task.cancel()
         self._files: list[Path] = []
         self._results: list[str] = []  # etiqueta por archivo tras un run
+        self._failed: list[bool] = []  # fila cuyo archivo falló en el run
         self._row_paths: list[Path | None] = []  # ruta por fila exitosa tras un run
         self._thumb_boxes: dict[str, ft.Container] = {}
         self._thumb_task = None
@@ -103,6 +104,7 @@ class MultiFileToolPanel(BaseToolPanel):
         for index, path in enumerate(self._files):
             result = self._results[index] if index < len(self._results) else None
             row_path = self._row_paths[index] if index < len(self._row_paths) else None
+            failed = index < len(self._failed) and self._failed[index]
             controls: list[ft.Control] = [ft.Text(f"{index + 1}.", width=28)]
             if self.show_thumbnails:
                 controls.append(self._thumb_control(path))
@@ -112,7 +114,7 @@ class MultiFileToolPanel(BaseToolPanel):
                     result or "",
                     size=12,
                     no_wrap=True,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=ft.Colors.ERROR if failed else ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 NamedIconButton(
                     ft.Icons.OPEN_IN_NEW,
@@ -161,6 +163,7 @@ class MultiFileToolPanel(BaseToolPanel):
     def _clear_results(self) -> None:
         self._results = []
         self._row_paths = []
+        self._failed = []
 
     def _move(self, index: int, delta: int) -> None:
         new_index = index + delta
@@ -184,7 +187,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._files = []
         self._clear_results()
         self._clear_error()
-        self.status.value = ""
+        self._set_status("")
         self._hide_result_actions()
         self._refresh()
 
@@ -201,10 +204,10 @@ class MultiFileToolPanel(BaseToolPanel):
                 self._files.append(path)
                 added += 1
         if added == 0 and e.files:
-            self.status.value = _WEB_MODE_MSG
+            self._set_status(_WEB_MODE_MSG)
         else:
             self._hide_result_actions()
-            self.status.value = ""
+            self._set_status("")
         self._clear_error()
         self._clear_results()
         self._refresh()
@@ -213,6 +216,7 @@ class MultiFileToolPanel(BaseToolPanel):
         items = result.items or []
         self._results = [item.message for item in items]
         self._row_paths = [item.output_path if item.ok else None for item in items]
+        self._failed = [not item.ok for item in items]
         self._refresh()
 
     def collect_inputs(self) -> list[Path]:

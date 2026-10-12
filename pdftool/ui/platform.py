@@ -10,7 +10,7 @@ def _open_with_system(path: Path) -> None:
     if sys.platform == "darwin":
         subprocess.run(["open", str(path)], check=False)
     elif sys.platform == "win32":
-        os.startfile(str(path))  # noqa: S606  (Windows-only)
+        os.startfile(str(path))  # solo Windows
     else:
         subprocess.run(["xdg-open", str(path)], check=False)
 
