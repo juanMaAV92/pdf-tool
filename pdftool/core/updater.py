@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import urllib.request
-from typing import Callable, Optional
+from collections.abc import Callable
 
 GITHUB_REPO = "juanMaAV92/pdf-tool"
 
@@ -42,7 +42,7 @@ def _default_get(url: str) -> dict:
 
 def check_for_update(
     current: str, repo: str, http_get: Callable[[str], dict] = _default_get
-) -> Optional[str]:
+) -> str | None:
     """Devuelve la URL del release si hay una versión más nueva, si no None.
 
     Nunca lanza: ante cualquier error (offline, formato raro) devuelve None.

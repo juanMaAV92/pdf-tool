@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import threading
 from collections import OrderedDict
+from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from pathlib import Path
-from typing import Callable
 
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX, render_thumbnail
 

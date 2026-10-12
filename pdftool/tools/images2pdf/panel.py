@@ -24,7 +24,7 @@ class ImagesToPdfTool(MultiFileToolPanel):
     run_icon = ft.Icons.PICTURE_AS_PDF
     pick_label = "Añadir imágenes"
     pick_icon = ft.Icons.ADD_PHOTO_ALTERNATE
-    allowed_extensions = ["jpg", "jpeg", "png"]
+    allowed_extensions = ("jpg", "jpeg", "png")
     min_files = 1
     show_thumbnails = True
 

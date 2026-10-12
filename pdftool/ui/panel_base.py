@@ -87,7 +87,7 @@ class BaseToolPanel(PdfTool):
     run_icon = ft.Icons.PLAY_ARROW
     pick_label: str = "Elegir PDF"
     pick_icon = ft.Icons.UPLOAD_FILE
-    allowed_extensions: list[str] = ["pdf"]
+    allowed_extensions: tuple[str, ...] = ("pdf",)
     # Las listas de lotes necesitan ocupar el espacio disponible cuando hay
     # archivos. Los paneles de un solo archivo no: un cuerpo vacío solo aleja la
     # acción principal de los controles que la preparan.
@@ -537,7 +537,8 @@ class SingleFileToolPanel(BaseToolPanel):
             self.pick_label,
             icon=self.pick_icon,
             on_click=lambda _e: self._picker.pick_files(
-                allow_multiple=False, allowed_extensions=self.allowed_extensions
+                allow_multiple=False,
+                allowed_extensions=list(self.allowed_extensions),
             ),
         )
         return ft.Row([self._pick_btn, self._file_label])

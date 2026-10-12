@@ -24,10 +24,9 @@ def test_atomic_output_keeps_previous_target_on_failure(tmp_path):
     target = tmp_path / "resultado.pdf"
     target.write_bytes(b"anterior")
 
-    with pytest.raises(RuntimeError):
-        with atomic_output(target) as temporary:
-            temporary.write_bytes(b"incompleto")
-            raise RuntimeError("fallo de escritura")
+    with pytest.raises(RuntimeError), atomic_output(target) as temporary:
+        temporary.write_bytes(b"incompleto")
+        raise RuntimeError("fallo de escritura")
 
     assert target.read_bytes() == b"anterior"
     assert _temporary_files(target) == []

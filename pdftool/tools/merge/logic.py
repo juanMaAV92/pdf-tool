@@ -43,13 +43,12 @@ def merge(
     total = len(paths)
     progress(0.0, f"Uniendo {total} PDFs…")
 
-    with atomic_output(out) as temporary:
-        with fitz.open() as out_doc:
-            for i, p in enumerate(paths):
-                with fitz.open(str(p)) as src:
-                    out_doc.insert_pdf(src)
-                progress((i + 1) / (total + 1), f"Añadido {p.name}")
-            out_doc.save(str(temporary), garbage=4, deflate=True)
+    with atomic_output(out) as temporary, fitz.open() as out_doc:
+        for i, p in enumerate(paths):
+            with fitz.open(str(p)) as src:
+                out_doc.insert_pdf(src)
+            progress((i + 1) / (total + 1), f"Añadido {p.name}")
+        out_doc.save(str(temporary), garbage=4, deflate=True)
 
     progress(1.0, f"Listo: {out.name}")
     return ToolResult(outputs=[out], summary=f"{total} PDFs unidos → {out.name}")

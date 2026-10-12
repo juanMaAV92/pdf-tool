@@ -44,7 +44,8 @@ class MultiFileToolPanel(BaseToolPanel):
             self.pick_label,
             icon=self.pick_icon,
             on_click=lambda _e: self._picker.pick_files(
-                allow_multiple=True, allowed_extensions=self.allowed_extensions
+                allow_multiple=True,
+                allowed_extensions=list(self.allowed_extensions),
             ),
         )
         return ft.Row([self._pick_btn, self._clear_btn])

@@ -97,9 +97,8 @@ def _convert_one(
     # convert_to_pdf genera una página del tamaño exacto de la imagen.
     with fitz.open(str(input_path)) as img:
         pdf_bytes = img.convert_to_pdf()
-    with atomic_output(out) as temporary:
-        with fitz.open("pdf", pdf_bytes) as pdf:
-            pdf.save(str(temporary), garbage=4, deflate=True)
+    with atomic_output(out) as temporary, fitz.open("pdf", pdf_bytes) as pdf:
+        pdf.save(str(temporary), garbage=4, deflate=True)
     progress(1.0, "Listo")
     return out, f"→ {out.name}"
 

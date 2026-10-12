@@ -28,7 +28,7 @@ class MergeTool(MultiFileToolPanel):
     run_icon = ft.Icons.MERGE_TYPE
     pick_label = "Añadir PDFs"
     pick_icon = ft.Icons.UPLOAD_FILE
-    allowed_extensions = ["pdf"]
+    allowed_extensions = ("pdf",)
     min_files = 2
     show_thumbnails = True
     reorderable = True
