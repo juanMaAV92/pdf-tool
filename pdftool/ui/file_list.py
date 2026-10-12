@@ -59,7 +59,9 @@ class MultiFileToolPanel(BaseToolPanel):
     def build_body(self) -> ft.Control:
         # La lista rellena el cuerpo y scrollea sola cuando no cabe; el footer
         # (ejecutar, progreso, status) queda siempre visible.
-        self._file_list = ft.Column(spacing=4, scroll=ft.ScrollMode.AUTO, expand=True)
+        # ListView construye solo las filas visibles: con cientos de archivos
+        # el scroll sigue siendo fluido.
+        self._file_list = ft.ListView(spacing=4, expand=True)
         return self._file_list
 
     @staticmethod
@@ -240,11 +242,13 @@ class MultiFileToolPanel(BaseToolPanel):
             return
         self._invalidate_active_job()
         added = 0
+        known = set(self._files)  # O(1) por archivo, también con miles
         for f in e.files:
             if not f.path:  # navegador (modo web): sin ruta local
                 continue
             path = Path(f.path)
-            if path not in self._files:
+            if path not in known:
+                known.add(path)
                 self._files.append(path)
                 added += 1
         if added == 0 and e.files:

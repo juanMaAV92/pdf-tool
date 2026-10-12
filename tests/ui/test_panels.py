@@ -1128,3 +1128,23 @@ def test_rows_with_warnings_show_an_explained_icon():
     assert icon.tooltip == "Se convirtieron en imagen."
     assert icon.semantics_label == "Aviso: Se convirtieron en imagen."
     assert warning_icons(second) == []
+
+
+def test_file_list_is_a_lazy_list_view():
+    tool = _build(_MultiStub())
+    assert isinstance(tool._file_list, ft.ListView)
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+    assert tool._file_list.expand is True
+
+
+def test_adding_many_files_deduplicates_quickly():
+    import time
+
+    tool = _build(_MultiStub())
+    paths = [f"/tmp/doc_{i}.pdf" for i in range(3000)]
+    tool._refresh = lambda: None  # mide solo la deduplicación
+    started = time.monotonic()
+    tool._on_pick(_FakeEvent(paths + paths))
+    elapsed = time.monotonic() - started
+    assert len(tool.collect_inputs()) == 3000
+    assert elapsed < 0.2
