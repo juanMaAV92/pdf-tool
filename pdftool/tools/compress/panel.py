@@ -61,6 +61,7 @@ class CompressTool(MultiFileToolPanel):
                     self._mode_help,
                 ],
                 spacing=12,
+                wrap=True,  # en ventanas estrechas pasa a dos líneas
             ),
             self._mode_help.detail,
         ]

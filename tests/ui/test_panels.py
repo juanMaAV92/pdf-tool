@@ -1208,3 +1208,16 @@ def test_buttons_advertise_their_shortcuts():
     tool = _build(_RunnableStub())
     assert shortcut_label("O") in tool._pick_btn.tooltip
     assert shortcut_label("Enter") in tool.run_btn.tooltip
+
+
+def test_compress_options_wrap_instead_of_overflowing():
+    """A la anchura mínima, objetivo + modo + ayuda no caben en una fila."""
+    from pdftool.tools.compress.panel import CompressTool
+
+    tool = _build(CompressTool())
+    row = next(
+        c
+        for c in tool.extra_controls()
+        if isinstance(c, ft.Row) and any(x is tool._mode_dd for x in c.controls)
+    )
+    assert row.wrap is True

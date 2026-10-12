@@ -41,6 +41,6 @@ def test_window_has_a_minimum_size():
 
     page = SimpleNamespace(window=SimpleNamespace())
     _configure_window(page)
-    assert page.window.min_width == 760
+    assert page.window.min_width == 820
     assert page.window.min_height == 560
     assert (page.window.width, page.window.height) == (980, 680)

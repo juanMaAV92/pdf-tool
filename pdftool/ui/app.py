@@ -251,8 +251,9 @@ def _theme_label(mode: str) -> str:
 def _configure_window(page) -> None:
     page.window.width = 980
     page.window.height = 680
-    # Por debajo de esto la barra lateral y el pie de acciones se solapan.
-    page.window.min_width = 760
+    # Barra lateral (208) + contenido: por debajo de esto los controles de los
+    # paneles dejan de caber.
+    page.window.min_width = 820
     page.window.min_height = 560
 
 
