@@ -20,6 +20,7 @@ class MergeTool(MultiFileToolPanel):
         description="Combina varios PDFs en uno solo, en el orden que elijas.",
         icon=ft.Icons.MERGE,
         category="Organizar",
+        order=10,
     )
     run_label = "Unir"
     run_icon = ft.Icons.MERGE_TYPE
@@ -28,6 +29,7 @@ class MergeTool(MultiFileToolPanel):
     allowed_extensions = ["pdf"]
     min_files = 2
     show_thumbnails = True
+    reorderable = True
 
     def extra_controls(self) -> list[ft.Control]:
         self._name_field = OutputNameField(resolve=self._resolve_output)
