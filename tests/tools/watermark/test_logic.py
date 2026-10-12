@@ -98,7 +98,7 @@ def test_huge_page_bounds_the_number_of_stamps(tmp_path, monkeypatch):
         doc.new_page(width=14400, height=14400)
         doc.save(str(src))
     calls = []
-    original = fitz.Page.insert_text
+    original = fitz.TextWriter.append
 
     def counting(self, *args, **kwargs):
         calls.append(1)
@@ -107,12 +107,12 @@ def test_huge_page_bounds_the_number_of_stamps(tmp_path, monkeypatch):
     import pdftool.tools.watermark.logic as logic
 
     monkeypatch.setattr(logic, "_MAX_STAMPS_PER_PAGE", 200)
-    monkeypatch.setattr(fitz.Page, "insert_text", counting)
+    monkeypatch.setattr(fitz.TextWriter, "append", counting)
     watermark([src], WatermarkParams(text="X", font_size=8))
     assert 0 < len(calls) <= 200
 
 
-@pytest.mark.parametrize("size", [(595, 842), (612, 792), (842, 1191)])
+@pytest.mark.parametrize("size", [(595, 842), (612, 792), (842, 1191), (2384, 3370)])
 def test_cap_does_not_change_spacing_on_real_page_sizes(size):
     from pdftool.tools.watermark.logic import _grid_steps
 
@@ -122,3 +122,56 @@ def test_cap_does_not_change_spacing_on_real_page_sizes(size):
         step_x,
         step_y,
     )
+
+
+def _reference_tiles(page, text, font_size, color, opacity):
+    """Implementación original (un insert_text por sello), como referencia."""
+    rot = fitz.Matrix(45)
+    text_w = fitz.get_text_length(text, fontsize=font_size)
+    step_x = max(text_w + font_size * 2, font_size * 4)
+    step_y = font_size * 4
+    y = step_y / 2
+    while y < page.rect.height + step_y:
+        x = -text_w
+        while x < page.rect.width + step_x:
+            pivot = fitz.Point(x, y)
+            page.insert_text(
+                pivot,
+                text,
+                fontsize=font_size,
+                color=color,
+                fill_opacity=opacity,
+                morph=(pivot, rot),
+                overlay=True,
+            )
+            x += step_x
+        y += step_y
+
+
+def test_output_matches_the_original_tiling_pixel_for_pixel(tmp_path):
+    src = tmp_path / "doc.pdf"
+    with fitz.open() as doc:
+        doc.new_page(width=595, height=842)
+        doc.save(str(src))
+    params = WatermarkParams(text="CONFIDENCIAL", font_size=40, opacity=0.3)
+    out = watermark([src], params).outputs[0]
+
+    with fitz.open() as ref, fitz.open(str(out)) as got:
+        page = ref.new_page(width=595, height=842)
+        _reference_tiles(page, "CONFIDENCIAL", 40, tuple(params.color), 0.3)
+        expected = page.get_pixmap(dpi=36).samples
+        actual = got[0].get_pixmap(dpi=36).samples
+    assert actual == expected
+
+
+def test_large_page_with_small_text_is_fast(tmp_path):
+    """El coste ya no crece de forma cuadrática con los sellos de una página."""
+    import time
+
+    src = tmp_path / "a0.pdf"
+    with fitz.open() as doc:
+        doc.new_page(width=2384, height=3370)
+        doc.save(str(src))
+    started = time.monotonic()
+    watermark([src], WatermarkParams(text="X", font_size=8))
+    assert time.monotonic() - started < 10

@@ -12,11 +12,10 @@ from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.watermark.params import WatermarkParams
 
 _ANGLE = 45
-# Tope de sellos por página: el mosaico crece con el área de la página y el
-# coste de insert_text crece de forma cuadrática con los sellos de una misma
-# página (2000 ≈ 5 s; 4000 ≈ 22 s). Con este tope A4, Letter y A3 no cambian ni
-# a 8 pt; solo páginas mayores con letra pequeña ganan separación.
-_MAX_STAMPS_PER_PAGE = 2_000
+# Tope de sellos por página: el mosaico crece con el área de la página. Queda por
+# encima de un A0 con letra de 8 pt (~8000), así que solo actúa ante páginas
+# fuera de lo normal (hasta 14400 pt de lado).
+_MAX_STAMPS_PER_PAGE = 20_000
 
 
 def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> Path:
@@ -46,6 +45,41 @@ def _grid_steps(
     return step_x * scale, step_y * scale
 
 
+def _tile_page(
+    page: fitz.Page,
+    text: str,
+    params: WatermarkParams,
+    font: fitz.Font,
+    step_x: float,
+    step_y: float,
+    text_w: float,
+) -> None:
+    """Cubre la página con el texto girado `_ANGLE` grados en mosaico.
+
+    Cada sello gira sobre su propio punto de inicio. En vez de un insert_text
+    por sello (coste cuadrático: cada llamada reescribe el contenido de la
+    página), todos van en un único TextWriter con una sola rotación alrededor
+    del centro: cada sello se coloca en el punto que esa rotación lleva a su
+    posición final, con idéntico resultado.
+    """
+    rect = page.rect
+    sx, sy = _grid_steps(rect, step_x, step_y, text_w)
+    center = fitz.Point(rect.width / 2, rect.height / 2)
+    # `morph` gira en el sistema de PDF (y hacia arriba); en coordenadas de
+    # página la rotación inversa equivale a la misma matriz.
+    rot = fitz.Matrix(_ANGLE)
+    writer = fitz.TextWriter(rect, opacity=params.opacity, color=tuple(params.color))
+    y = sy / 2
+    while y < rect.height + sy:
+        x = -text_w
+        while x < rect.width + sx:
+            start = (fitz.Point(x, y) - center) * rot + center
+            writer.append(start, text, font=font, fontsize=params.font_size)
+            x += sx
+        y += sy
+    writer.write_text(page, morph=(center, rot), overlay=True)
+
+
 def watermark(
     inputs: list[Path], params: WatermarkParams, progress: Progress = noop_progress
 ) -> ToolResult:
@@ -57,36 +91,19 @@ def watermark(
 
     out = output_path_for_watermark(input_path, params.output_dir)
     text = params.text
-    rot = fitz.Matrix(_ANGLE)
     text_w = fitz.get_text_length(text, fontsize=params.font_size)
     # Separación de la rejilla (mosaico): ancho del texto + holgura.
     step_x = max(text_w + params.font_size * 2, params.font_size * 4)
     step_y = params.font_size * 4
 
     progress(0.0, "Aplicando marca de agua…")
+    font = fitz.Font("helv")
     with atomic_output(out) as temporary:
         with fitz.open(str(input_path)) as doc:
             total = doc.page_count
             for pno in range(total):
                 page = doc[pno]
-                rect = page.rect
-                sx, sy = _grid_steps(rect, step_x, step_y, text_w)
-                y = sy / 2
-                while y < rect.height + sy:
-                    x = -text_w
-                    while x < rect.width + sx:
-                        pivot = fitz.Point(x, y)
-                        page.insert_text(
-                            pivot,
-                            text,
-                            fontsize=params.font_size,
-                            color=tuple(params.color),
-                            fill_opacity=params.opacity,
-                            morph=(pivot, rot),
-                            overlay=True,
-                        )
-                        x += sx
-                    y += sy
+                _tile_page(page, text, params, font, step_x, step_y, text_w)
                 progress((pno + 1) / total, f"Página {pno + 1}/{total}")
             doc.save(str(temporary), garbage=4, deflate=True)
 
