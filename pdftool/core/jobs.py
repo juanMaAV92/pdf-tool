@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass, field
@@ -9,6 +10,7 @@ _MAX_WORKERS = 2
 _executor_lock = threading.Lock()
 _active_jobs_lock = threading.Lock()
 _executor: ThreadPoolExecutor | None = None
+_log = logging.getLogger("pdftool.jobs")
 
 
 class JobCancelled(Exception):
@@ -115,17 +117,25 @@ def run_job(
             raise JobCancelled()
         on_progress(pct, message)
 
+    def _notify(callback: Callable, value: object) -> None:
+        # Un fallo aquí es un bug de la UI: sin este registro se perdería en un
+        # Future que nadie lee y el panel quedaría en «Procesando…».
+        try:
+            callback(value)
+        except Exception:
+            _log.exception("Error en el callback de un trabajo")
+
     def _target() -> None:
         try:
             result = work(_progress)
         except JobCancelled:
             return
-        except Exception as exc:  # noqa: BLE001 - se reenvía a on_error
+        except Exception as exc:  # se reenvía a on_error
             if _still_current():
-                on_error(exc)
+                _notify(on_error, exc)
         else:
             if _still_current():
-                on_done(result)
+                _notify(on_done, result)
         finally:
             _unregister(handle)
 

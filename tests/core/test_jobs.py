@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 
@@ -169,3 +170,44 @@ def test_executor_is_available_again_after_shutdown():
 
     assert done.wait(timeout=5)
     handle.join(timeout=5)
+
+
+class _Capture(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.records = []
+
+    def emit(self, record):
+        self.records.append(record)
+
+
+@pytest.fixture
+def job_log():
+    handler = _Capture()
+    logger = logging.getLogger("pdftool.jobs")
+    logger.addHandler(handler)
+    yield handler.records
+    logger.removeHandler(handler)
+
+
+def test_failing_on_done_is_logged_and_join_does_not_raise(job_log):
+    def on_done(_result):
+        raise ZeroDivisionError("bug en la UI")
+
+    handle = run_job(lambda p: "ok", lambda p, m: None, on_done, lambda e: None)
+    handle.join(timeout=5)
+
+    assert any(r.exc_info and r.exc_info[0] is ZeroDivisionError for r in job_log)
+
+
+def test_failing_on_error_is_logged(job_log):
+    def work(_p):
+        raise ValueError("trabajo")
+
+    def on_error(_exc):
+        raise ZeroDivisionError("bug en la UI")
+
+    handle = run_job(work, lambda p, m: None, lambda r: None, on_error)
+    handle.join(timeout=5)
+
+    assert any(r.exc_info and r.exc_info[0] is ZeroDivisionError for r in job_log)
