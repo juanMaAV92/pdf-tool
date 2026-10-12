@@ -31,7 +31,7 @@ pdftool/
 │   ├── jobs.py             # run_job(...) con JobHandle, cancelación y generaciones
 │   ├── atomic.py           # publicación atómica de PDFs y copias
 │   ├── batch.py            # run_batch(): bucle común de lotes (errores por archivo)
-│   ├── config.py           # Settings en el dir de datos del usuario
+│   ├── config.py           # Settings versionados; settings.tool(id) para preferencias propias
 │   ├── errors.py           # UserError y user_message(): mensajes para el usuario
 │   ├── logger.py           # log rotativo con rutas y nombres redactados
 │   ├── naming.py           # destinos y colisiones de nombres
@@ -44,7 +44,7 @@ pdftool/
 │   ├── output_dir.py       # campo «Guardar en» (persistido en Settings)
 │   ├── errors.py           # humanize_error() para la UI (delega en core/errors)
 │   ├── accessibility.py    # NamedIconButton, HelpButton
-│   ├── thumbnails.py       # carga asíncrona y caché de miniaturas
+│   ├── thumbnails.py       # carga paralela por (ruta, página), caché por mtime
 │   ├── logs.py             # «Descargar log»
 │   ├── platform.py         # abrir archivo / carpeta en el SO
 │   └── theme.py            # build_theme(), resolve_mode(), next_mode()
@@ -87,6 +87,10 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    `run_batch(inputs, process_one, progress, all_failed=...)` de
    `pdftool/core/batch.py`. Aísla el fallo de cada archivo en su `FileResult`,
    escala el progreso (`[i/N] nombre: …`) y deja pasar la cancelación.
+   `process_one` puede devolver `(salida, mensaje)` o un `Outcome` con
+   `warnings` y `metrics` cuando el usuario debe saber algo del resultado (p.
+   ej. «se rasterizaron páginas»; tamaños y % ahorrado). La UI muestra los
+   avisos bajo el resumen y en la fila del archivo, sin diálogos.
 
    **Errores para el usuario:** lanza `UserError("mensaje en español")`
    (`pdftool/core/errors.py`) cuando el mensaje deba verse tal cual. Cualquier
@@ -109,7 +113,8 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    (p. ej. Dividir lee el número de páginas así, nunca en el hilo de la UI).
 4. `__init__.py` — `from pdftool.tools.<id>.panel import <Tool>  # noqa: F401` para disparar el registro.
 
-`discover()` la encuentra automáticamente y aparece en la barra lateral. Si una
+`discover()` la encuentra automáticamente y aparece en la barra lateral, en el
+grupo de su `meta.category` (la barra tiene scroll, así que caben muchas). Si una
 herramienta falla al importarse, se registra en el log y el resto de la app
 sigue funcionando; dos herramientas con el mismo `meta.id` son un error.
 
