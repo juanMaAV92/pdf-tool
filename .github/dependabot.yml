@@ -1,0 +1,17 @@
+# Mantiene al día las actions fijadas por SHA y las dependencias de Python.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Fijado a propósito (ver pyproject.toml): 0.28.3 rompe el FilePicker en macOS.
+      - dependency-name: flet
