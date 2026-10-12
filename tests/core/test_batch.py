@@ -101,3 +101,32 @@ def test_paths_are_normalized(tmp_path):
     (a,) = _files(tmp_path, "a.pdf")
     res = run_batch([str(a)], _ok, all_failed="nada")
     assert res.items[0].input_path == Path(a)
+
+
+def test_failed_item_message_is_human(tmp_path):
+    from pdftool.core.errors import UserError
+
+    a, b, c = _files(tmp_path, "a.pdf", "b.pdf", "c.pdf")
+
+    def one(path, progress):
+        if path == a:
+            raise UserError("Contraseña incorrecta.")
+        if path == b:
+            raise RuntimeError("code=7: no objects found")
+        return _ok(path, progress)
+
+    res = run_batch([a, b, c], one, all_failed="nada")
+    assert res.items[0].message == "Contraseña incorrecta."
+    assert "no objects found" not in res.items[1].message
+
+
+def test_all_failed_is_a_user_error(tmp_path):
+    from pdftool.core.errors import UserError
+
+    a, b = _files(tmp_path, "a.pdf", "b.pdf")
+
+    def one(path, progress):
+        raise RuntimeError("x")
+
+    with pytest.raises(UserError):
+        run_batch([a, b], one, all_failed="Ningún PDF pudo procesarse.")

@@ -6,6 +6,7 @@ import fitz
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress
+from pdftool.core.errors import UserError
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.split.params import SplitParams
@@ -26,7 +27,7 @@ def parse_ranges(spec: str) -> list[Range]:
     Lanza ``ValueError`` si la sintaxis es inválida o el rango está invertido.
     """
     if not spec or not spec.strip():
-        raise ValueError("Indica al menos un rango (ej: 1-3, 5, 8-)")
+        raise UserError("Indica al menos un rango (ej: 1-3, 5, 8-)")
 
     out: list[Range] = []
     for raw in spec.split(","):
@@ -35,16 +36,18 @@ def parse_ranges(spec: str) -> list[Range]:
             continue
         out.append(_parse_token(token))
     if not out:
-        raise ValueError("Indica al menos un rango (ej: 1-3, 5, 8-)")
+        raise UserError("Indica al menos un rango (ej: 1-3, 5, 8-)")
     return out
 
 
 def _parse_int(text: str) -> int:
     if not text.isdigit():
-        raise ValueError(f"Valor inválido: {text!r}")
+        raise UserError(
+            f"«{text}» no es un número de página válido. Usa por ejemplo 1-3, 5"
+        )
     value = int(text)
     if value < 1:
-        raise ValueError("Las páginas empiezan en 1")
+        raise UserError("Las páginas empiezan en 1")
     return value
 
 
@@ -55,15 +58,17 @@ def _parse_token(token: str) -> Range:
 
     parts = token.split("-")
     if len(parts) != 2:
-        raise ValueError(f"Rango inválido: {token!r}")
+        raise UserError(f"«{token}» no es un rango válido. Usa por ejemplo 1-3, 5")
     left, right = parts[0].strip(), parts[1].strip()
 
     start = _parse_int(left) if left else None
     end = _parse_int(right) if right else None
     if not left and not right:
-        raise ValueError(f"Rango inválido: {token!r}")
+        raise UserError(f"«{token}» no es un rango válido. Usa por ejemplo 1-3, 5")
     if start is not None and end is not None and start > end:
-        raise ValueError(f"Rango invertido: {token!r}")
+        raise UserError(
+            f"El rango «{token}» está al revés: escribe primero la página menor."
+        )
     return (start, end)
 
 
@@ -74,11 +79,15 @@ def resolve_ranges(parsed: list[Range], page_count: int) -> list[tuple[int, int]
         s = 1 if start is None else start
         e = page_count if end is None else end
         if s > page_count or e > page_count:
-            raise ValueError(
-                f"El rango {s}-{e} excede el total de {page_count} páginas"
-            )
+            raise UserError(f"El rango {s}-{e} excede el total de {page_count} páginas")
         resolved.append((s, e))
     return resolved
+
+
+def page_count(path: Path) -> int:
+    """Número de páginas de un PDF; lanza si no se puede abrir."""
+    with fitz.open(str(path)) as doc:
+        return doc.page_count
 
 
 def _label(start: int, end: int, width: int) -> str:

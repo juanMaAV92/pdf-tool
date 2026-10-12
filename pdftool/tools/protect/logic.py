@@ -6,6 +6,7 @@ import fitz
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress, run_batch
+from pdftool.core.errors import UserError
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.tools.protect.params import ProtectParams
@@ -26,7 +27,7 @@ def _protect_one(
         with atomic_output(out) as temporary:
             with fitz.open(str(input_path)) as doc:
                 if doc.needs_pass:
-                    raise ValueError(
+                    raise UserError(
                         "El PDF ya está protegido; quítale la contraseña primero."
                     )
                 doc.save(
@@ -44,7 +45,7 @@ def _protect_one(
     with atomic_output(out) as temporary:
         with fitz.open(str(input_path)) as doc:
             if doc.needs_pass and not doc.authenticate(params.password):
-                raise ValueError("Contraseña incorrecta.")
+                raise UserError("Contraseña incorrecta.")
             doc.save(str(temporary), encryption=fitz.PDF_ENCRYPT_NONE)
     progress(1.0, "Listo")
     return out, f"→ {out.name}"

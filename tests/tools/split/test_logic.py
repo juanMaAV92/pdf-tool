@@ -240,3 +240,14 @@ def test_split_writes_every_range_to_output_dir(tmp_path):
     ]
     assert all(o.parent == destino for o in res.outputs)
     assert all(o.exists() for o in res.outputs)
+
+
+def test_invalid_range_message_shows_an_example():
+    from pdftool.core.errors import UserError
+    from pdftool.tools.split.logic import parse_ranges
+
+    with pytest.raises(UserError) as info:
+        parse_ranges("abc")
+    assert "'abc'" not in str(info.value)
+    assert "«abc»" in str(info.value)
+    assert "1-3, 5" in str(info.value)

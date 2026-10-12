@@ -7,15 +7,19 @@ fallo de archivo.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from pdftool.core.errors import UserError, user_message
 from pdftool.core.jobs import JobCancelled
 from pdftool.core.plugin import FileResult, Progress
 
 # Procesa una entrada y devuelve (salida, mensaje corto para el usuario).
 ProcessOne = Callable[[Path, Progress], tuple[Path, str]]
+
+_log = logging.getLogger("pdftool.batch")
 
 
 def noop_progress(_p: float, _m: str) -> None:
@@ -53,8 +57,9 @@ def run_batch(
     """Procesa cada entrada aislando sus errores.
 
     Con un solo archivo, su error se relanza tal cual (así el mensaje humano
-    del host lo reconoce). Con varios, solo se lanza `ValueError(all_failed)`
-    si no salió ninguno.
+    del host lo reconoce). Con varios, solo se lanza `UserError(all_failed)`
+    si no salió ninguno. El mensaje de cada fallo ya viene traducido para el
+    usuario; el detalle técnico queda en el log.
     """
     paths = validate_inputs(inputs)
     total = len(paths)
@@ -76,11 +81,14 @@ def run_batch(
         except Exception as exc:  # este archivo falla; el lote continúa
             if total == 1:
                 raise
-            items.append(FileResult(path, None, False, str(exc)))
+            message, detail = user_message(exc)
+            if detail is not None:
+                _log.warning("archivo %d/%d falló", index + 1, total, exc_info=exc)
+            items.append(FileResult(path, None, False, message))
             continue
         outputs.append(out)
         items.append(FileResult(path, out, True, message))
 
     if not outputs:
-        raise ValueError(all_failed)
+        raise UserError(all_failed)
     return BatchResult(outputs=outputs, items=items)
