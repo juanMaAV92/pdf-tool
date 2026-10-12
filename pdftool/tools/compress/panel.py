@@ -45,7 +45,7 @@ class CompressTool(MultiFileToolPanel):
         )
         self._mode_dd = ft.Dropdown(
             label="Modo de compresión",
-            width=260,
+            width=330,  # cabe «Reducir al máximo (recomendado)» sin recortarse
             value="max",
             options=[
                 ft.dropdown.Option("max", "Reducir al máximo (recomendado)"),
@@ -62,6 +62,9 @@ class CompressTool(MultiFileToolPanel):
                 ],
                 spacing=12,
                 wrap=True,  # en ventanas estrechas pasa a dos líneas
+                # Arriba, no centrados: la ayuda «Objetivo, no garantía.» alarga
+                # el campo del objetivo y lo descuadraba frente al desplegable.
+                vertical_alignment=ft.CrossAxisAlignment.START,
             ),
             self._mode_help.detail,
         ]
