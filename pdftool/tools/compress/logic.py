@@ -77,6 +77,12 @@ def _simple_compress(src: Path, dst: Path) -> None:
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
 
 
+# Páginas que se acumulan en memoria antes de volcar el PDF de salida a disco.
+# Sin este volcado, el documento entero (todas sus imágenes JPEG) vive en RAM
+# hasta el final: ~0,3 MB por página en un A4.
+_RERENDER_CHUNK = 50
+
+
 def _rerender(
     src: Path,
     dst: Path,
@@ -85,24 +91,53 @@ def _rerender(
     jpg_quality: int,
     progress: Progress = noop_progress,
 ) -> None:
-    with fitz.open(src) as source, fitz.open() as doc:
+    with fitz.open(src) as source:
         total = len(source)
-        for page_num in range(total):
-            src_page = source[page_num]
-            rect = src_page.rect
-            if rect.width == 0 or rect.height == 0:
-                continue
-            # Sin zoom mínimo: el lado mayor nunca pasa de `max_dimension`,
-            # así una página enorme no se convierte en decenas de MP.
-            zoom = min(max_dimension / rect.width, max_dimension / rect.height, 2.0)
-            pix = src_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-            img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
-            new_page = doc.new_page(width=rect.width, height=rect.height)
-            new_page.insert_image(new_page.rect, stream=img_bytes)
-            # Un punto de progreso (y de cancelación) por página: un intento
-            # sobre un PDF largo puede durar decenas de segundos.
-            progress((page_num + 1) / total, f"página {page_num + 1} de {total}")
-        doc.save(str(dst), garbage=4, deflate=True)
+        doc = fitz.open()
+        flushed = False
+        try:
+            for page_num in range(total):
+                src_page = source[page_num]
+                rect = src_page.rect
+                if rect.width > 0 and rect.height > 0:
+                    # Sin zoom mínimo: el lado mayor nunca pasa de `max_dimension`,
+                    # así una página enorme no se convierte en decenas de MP.
+                    zoom = min(
+                        max_dimension / rect.width, max_dimension / rect.height, 2.0
+                    )
+                    pix = src_page.get_pixmap(
+                        matrix=fitz.Matrix(zoom, zoom), alpha=False
+                    )
+                    img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
+                    new_page = doc.new_page(width=rect.width, height=rect.height)
+                    new_page.insert_image(new_page.rect, stream=img_bytes)
+                done = page_num + 1
+                if done % _RERENDER_CHUNK == 0 and done < total:
+                    # Volcar a disco y reabrir libera las imágenes ya escritas.
+                    if flushed:
+                        doc.saveIncr()
+                    else:
+                        doc.save(str(dst))
+                        flushed = True
+                    doc.close()
+                    doc = fitz.open(str(dst))
+                # Un punto de progreso (y de cancelación) por página: un intento
+                # sobre un PDF largo puede durar decenas de segundos.
+                progress(done / total, f"página {done} de {total}")
+            if not flushed:
+                doc.save(str(dst), garbage=4, deflate=True)
+                return
+            doc.saveIncr()
+        finally:
+            doc.close()
+    # Los volcados incrementales dejan versiones intermedias: se compacta.
+    compact = dst.with_name(f".{dst.name}.compact")
+    try:
+        with fitz.open(str(dst)) as doc:
+            doc.save(str(compact), garbage=4, deflate=True)
+        os.replace(compact, dst)
+    finally:
+        compact.unlink(missing_ok=True)
 
 
 def _preserve_compress(

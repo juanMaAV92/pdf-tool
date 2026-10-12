@@ -419,3 +419,36 @@ def test_batch_rows_carry_their_own_warnings(tmp_path, big_pdf, small_pdf):
     assert any(_RASTER in w for w in big_row.warnings)
     assert small_row.warnings == ()
     assert "saved_pct" in big_row.metrics
+
+
+def test_rerender_in_chunks_keeps_every_page(tmp_path, monkeypatch):
+    """Guardar por bloques (para acotar memoria) no pierde ni duplica páginas."""
+    import pdftool.tools.compress.logic as logic
+
+    monkeypatch.setattr(logic, "_RERENDER_CHUNK", 2)
+    src = _pages_pdf(tmp_path / "doc.pdf", 5)
+    dst = tmp_path / "out.pdf"
+    seen = []
+
+    logic._rerender(
+        src, dst, max_dimension=400, jpg_quality=40, progress=lambda p, m: seen.append(p)
+    )
+
+    with fitz.open(str(dst)) as doc:
+        assert doc.page_count == 5
+        assert all(len(page.get_images()) == 1 for page in doc)
+    assert seen[-1] == 1.0
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["doc.pdf", "out.pdf"]
+
+
+def test_chunked_output_is_compacted(tmp_path, monkeypatch):
+    """Los guardados incrementales se compactan: no crece por cada bloque."""
+    import pdftool.tools.compress.logic as logic
+
+    src = _pages_pdf(tmp_path / "doc.pdf", 6)
+    whole, chunked = tmp_path / "whole.pdf", tmp_path / "chunked.pdf"
+    logic._rerender(src, whole, max_dimension=400, jpg_quality=40)
+    monkeypatch.setattr(logic, "_RERENDER_CHUNK", 2)
+    logic._rerender(src, chunked, max_dimension=400, jpg_quality=40)
+
+    assert chunked.stat().st_size <= whole.stat().st_size * 1.05
