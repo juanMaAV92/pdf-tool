@@ -22,8 +22,11 @@ def settings_path() -> Path:
     return data_dir() / "settings.json"
 
 
+ThemeSetting = Literal["system", "light", "dark"]
+
+
 class Settings(BaseModel):
-    theme_mode: Literal["system", "light", "dark"] = "system"
+    theme_mode: ThemeSetting = "system"
     # Carpeta de salida global; None → junto al original. Se guarda como texto
     # porque el JSON no tiene tipo ruta.
     output_dir: str | None = None

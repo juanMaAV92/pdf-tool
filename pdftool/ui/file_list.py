@@ -10,7 +10,7 @@ from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
 from pdftool.ui.accessibility import NamedIconButton
 from pdftool.ui.panel_base import _WEB_MODE_MSG, BaseToolPanel
 from pdftool.ui.platform import open_file
-from pdftool.ui.thumbnails import MISSING, get_cached, load_async
+from pdftool.ui.thumbnails import MISSING, ThumbnailTask, get_cached, load_async
 
 
 class MultiFileToolPanel(BaseToolPanel):
@@ -18,6 +18,9 @@ class MultiFileToolPanel(BaseToolPanel):
 
     min_files: int = 1
     show_thumbnails: bool = False  # solo tools donde el orden/identidad importa
+    # Flechas de orden solo donde el orden cambia el resultado (Unir): en las
+    # herramientas 1→1 sugieren algo que no ocurre.
+    reorderable: bool = False
 
     def build_input(self, page) -> ft.Control:
         previous_task = getattr(self, "_thumb_task", None)
@@ -28,7 +31,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._failed: list[bool] = []  # fila cuyo archivo falló en el run
         self._row_paths: list[Path | None] = []  # ruta por fila exitosa tras un run
         self._thumb_boxes: dict[str, ft.Container] = {}
-        self._thumb_task = None
+        self._thumb_task: ThumbnailTask | None = None
         self._thumb_generation = getattr(self, "_thumb_generation", -1) + 1
         self._picker.on_result = self._on_pick
         self._clear_btn = ft.OutlinedButton(
@@ -112,7 +115,7 @@ class MultiFileToolPanel(BaseToolPanel):
                 ft.Text(path.name, expand=True, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(
                     result or "",
-                    size=12,
+                    size=14,
                     no_wrap=True,
                     color=ft.Colors.ERROR if failed else ft.Colors.ON_SURFACE_VARIANT,
                 ),
@@ -122,18 +125,23 @@ class MultiFileToolPanel(BaseToolPanel):
                     visible=row_path is not None,
                     on_click=lambda _e, p=row_path: open_file(p),
                 ),
-                NamedIconButton(
-                    ft.Icons.ARROW_UPWARD,
-                    f"Subir {path.name}",
-                    disabled=index == 0,
-                    on_click=lambda _e, i=index: self._move(i, -1),
-                ),
-                NamedIconButton(
-                    ft.Icons.ARROW_DOWNWARD,
-                    f"Bajar {path.name}",
-                    disabled=index == len(self._files) - 1,
-                    on_click=lambda _e, i=index: self._move(i, 1),
-                ),
+            ]
+            if self.reorderable:
+                controls += [
+                    NamedIconButton(
+                        ft.Icons.ARROW_UPWARD,
+                        f"Subir {path.name}",
+                        disabled=index == 0,
+                        on_click=lambda _e, i=index: self._move(i, -1),
+                    ),
+                    NamedIconButton(
+                        ft.Icons.ARROW_DOWNWARD,
+                        f"Bajar {path.name}",
+                        disabled=index == len(self._files) - 1,
+                        on_click=lambda _e, i=index: self._move(i, 1),
+                    ),
+                ]
+            controls += [
                 NamedIconButton(
                     ft.Icons.CLOSE,
                     f"Quitar {path.name} de la lista",
@@ -184,11 +192,25 @@ class MultiFileToolPanel(BaseToolPanel):
 
     def _clear_all(self, _e) -> None:
         self._invalidate_active_job()
+        removed = list(self._files)
         self._files = []
         self._clear_results()
         self._clear_error()
         self._set_status("")
         self._hide_result_actions()
+        self._refresh()
+        if removed:
+            self._notify(
+                "Lista vaciada.",
+                action="Deshacer",
+                on_action=lambda _e: self._restore(removed),
+            )
+
+    def _restore(self, files: list[Path]) -> None:
+        """Deshace «Limpiar lista» si el usuario no añadió nada mientras."""
+        if self._files:
+            return
+        self._files = list(files)
         self._refresh()
 
     def _on_pick(self, e) -> None:

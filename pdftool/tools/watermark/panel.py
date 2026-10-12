@@ -27,8 +27,9 @@ class WatermarkTool(SingleFileToolPanel):
         description="Repite un texto en diagonal sobre todas las páginas.",
         icon=ft.Icons.BRANDING_WATERMARK,
         category="Editar",
+        order=50,
     )
-    run_label = "Aplicar"
+    run_label = "Añadir marca de agua"
     run_icon = ft.Icons.BRANDING_WATERMARK
     pick_label = "Elegir PDF"
 
@@ -36,13 +37,13 @@ class WatermarkTool(SingleFileToolPanel):
         self._text_field = ft.TextField(
             label="Texto de la marca", value="CONFIDENCIAL", width=320
         )
+        # En porcentaje: «15 %» se entiende mejor que «0.15».
         self._opacity = ft.Slider(
-            min=0.05,
-            max=0.6,
-            value=0.15,
+            min=5,
+            max=60,
+            value=15,
             divisions=11,
-            label="{value}",
-            round=2,
+            label="{value} %",
             width=320,
         )
         self._color_dd = ft.Dropdown(
@@ -52,7 +53,10 @@ class WatermarkTool(SingleFileToolPanel):
             options=[ft.dropdown.Option(name) for name in _COLORS],
         )
         self._size_field = ft.TextField(
-            label="Tamaño", value="40", width=120, keyboard_type=ft.KeyboardType.NUMBER
+            label="Tamaño del texto (pt)",
+            value="40",
+            width=180,
+            keyboard_type=ft.KeyboardType.NUMBER,
         )
         return [
             self._text_field,
@@ -64,7 +68,7 @@ class WatermarkTool(SingleFileToolPanel):
         try:
             return WatermarkParams(
                 text=self._text_field.value or "",
-                opacity=float(self._opacity.value),
+                opacity=float(self._opacity.value) / 100,
                 font_size=int(self._size_field.value),
                 color=_COLORS.get(self._color_dd.value, _COLORS["Gris"]),
             )

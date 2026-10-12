@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import flet as ft
 
+from pdftool.core.config import ThemeSetting
+
 SEED_COLOR = "#4F46E5"  # índigo moderno
 
 
@@ -16,6 +18,13 @@ def resolve_mode(setting: str) -> ft.ThemeMode:
     }.get(setting, ft.ThemeMode.SYSTEM)
 
 
-def next_mode(setting: str) -> str:
+_NEXT_MODE: dict[str, ThemeSetting] = {
+    "system": "light",
+    "light": "dark",
+    "dark": "system",
+}
+
+
+def next_mode(setting: str) -> ThemeSetting:
     """Cicla system -> light -> dark -> system para el toggle."""
-    return {"system": "light", "light": "dark", "dark": "system"}.get(setting, "light")
+    return _NEXT_MODE.get(setting, "light")

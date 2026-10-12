@@ -57,3 +57,11 @@ def test_cancel_does_nothing(tmp_path, monkeypatch):
     picker = make_log_picker()
     picker.on_result(_FakeSaveEvent(None))  # cancelado: no explota, no escribe
     assert list(tmp_path.iterdir()) == []
+
+
+def test_saving_notifies_the_final_path(tmp_path, monkeypatch):
+    monkeypatch.setattr(logs_mod, "log_paths", lambda: [])
+    saved = []
+    picker = make_log_picker(on_saved=saved.append)
+    picker.on_result(_FakeSaveEvent(str(tmp_path / "informe")))
+    assert saved == [tmp_path / "informe.txt"]

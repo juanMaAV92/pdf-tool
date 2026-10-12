@@ -24,9 +24,13 @@ class _FakePage:
 
     def __init__(self) -> None:
         self.overlay = []
+        self.opened = []
 
     def update(self) -> None:
         pass
+
+    def open(self, control) -> None:
+        self.opened.append(control)
 
 
 def _tools():
@@ -91,6 +95,17 @@ class _MultiStub(MultiFileToolPanel):
         return ToolResult(outputs=[], summary="")
 
 
+def _sync_run_job(work, on_progress, on_done, on_error, is_current=None):
+    """run_job inmediato: ejecuta el trabajo en el hilo del test."""
+    try:
+        result = work(on_progress)
+    except Exception as exc:
+        on_error(exc)
+    else:
+        on_done(result)
+    return JobHandle()
+
+
 def _build(tool):
     tool.build_panel(ToolContext(page=_FakePage(), run_job=lambda **kwargs: None))
     return tool
@@ -122,7 +137,7 @@ def test_single_file_web_mode_without_path_stays_disabled():
     assert "navegador" in tool.status.value.lower()
 
 
-def test_rebuilding_panel_cancels_job_and_ignores_old_callbacks():
+def _running(tool, page=None):
     calls = {}
     handle = JobHandle()
 
@@ -130,24 +145,82 @@ def test_rebuilding_panel_cancels_job_and_ignores_old_callbacks():
         calls.update(kwargs)
         return handle
 
-    page = _FakePage()
-    ctx = ToolContext(page=page, run_job=fake_run_job)
-    tool = _RunnableStub()
+    ctx = ToolContext(page=page or _FakePage(), run_job=fake_run_job)
     tool.build_panel(ctx)
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
     tool.run_btn.on_click(None)
+    return ctx, calls, handle
 
-    old_progress = calls["on_progress"]
-    old_done = calls["on_done"]
+
+def test_returning_to_a_panel_keeps_the_running_job_and_its_result():
+    tool = _RunnableStub()
+    ctx, calls, handle = _running(tool)
+    first = tool._root
+
+    again = tool.build_panel(ctx)  # navegar fuera y volver
+
+    assert again is first
     assert handle.cancelled is False
+    assert tool.collect_inputs() == [Path("/tmp/a.pdf")]
+    calls["on_done"](ToolResult(outputs=[Path("/tmp/a_x.pdf")], summary="Listo"))
+    assert tool.status.value == "Listo"
+    assert tool.open_file_btn.visible is True
 
-    tool.build_panel(ctx)
-    old_progress(1.0, "resultado antiguo")
+
+def test_returning_to_a_batch_panel_keeps_the_file_list():
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+    tool.build_panel(tool._ctx)
+    assert tool.collect_inputs() == [Path("/tmp/a.pdf"), Path("/tmp/b.pdf")]
+    assert len(tool._file_list.controls) == 2
+
+
+def test_a_new_page_rebuilds_the_panel_and_cancels_the_old_job():
+    tool = _RunnableStub()
+    _ctx, calls, handle = _running(tool)
+    old_done = calls["on_done"]
+
+    tool.build_panel(ToolContext(page=_FakePage(), run_job=lambda **kw: None))
     old_done(ToolResult(outputs=[Path("/tmp/old.pdf")], summary="antiguo"))
 
     assert handle.cancelled is True
     assert tool.status.value == ""
     assert tool.open_btn.visible is False
+
+
+# ── Cancelar ─────────────────────────────────────────────────────────────────
+
+
+def test_cancel_button_is_visible_only_while_running():
+    tool = _RunnableStub()
+    assert _build(tool).cancel_btn.visible is False
+    _ctx, calls, _handle = _running(tool)
+    assert tool.cancel_btn.visible is True
+    calls["on_done"](ToolResult(outputs=[], summary="Listo"))
+    assert tool.cancel_btn.visible is False
+
+
+def test_cancel_stops_the_job_and_ignores_its_late_result():
+    tool = _RunnableStub()
+    _ctx, calls, handle = _running(tool)
+
+    tool.cancel_btn.on_click(None)
+
+    assert handle.cancelled is True
+    assert tool.cancel_btn.visible is False
+    assert tool.progress.visible is False
+    assert tool.run_btn.disabled is False
+    assert "Cancelado" in tool.status.value
+    assert "terminados se conservan" in tool.status.value
+    calls["on_done"](ToolResult(outputs=[Path("/tmp/x.pdf")], summary="tarde"))
+    assert "Cancelado" in tool.status.value
+
+
+def test_error_hides_the_cancel_button():
+    tool = _RunnableStub()
+    _ctx, calls, _handle = _running(tool)
+    calls["on_error"](RuntimeError("boom"))
+    assert tool.cancel_btn.visible is False
 
 
 def test_multi_file_requires_min_files():
@@ -381,13 +454,13 @@ def test_result_without_outputs_does_not_offer_open_actions():
     assert tool.open_file_btn.visible is False
 
 
-def test_watermark_opacity_label_shows_decimals():
-    # Regresión: con round=0 (default de Flet) el label "{value}" muestra
-    # 0 en todo el rango 0.05–0.6 (y 1 en el tope).
+def test_watermark_opacity_is_shown_as_a_percentage():
     from pdftool.tools.watermark.panel import WatermarkTool
 
     tool = _build(WatermarkTool())
-    assert tool._opacity.round == 2
+    assert (tool._opacity.min, tool._opacity.max, tool._opacity.value) == (5, 60, 15)
+    assert tool._opacity.label == "{value} %"
+    assert tool.make_params().opacity == 0.15
 
 
 def test_compress_defaults_to_max_mode_with_tooltip():
@@ -655,7 +728,8 @@ def test_after_pick_failure_resets_selection_and_shows_error(tmp_path):
     broken = tmp_path / "roto.pdf"
     broken.write_bytes(b"no soy un pdf" * 50)
 
-    tool = _build(SplitTool())
+    tool = SplitTool()
+    tool.build_panel(ToolContext(page=_FakePage(), run_job=_sync_run_job))
     tool._on_pick(_FakeEvent([str(good)]))
     assert tool._pages == 3
 
@@ -738,3 +812,141 @@ def test_remove_mode_does_not_need_confirmation():
     tool._pw_field.value = "clave"
     tool._confirm_field.value = ""
     assert tool.make_params().password == "clave"
+
+
+def test_split_reads_the_page_count_in_the_background(tmp_path):
+    from pdftool.tools.split.panel import SplitTool
+
+    pdf = tmp_path / "doc.pdf"
+    with fitz.open() as d:
+        for _ in range(4):
+            d.new_page()
+        d.save(str(pdf))
+    calls = {}
+
+    def deferred_run_job(**kwargs):
+        calls.update(kwargs)
+        return JobHandle()
+
+    tool = SplitTool()
+    tool.build_panel(ToolContext(page=_FakePage(), run_job=deferred_run_job))
+    tool._on_pick(_FakeEvent([str(pdf)]))
+
+    assert "work" in calls  # no se abrió el PDF en el hilo de la UI
+    assert tool.can_run() is False
+    assert "leyendo" in tool._file_label.value
+
+    calls["on_done"](calls["work"](lambda p, m: None))
+
+    assert tool._pages == 4
+    assert tool._file_label.value == "doc.pdf · 4 páginas"
+    assert tool.can_run() is True
+    assert tool.run_btn.disabled is False
+
+
+# ── Pulido de la Fase 2 ──────────────────────────────────────────────────────
+
+
+def _row_texts(row):
+    return [c for c in row.controls if isinstance(c, ft.Text)]
+
+
+def test_guidance_and_row_results_use_readable_sizes():
+    tool = _build(_MultiStub())
+    assert tool._empty_hint.size >= 14
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    tool._results = ["→ a_x.pdf"]
+    tool._refresh()
+    result_text = next(
+        t for t in _row_texts(tool._file_list.controls[0]) if t.value == "→ a_x.pdf"
+    )
+    assert result_text.size >= 14
+
+
+def _tooltips(row):
+    return [getattr(c, "tooltip", None) or "" for c in row.controls]
+
+
+def test_only_merge_offers_reordering():
+    from pdftool.tools.compress.panel import CompressTool
+    from pdftool.tools.images2pdf.panel import ImagesToPdfTool
+    from pdftool.tools.merge.panel import MergeTool
+
+    for tool_cls, reorderable in (
+        (MergeTool, True),
+        (CompressTool, False),
+        (ImagesToPdfTool, False),
+    ):
+        tool = _build(tool_cls())
+        tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+        tips = " ".join(_tooltips(tool._file_list.controls[0]))
+        assert ("Bajar" in tips) is reorderable, tool_cls.__name__
+
+
+def test_images_to_pdf_explains_one_pdf_per_image():
+    from pdftool.tools.images2pdf.panel import ImagesToPdfTool
+
+    meta = ImagesToPdfTool.meta
+    assert meta.description == "Crea un PDF por cada imagen (JPG o PNG)."
+    assert meta.icon == ft.Icons.PHOTO_LIBRARY
+
+
+def test_watermark_labels_name_units_and_action():
+    from pdftool.tools.watermark.panel import WatermarkTool
+
+    tool = _build(WatermarkTool())
+    assert tool._size_field.label == "Tamaño del texto (pt)"
+    assert tool.run_btn.text == "Añadir marca de agua"
+
+
+def test_clearing_the_list_can_be_undone():
+    tool = _build(_MultiStub())
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
+
+    tool._clear_all(None)
+
+    assert tool.collect_inputs() == []
+    snack = tool._page.opened[-1]
+    assert isinstance(snack, ft.SnackBar)
+    assert snack.action == "Deshacer"
+    snack.on_action(None)
+    assert tool.collect_inputs() == [Path("/tmp/a.pdf"), Path("/tmp/b.pdf")]
+
+
+def test_saving_the_diagnostic_report_is_confirmed(tmp_path, monkeypatch):
+    import pdftool.ui.logs as logs_mod
+
+    monkeypatch.setattr(logs_mod, "log_paths", lambda: [])
+    tool = _build(_SingleStub())
+    assert tool._log_btn.text == "Guardar informe de diagnóstico"
+
+    class _Saved:
+        path = str(tmp_path / "informe.txt")
+
+    tool._log_picker.on_result(_Saved())
+
+    snack = tool._page.opened[-1]
+    assert isinstance(snack, ft.SnackBar)
+    assert "informe.txt" in snack.content.value
+
+
+def test_invalid_field_is_marked_and_cleared_on_the_next_run():
+    from pdftool.tools.compress.panel import CompressTool
+
+    calls = {}
+    tool = CompressTool()
+    tool.build_panel(
+        ToolContext(page=_FakePage(), run_job=lambda **kw: calls.update(kw))
+    )
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+    tool._target_field.value = "abc"
+
+    tool.run_btn.on_click(None)
+
+    assert tool._target_field.error_text == tool.status.value
+    assert "2,5" in tool._target_field.error_text
+
+    tool._target_field.value = "3"
+    tool.run_btn.on_click(None)
+    assert not tool._target_field.error_text
+    assert "work" in calls

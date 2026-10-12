@@ -32,6 +32,7 @@ class SplitTool(SingleFileToolPanel):
         description="Separa un PDF en varios, por rangos o por páginas.",
         icon=ft.Icons.CONTENT_CUT,
         category="Organizar",
+        order=20,
     )
     run_label = "Dividir"
     run_icon = ft.Icons.CONTENT_CUT
@@ -87,8 +88,32 @@ class SplitTool(SingleFileToolPanel):
         # Se reinicia antes de leer: si el PDF no abre, los rangos no deben
         # validarse contra las páginas del archivo anterior.
         self._pages = 0
-        self._pages = page_count(path)
-        self._file_label.value = f"{path.name} · {self._pages} páginas"
+        self._file_label.value = f"{path.name} · leyendo páginas…"
+
+        # Abrir un PDF grande o dañado puede tardar: se lee en segundo plano.
+        def on_done(count: int) -> None:
+            if self._file != path:  # el usuario ya eligió otro archivo
+                return
+            self._pages = count
+            self._file_label.value = f"{path.name} · {count} páginas"
+            self._sync_ready_state()
+            self._page.update()
+
+        def on_error(exc: Exception) -> None:
+            if self._file != path:
+                return
+            self._reject_pick(exc)
+            self._page.update()
+
+        self._ctx.run_job(
+            work=lambda _progress: page_count(path),
+            on_progress=lambda *_: None,
+            on_done=on_done,
+            on_error=on_error,
+        )
+
+    def can_run(self) -> bool:
+        return super().can_run() and self._pages > 0
 
     def make_params(self):
         try:
@@ -98,13 +123,15 @@ class SplitTool(SingleFileToolPanel):
                 every_n=int(self._every_field.value) if self._every_field.value else 1,
             )
         except (ValueError, ValidationError) as exc:
-            raise InvalidParams("Escribe un número de páginas mayor que 0.") from exc
+            raise InvalidParams(
+                "Escribe un número de páginas mayor que 0.", field=self._every_field
+            ) from exc
         if params.mode == "ranges":
             # Valida sintaxis y límites antes de lanzar el job.
             try:
                 resolve_ranges(parse_ranges(params.ranges), int(self._pages))
             except UserError as exc:
-                raise InvalidParams(str(exc)) from exc
+                raise InvalidParams(str(exc), field=self._ranges_field) from exc
         return params
 
     def run_logic(self, inputs: list[Path], params, progress):
