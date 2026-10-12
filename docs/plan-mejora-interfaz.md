@@ -15,7 +15,15 @@ Referencia: auditoría visual Impeccable realizada sobre la interfaz de PDF Tool
   Tab/Shift+Tab y apertura de una herramienta con Enter. Pendiente: recorrido
   completo en los paquetes nativos, diálogos de archivo con Escape y lectura con
   VoiceOver en macOS y lector de pantalla en Windows.
-- Fases 3 y 4: pendientes.
+- Fase 3: implementada. Resumen y acciones de apertura agrupados; abrir archivo
+  prima con una salida y abrir carpeta con varias. Ejecutar pasa a segundo plano
+  tras completar. Versión visible y utilidades globales en un menú secundario;
+  descarga del log también disponible junto a errores técnicos. Reintentar o
+  cambiar entradas retira las acciones antiguas. Verificado con tests de estado
+  y vista web de un resultado ilustrativo en claro/oscuro; no equivale a probar
+  los paquetes nativos.
+- Fase 4: pendiente de cierre visual y validación empaquetada. En este paquete:
+  321 tests correctos, cobertura 89,25 %, formato, lint y tipos correctos.
 
 ## Fase 0 — Línea base del artefacto
 

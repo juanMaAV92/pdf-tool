@@ -32,6 +32,17 @@ actualizar Flet, ejecutar esta lista sobre los artefactos del draft release.
 Registrar sistema operativo, arquitectura y cualquier excepción en las notas de
 la release o en el issue asociado.
 
+## Cierre de tarea y soporte
+
+- Tras una operación, el resumen aparece junto a las acciones de apertura:
+  con una salida prima **Abrir archivo** y con varias **Abrir carpeta**.
+- Reintentar muestra progreso sin el resumen anterior; cambiar entradas retira
+  los botones de apertura antiguos.
+- En claro y oscuro, la versión sigue visible; **Opciones de la aplicación**
+  permite cambiar tema, descargar el log y visitar la página del autor.
+- Ante un error técnico, **Ver detalle técnico** y **Descargar log** siguen
+  disponibles junto al mensaje, sin tener que buscar el menú general.
+
 ## Accesibilidad del paquete nativo
 
 - En Inicio, recorrer las tarjetas con Tab y Shift+Tab: el foco es visible y
@@ -43,3 +54,5 @@ la release o en el issue asociado.
 - Con VoiceOver en macOS y el lector de pantalla disponible en Windows, comprobar
   que las tarjetas se anuncian como botones y que tema, ayuda y acciones de cada
   archivo tienen nombres útiles.
+- Abrir **Opciones de la aplicación** con teclado, recorrer sus opciones y
+  cerrar el menú con Escape sin perder el foco.

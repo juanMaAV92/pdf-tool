@@ -54,7 +54,17 @@ def parse_output_name(value: str | None) -> str | None:
 
 
 _HELPER_OK_COLOR = ft.Colors.ON_SURFACE_VARIANT
-_HELPER_WARN_COLOR = ft.Colors.AMBER
+# Token del tema (no un ámbar fijo): legible en claro y en oscuro.
+_HELPER_WARN_COLOR = ft.Colors.TERTIARY
+
+# Tipo de mensaje de estado → (icono, color del icono, color del texto).
+# El color nunca va solo: el icono y el propio texto llevan el significado.
+_STATUS_STYLES: dict[str, tuple[str | None, str | None, str | None]] = {
+    "info": (None, None, None),
+    "success": (ft.Icons.CHECK_CIRCLE, ft.Colors.PRIMARY, None),
+    "partial": (ft.Icons.WARNING_AMBER_ROUNDED, ft.Colors.ERROR, None),
+    "error": (ft.Icons.ERROR_OUTLINE, ft.Colors.ERROR, ft.Colors.ERROR),
+}
 
 
 class OutputNameField(ft.TextField):
@@ -189,16 +199,45 @@ class BaseToolPanel(PdfTool):
         started = getattr(self, "_run_started", None)
         return 0.0 if started is None else time.monotonic() - started
 
+    # ---- estado (mensaje bajo la acción principal) ----
+    def _set_status(self, text: str, kind: str = "info") -> None:
+        icon, icon_color, text_color = _STATUS_STYLES[kind]
+        self.status.value = text
+        self.status.color = text_color
+        self._status_icon.name = icon
+        self._status_icon.color = icon_color
+        self._status_icon.visible = bool(text) and icon is not None
+
     # ---- acciones post-run (footer) ----
     def _show_result_actions(self, result: ToolResult) -> None:
+        self._hide_result_actions()
+        if not result.outputs:
+            return
+        self._result_actions.visible = True
+        # Tras completar, abrir el resultado prima sobre volver a procesarlo.
+        self.run_btn.style = ft.ButtonStyle(
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST, color=ft.Colors.ON_SURFACE
+        )
         self.open_btn.visible = True
+        self.open_btn.style = (
+            ft.ButtonStyle(
+                bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                color=ft.Colors.ON_SECONDARY_CONTAINER,
+            )
+            if len(result.outputs) == 1
+            else None
+        )
         self.open_btn.data = result.outputs[0].parent
         self.open_file_btn.visible = len(result.outputs) == 1
         self.open_file_btn.data = result.outputs[0]
 
     def _hide_result_actions(self) -> None:
+        self._result_actions.visible = False
         self.open_btn.visible = False
         self.open_file_btn.visible = False
+        self.open_btn.data = None
+        self.open_file_btn.data = None
+        self.run_btn.style = None
 
     # ---- errores (mensajes para el usuario) ----
     def _clear_error(self) -> None:
@@ -220,10 +259,11 @@ class BaseToolPanel(PdfTool):
         if generation is not None and generation != self._generation:
             return
         self._job = None
+        self._hide_result_actions()
         self._logger().error("error · %.1fs", self._elapsed(), exc_info=exc)
         self.progress.visible = False
         message, detail = humanize_error(exc)
-        self.status.value = message
+        self._set_status(message, "error")
         if detail:
             self._error_detail.value = detail
             self._error_detail.visible = False  # arranca plegado
@@ -244,7 +284,13 @@ class BaseToolPanel(PdfTool):
         self._page = page
 
         self.progress = ft.ProgressBar(value=0, visible=False)
-        self.status = ft.Text("")
+        self.status = ft.Text("", weight=ft.FontWeight.W_500, expand=True)
+        self._status_icon = ft.Icon(visible=False, size=20)
+        self._status_row = ft.Row(
+            [self._status_icon, self.status],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        )
         self._counter = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
         self._error_toggle = ft.TextButton(
             "Ver detalle técnico", visible=False, on_click=self._toggle_error_detail
@@ -258,15 +304,31 @@ class BaseToolPanel(PdfTool):
         )
         self._log_btn = download_log_button(self._log_picker)
         self._log_btn.visible = False
-        self._error_actions = ft.Row([self._error_toggle, self._log_btn], visible=False)
-        self.open_btn = ft.OutlinedButton(
+        self._error_actions = ft.Row(
+            [self._error_toggle, self._log_btn], visible=False, wrap=True
+        )
+        self.open_btn = ft.FilledButton(
             "Abrir carpeta", icon=ft.Icons.FOLDER_OPEN, visible=False
         )
-        self.open_file_btn = ft.OutlinedButton(
+        self.open_file_btn = ft.FilledButton(
             "Abrir archivo", icon=ft.Icons.OPEN_IN_NEW, visible=False
         )
         self.run_btn = ft.FilledButton(
             self.run_label, icon=self.run_icon, disabled=True
+        )
+        self._result_actions = ft.Row(
+            [self.open_file_btn, self.open_btn], visible=False, wrap=True, spacing=8
+        )
+        self._feedback = ft.Column(
+            [
+                self.progress,
+                self._status_row,
+                self._result_actions,
+                self._error_actions,
+                self._error_detail,
+            ],
+            spacing=8,
+            tight=True,
         )
 
         # Una única instancia reutilizada entre renders: `build_panel` corre en
@@ -303,10 +365,12 @@ class BaseToolPanel(PdfTool):
             if not self.can_run():
                 return
             self._clear_error()
+            self._hide_result_actions()
             if self._out_dir.destination_missing():
-                self.status.value = (
+                self._set_status(
                     "La carpeta de destino ya no está disponible. Elige otra "
-                    "o vuelve a «junto al original»."
+                    "o vuelve a «junto al original».",
+                    "error",
                 )
                 page.update()
                 return
@@ -315,13 +379,13 @@ class BaseToolPanel(PdfTool):
                     update={"output_dir": self._out_dir.value}
                 )
             except InvalidParams as exc:
-                self.status.value = str(exc)
+                self._set_status(str(exc), "error")
                 page.update()
                 return
             self.run_btn.disabled = True
-            self._hide_result_actions()
             self.progress.visible = True
             self.progress.value = 0
+            self._set_status("Procesando…")
             page.update()
             inputs = self.collect_inputs()
             self._invalidate_active_job(reset_ui=False)
@@ -336,7 +400,7 @@ class BaseToolPanel(PdfTool):
                 if not is_current():
                     return
                 self.progress.value = pct
-                self.status.value = msg
+                self._set_status(msg)
                 page.update()
 
             def on_done(result: ToolResult) -> None:
@@ -346,7 +410,8 @@ class BaseToolPanel(PdfTool):
                 self._logger().info("ok · %.1fs", self._elapsed())
                 self._clear_error()
                 self.progress.visible = False
-                self.status.value = result.summary
+                failed = any(not item.ok for item in result.items or [])
+                self._set_status(result.summary, "partial" if failed else "success")
                 self._show_result_actions(result)
                 self.run_btn.disabled = not self.can_run()
                 self.on_result(result)
@@ -381,16 +446,11 @@ class BaseToolPanel(PdfTool):
                 ft.Row(
                     [
                         self.run_btn,
-                        self.open_file_btn,
-                        self.open_btn,
                         ft.Container(expand=True),
                         self._counter,
                     ]
                 ),
-                self.progress,
-                self.status,
-                self._error_actions,
-                self._error_detail,
+                self._feedback,
             ],
             spacing=16,
             expand=True,
@@ -427,17 +487,31 @@ class SingleFileToolPanel(BaseToolPanel):
             self._file_label.value = self._file.name
             self._file_label.italic = False
             self._hide_result_actions()
-            self.status.value = ""
+            self._set_status("")
             self._clear_error()
             self._sync_ready_state()
-            self.after_pick(self._file)
+            try:
+                self.after_pick(self._file)
+            except Exception as exc:  # p. ej. un PDF dañado al leer sus páginas
+                self._reject_pick(exc)
         elif e.files:
-            self.status.value = _WEB_MODE_MSG
+            self._set_status(_WEB_MODE_MSG)
             self._clear_error()
         self._page.update()
 
     def after_pick(self, path: Path) -> None:
-        """Hook opcional tras elegir un archivo válido (p.ej. leer nº de páginas)."""
+        """Hook opcional tras elegir un archivo válido (p.ej. leer nº de páginas).
+
+        Si lanza, la selección se descarta y el error se muestra al usuario.
+        """
+
+    def _reject_pick(self, exc: Exception) -> None:
+        self._logger().warning("no se pudo leer la entrada", exc_info=exc)
+        self._file = None
+        self._file_label.value = "Ningún archivo seleccionado"
+        self._file_label.italic = True
+        self._sync_ready_state()
+        self._set_status(humanize_error(exc)[0], "error")
 
     def collect_inputs(self) -> list[Path]:
         return [self._file]

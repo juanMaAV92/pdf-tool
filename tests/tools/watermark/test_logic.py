@@ -89,3 +89,36 @@ def test_watermark_writes_to_output_dir(tmp_path):
 
     assert res.outputs[0] == destino / "doc_marca.pdf"
     assert res.outputs[0].exists()
+
+
+def test_huge_page_bounds_the_number_of_stamps(tmp_path, monkeypatch):
+    """Los bucles del mosaico crecían con el tamaño de la página."""
+    src = tmp_path / "poster.pdf"
+    with fitz.open() as doc:
+        doc.new_page(width=14400, height=14400)
+        doc.save(str(src))
+    calls = []
+    original = fitz.Page.insert_text
+
+    def counting(self, *args, **kwargs):
+        calls.append(1)
+        return original(self, *args, **kwargs)
+
+    import pdftool.tools.watermark.logic as logic
+
+    monkeypatch.setattr(logic, "_MAX_STAMPS_PER_PAGE", 200)
+    monkeypatch.setattr(fitz.Page, "insert_text", counting)
+    watermark([src], WatermarkParams(text="X", font_size=8))
+    assert 0 < len(calls) <= 200
+
+
+@pytest.mark.parametrize("size", [(595, 842), (612, 792), (842, 1191)])
+def test_cap_does_not_change_spacing_on_real_page_sizes(size):
+    from pdftool.tools.watermark.logic import _grid_steps
+
+    text_w = fitz.get_text_length("X", fontsize=8)
+    step_x, step_y = max(text_w + 16, 32), 32
+    assert _grid_steps(fitz.Rect(0, 0, *size), step_x, step_y, text_w) == (
+        step_x,
+        step_y,
+    )
