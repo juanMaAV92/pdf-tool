@@ -4,13 +4,15 @@ Guía para agentes de código (Claude Code, etc.) que trabajen en **pdf-tool**.
 
 ## Qué es
 
-App de escritorio (Flet) **modular** para gestionar PDFs, pensada para usuarios **no técnicos**, multiplataforma (macOS + Windows), instalable y actualizable. Cada funcionalidad es una "herramienta" autocontenida que el host descubre y muestra. Actualmente incluye Comprimir, Imágenes a PDF, Unir, Proteger, Dividir y Marca de agua.
+App de escritorio (Flet) **modular** para gestionar PDFs, pensada para usuarios **no técnicos**, con una CLI (`pdf-tool`) para agentes generada de las mismas herramientas, multiplataforma (macOS + Windows), instalable y actualizable. Cada funcionalidad es una "herramienta" autocontenida que el host descubre y muestra. Actualmente incluye Comprimir, Imágenes a PDF, Unir, Proteger, Dividir y Marca de agua.
 
 ## Comandos
 
 ```bash
 poetry install          # instalar dependencias
 poetry run pdftool      # abrir la app de escritorio
+poetry run pdf-tool list            # CLI: herramientas disponibles (--json para agentes)
+poetry run pdf-tool compress a.pdf --json   # CLI: ejecutar una herramienta
 poetry run pytest       # correr la suite de tests
 poetry run pytest -v    # tests con detalle
 poetry run ruff format pdftool tests && poetry run ruff check pdftool tests && poetry run mypy
@@ -25,6 +27,10 @@ pipx install pre-commit && pre-commit install   # opcional: lo anterior en cada 
 ```
 pdftool/
 ├── main.py                 # entrypoint -> ft.app(target=build_app)
+├── cli/                    # `pdf-tool`, SIN Flet: subcomandos desde el registro de specs
+│   ├── __init__.py         # main(): list, <herramienta>, --json, códigos de salida 0/1/2/3
+│   ├── args.py             # params Pydantic -> flags argparse (secretos por stdin/env)
+│   └── report.py           # ToolResult -> texto o JSON
 ├── core/                   # SIN dependencia de Flet (testeable en aislamiento)
 │   ├── plugin.py           # contrato: ToolMeta, ToolSpec, ToolResult, ToolContext, Progress, PdfTool
 │   ├── registry.py         # specs sin Flet: register(), get_specs(), discover() (app y CLI)
@@ -67,6 +73,11 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 1. `params.py` — hereda de `BaseParams` (`pdftool/core/plugin.py`), no de
    `BaseModel` a secas: `BaseParams` aporta `output_dir`, y una herramienta que
    no lo herede ignorará en silencio la carpeta de salida que elija el usuario.
+   Cada campo lleva `Field(description=...)`: es la ayuda de `pdf-tool <id>
+   --help` (un test lo exige). Un secreto (contraseña) lleva
+   `json_schema_extra={"secret": True}` y la CLI solo lo acepta por stdin o
+   variable de entorno. La validación va en el modelo (`field_validator`), no
+   en el panel, para que la app y la CLI la compartan.
 2. `logic.py` — función pura con la firma uniforme:
    ```python
    def run(inputs: list[Path], params: <Params>, progress: Progress = _noop) -> ToolResult: ...
@@ -101,10 +112,13 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    ```python
    SPEC = register(ToolSpec(meta=ToolMeta(id=..., name=..., description=...,
                                           category=..., order=...),
-                            params=<Params>, run=<función de logic.py>))
+                            params=<Params>, run=<función de logic.py>,
+                            min_inputs=1, max_inputs=None, extensions=("pdf",)))
    ```
    (`register` de `pdftool/core/registry.py`; `order` fija su posición en la
-   navegación).
+   navegación). Las reglas de entrada valen para la app (el panel las hereda)
+   y para la CLI. La CLI no se toca: la herramienta aparece sola en
+   `pdf-tool list`.
 4. `panel.py` — clase decorada con `@register` (`pdftool/ui/registry.py`) que
    hereda la plantilla de la UI: `MultiFileToolPanel` (`pdftool/ui/file_list.py`)
    para lotes o `SingleFileToolPanel` (`pdftool/ui/panel_base.py`) para un

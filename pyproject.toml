@@ -24,6 +24,8 @@ pytest-cov = "^7.1.0"
 
 [tool.poetry.scripts]
 pdftool = "pdftool.main:main"
+# CLI para agentes y scripts (sin Flet).
+pdf-tool = "pdftool.cli:main"
 
 [tool.ruff]
 target-version = "py311"

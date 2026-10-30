@@ -66,6 +66,24 @@ Ve a la **[página de descargas](https://github.com/juanMaAV92/pdf-tool/releases
 
 ---
 
+## 🤖 Para agentes de IA y la línea de comandos
+
+Las mismas herramientas están disponibles como comando, pensado para agentes
+(Claude Code, Cursor, Copilot…) y scripts. Todo sigue ocurriendo en tu equipo.
+
+```bash
+pdf-tool list --json                         # qué herramientas hay y qué aceptan
+pdf-tool compress informe.pdf --json         # comprimir y obtener el resultado en JSON
+pdf-tool merge a.pdf b.pdf --output-name todo
+echo "$CLAVE" | pdf-tool protect a.pdf --password-stdin
+```
+
+Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Códigos de salida:
+`0` ok · `1` error al procesar · `2` uso inválido · `3` algún archivo del lote falló.
+Por ahora se usa desde el repo con `poetry run pdf-tool`; pronto en PyPI.
+
+---
+
 ## 🤝 Contribuir
 
 ¡Las contribuciones son bienvenidas! Puedes abrir un *issue* con ideas o errores,
@@ -87,13 +105,13 @@ poetry run pytest         # corre los tests
 ```
 
 ### Añadir una herramienta nueva
-1. Crea `pdftool/tools/<id>/` con `params.py`, `logic.py` (función pura + tests) y `panel.py`.
-2. En `panel.py`, decora la clase con `@register` y define su `meta` (`ToolMeta`).
-3. En `pdftool/tools/<id>/__init__.py` importa la clase para disparar el registro.
-4. La app la descubre y la muestra automáticamente en la barra lateral.
+1. Crea `pdftool/tools/<id>/` con `params.py`, `logic.py` (función pura + tests),
+   `spec.py` (registra la herramienta, sin Flet), `panel.py` y un `__init__.py` vacío.
+2. La app la muestra en la barra lateral y la CLI la ofrece como `pdf-tool <id>`,
+   las dos automáticamente.
 
 La **lógica** (`logic.py`) no importa Flet y se prueba sin UI; la **UI** (`panel.py`)
-solo arma controles. Esa separación mantiene los tests rápidos y la app desacoplada.
+solo arma controles. Detalles en [AGENTS.md](AGENTS.md).
 
 ### Publicar una versión (automatizado con GitHub Actions)
 ```bash
