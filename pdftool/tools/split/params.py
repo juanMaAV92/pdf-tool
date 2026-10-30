@@ -15,6 +15,14 @@ class SplitParams(BaseParams):
     - ``every``: bloques de ``every_n`` páginas.
     """
 
-    mode: Literal["ranges", "single", "every"] = "ranges"
-    ranges: str = ""
-    every_n: int = Field(default=1, ge=1)
+    mode: Literal["ranges", "single", "every"] = Field(
+        default="ranges",
+        description="ranges: un PDF por rango; single: una página por archivo; "
+        "every: bloques de N páginas.",
+    )
+    ranges: str = Field(
+        default="", description='Rangos de páginas para mode=ranges, ej. "1-3, 5, 8-".'
+    )
+    every_n: int = Field(
+        default=1, ge=1, description="Páginas por archivo para mode=every."
+    )

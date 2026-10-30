@@ -14,5 +14,6 @@ SPEC = register(
         ),
         params=ImagesToPdfParams,
         run=images_to_pdf,
+        extensions=("jpg", "jpeg", "png"),
     )
 )

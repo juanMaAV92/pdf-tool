@@ -14,5 +14,6 @@ SPEC = register(
         ),
         params=MergeParams,
         run=merge,
+        min_inputs=2,
     )
 )

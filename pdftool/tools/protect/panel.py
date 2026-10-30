@@ -18,7 +18,6 @@ class ProtectTool(MultiFileToolPanel):
     run_label = "Proteger"
     run_icon = ft.Icons.LOCK
     pick_label = "Añadir PDFs"
-    min_files = 1
 
     def extra_controls(self) -> list[ft.Control]:
         self._mode_dd = ft.Dropdown(
