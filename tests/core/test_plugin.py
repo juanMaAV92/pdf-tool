@@ -10,8 +10,10 @@ from pdftool.tools.watermark.params import WatermarkParams
 
 
 def test_toolmeta_holds_metadata():
-    m = ToolMeta(id="x", name="X", description="d", icon="i", category="c")
+    m = ToolMeta(id="x", name="X", description="d", category="c")
     assert m.id == "x" and m.category == "c"
+    # El icono es cosa de la UI: el núcleo no conoce Flet.
+    assert not hasattr(m, "icon")
 
 
 def test_toolresult_holds_outputs_and_summary():

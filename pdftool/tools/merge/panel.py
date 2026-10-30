@@ -5,25 +5,18 @@ from pathlib import Path
 import flet as ft
 
 from pdftool.core.naming import parse_output_name
-from pdftool.core.plugin import ToolMeta
-from pdftool.core.registry import register
-from pdftool.tools.merge.logic import merge, output_path_for_merge
+from pdftool.tools.merge.logic import output_path_for_merge
 from pdftool.tools.merge.params import MergeParams
+from pdftool.tools.merge.spec import SPEC
 from pdftool.ui.file_list import MultiFileToolPanel
 from pdftool.ui.panel_base import OutputNameField
+from pdftool.ui.registry import register
 
 
 @register
 class MergeTool(MultiFileToolPanel):
-    meta = ToolMeta(
-        id="merge",
-        name="Unir PDFs",
-        description="Combina varios PDFs en uno solo, en el orden que elijas.",
-        icon=ft.Icons.MERGE,
-        category="Organizar",
-        order=10,
-    )
-    logic = staticmethod(merge)
+    spec = SPEC
+    icon = ft.Icons.MERGE
     run_label = "Unir"
     run_icon = ft.Icons.MERGE_TYPE
     pick_label = "Añadir PDFs"

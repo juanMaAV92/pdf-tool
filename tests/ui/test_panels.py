@@ -5,7 +5,6 @@ import fitz
 import flet as ft
 import pytest
 
-from pdftool.core import registry
 from pdftool.core.errors import GENERIC_MESSAGE, UserError
 from pdftool.core.jobs import JobHandle
 from pdftool.core.plugin import (
@@ -15,6 +14,7 @@ from pdftool.core.plugin import (
     ToolMeta,
     ToolResult,
 )
+from pdftool.ui import registry
 from pdftool.ui.file_list import MultiFileToolPanel
 from pdftool.ui.panel_base import SingleFileToolPanel
 
@@ -63,7 +63,7 @@ class _FakeEvent:
 
 
 class _SingleStub(SingleFileToolPanel):
-    meta = ToolMeta(id="single-stub", name="S", description="d", icon="", category="c")
+    meta = ToolMeta(id="single-stub", name="S", description="d", category="c")
 
     def make_params(self):
         return None
@@ -73,9 +73,7 @@ class _SingleStub(SingleFileToolPanel):
 
 
 class _RunnableStub(SingleFileToolPanel):
-    meta = ToolMeta(
-        id="runnable-stub", name="R", description="d", icon="", category="c"
-    )
+    meta = ToolMeta(id="runnable-stub", name="R", description="d", category="c")
 
     def make_params(self):
         return BaseParams()
@@ -85,7 +83,7 @@ class _RunnableStub(SingleFileToolPanel):
 
 
 class _MultiStub(MultiFileToolPanel):
-    meta = ToolMeta(id="multi-stub", name="M", description="d", icon="", category="c")
+    meta = ToolMeta(id="multi-stub", name="M", description="d", category="c")
     min_files = 2
 
     def make_params(self):
@@ -542,7 +540,7 @@ def test_multi_row_paths_positional_when_no_failures():
 
 
 class _ThumbStub(MultiFileToolPanel):
-    meta = ToolMeta(id="thumb-stub", name="T", description="d", icon="", category="c")
+    meta = ToolMeta(id="thumb-stub", name="T", description="d", category="c")
     show_thumbnails = True
 
     def make_params(self):
@@ -627,7 +625,7 @@ def _done(tool, result):
 
 
 class _RunnableMulti(MultiFileToolPanel):
-    meta = ToolMeta(id="multi-run", name="M", description="d", icon="", category="c")
+    meta = ToolMeta(id="multi-run", name="M", description="d", category="c")
 
     def make_params(self):
         return BaseParams()
@@ -891,7 +889,7 @@ def test_images_to_pdf_explains_one_pdf_per_image():
 
     meta = ImagesToPdfTool.meta
     assert meta.description == "Crea un PDF por cada imagen (JPG o PNG)."
-    assert meta.icon == ft.Icons.PHOTO_LIBRARY
+    assert ImagesToPdfTool.icon == ft.Icons.PHOTO_LIBRARY
 
 
 def test_watermark_labels_name_units_and_action():
@@ -998,7 +996,7 @@ def test_run_logic_defaults_to_the_declared_logic():
         return ToolResult(outputs=[], summary="ok")
 
     class _Declared(SingleFileToolPanel):
-        meta = ToolMeta(id="declared", name="D", description="d", icon="", category="c")
+        meta = ToolMeta(id="declared", name="D", description="d", category="c")
         logic = staticmethod(fake_logic)
 
         def make_params(self):
@@ -1013,7 +1011,8 @@ def test_run_logic_defaults_to_the_declared_logic():
 @pytest.mark.parametrize("tool", _tools(), ids=lambda t: t.meta.id)
 def test_real_tools_declare_their_logic(tool):
     assert "run_logic" not in type(tool).__dict__
-    assert callable(type(tool).logic)
+    assert type(tool).spec is not None
+    assert type(tool).logic is type(tool).spec.run
 
 
 # ── Entradas bloqueadas mientras corre un trabajo ────────────────────────────

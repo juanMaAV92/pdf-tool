@@ -4,58 +4,56 @@ import importlib
 import logging
 import pkgutil
 
-from pdftool.core.plugin import PdfTool
+from pdftool.core.plugin import ToolSpec
 
-_REGISTRY: dict[str, type[PdfTool]] = {}
+# Registro de herramientas sin Flet: lo comparten la app y la CLI. Los paneles
+# de la app tienen su propio registro en `pdftool.ui.registry`.
+_REGISTRY: dict[str, ToolSpec] = {}
 # Todo lo registrado alguna vez, por módulo: `clear()` vacía el registro pero un
-# módulo ya importado no vuelve a ejecutar sus @register, así que `discover()`
-# los recupera de aquí.
-_SEEN: dict[str, list[type[PdfTool]]] = {}
+# módulo ya importado no vuelve a ejecutar su register(), así que `discover()`
+# las recupera de aquí.
+_SEEN: dict[str, list[ToolSpec]] = {}
 _log = logging.getLogger("pdftool.registry")
 
 
-def register(cls: type[PdfTool]) -> type[PdfTool]:
-    tool_id = cls.meta.id
+def register(spec: ToolSpec) -> ToolSpec:
+    tool_id = spec.meta.id
     current = _REGISTRY.get(tool_id)
-    if current is not None and current is not cls:
-        raise ValueError(
-            f"Id de herramienta duplicado: {tool_id!r} "
-            f"({current.__qualname__} y {cls.__qualname__})"
-        )
-    _REGISTRY[tool_id] = cls
-    seen = _SEEN.setdefault(cls.__module__, [])
-    if cls not in seen:
-        seen.append(cls)
-    return cls
+    if current is not None and current is not spec:
+        raise ValueError(f"Id de herramienta duplicado: {tool_id!r}")
+    _REGISTRY[tool_id] = spec
+    module = getattr(spec.run, "__module__", None) or ""
+    seen = _SEEN.setdefault(module, [])
+    if spec not in seen:
+        seen.append(spec)
+    return spec
 
 
 def clear() -> None:
     _REGISTRY.clear()
 
 
-def get_tools() -> list[PdfTool]:
-    """Instancias ordenadas por `meta.order` y, a igualdad, por nombre."""
-    classes = sorted(_REGISTRY.values(), key=lambda c: (c.meta.order, c.meta.name))
-    return [cls() for cls in classes]
+def get_specs() -> list[ToolSpec]:
+    """Specs ordenadas por `meta.order` y, a igualdad, por nombre."""
+    return sorted(_REGISTRY.values(), key=lambda s: (s.meta.order, s.meta.name))
 
 
 def discover(package: str = "pdftool.tools") -> list[str]:
-    """Importa cada subpaquete de `package` para disparar @register.
+    """Importa el `spec.py` de cada subpaquete de `package` para registrarlo.
 
-    Una herramienta que falla al importarse se registra en el log y se omite:
-    el resto de la app sigue funcionando. Devuelve los nombres que fallaron.
+    Una herramienta que falla al importarse se registra en el log y se omite.
+    Devuelve los nombres que fallaron.
     """
     pkg = importlib.import_module(package)
     failed: list[str] = []
     for mod in pkgutil.iter_modules(pkg.__path__):
-        name = f"{package}.{mod.name}"
         try:
-            importlib.import_module(name)
+            importlib.import_module(f"{package}.{mod.name}.spec")
         except Exception:
             _log.exception("No se pudo cargar la herramienta %s", mod.name)
             failed.append(mod.name)
-    for module, classes in list(_SEEN.items()):
+    for module, specs in list(_SEEN.items()):
         if module == package or module.startswith(f"{package}."):
-            for cls in classes:
-                _REGISTRY.setdefault(cls.meta.id, cls)
+            for spec in specs:
+                _REGISTRY.setdefault(spec.meta.id, spec)
     return failed

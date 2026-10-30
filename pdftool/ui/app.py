@@ -6,11 +6,11 @@ from collections.abc import Callable
 import flet as ft
 
 from pdftool import __version__
-from pdftool.core import registry
 from pdftool.core.config import load_settings, save_settings
 from pdftool.core.jobs import run_job, shutdown_job_executor
 from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import GITHUB_REPO, check_for_update
+from pdftool.ui import registry
 from pdftool.ui.accessibility import icon_content
 from pdftool.ui.logs import LOG_LABEL, download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
@@ -75,7 +75,7 @@ def _tool_card(index, tool, on_open):
                 # agrupa sin añadir altura (la barra lateral ya muestra grupos).
                 ft.Row(
                     [
-                        ft.Icon(tool.meta.icon, size=30),
+                        ft.Icon(tool.icon, size=30),
                         ft.Text(
                             tool.meta.category,
                             size=12,
@@ -181,7 +181,7 @@ class _Sidebar(ft.Container):
             ft.Icons.GRID_VIEW, "Inicio", lambda _e: on_home()
         )
         self.tool_buttons: list[ft.TextButton] = [
-            _nav_button(tool.meta.icon, tool.meta.name, lambda _e, i=index: on_tool(i))
+            _nav_button(tool.icon, tool.meta.name, lambda _e, i=index: on_tool(i))
             for index, tool in enumerate(tools)
         ]
         controls: list[ft.Control] = [self.home_button]

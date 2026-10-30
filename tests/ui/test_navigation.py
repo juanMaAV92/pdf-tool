@@ -6,9 +6,8 @@ from pdftool.ui.app import _build_home, _group_by_category, _Sidebar
 
 class _Tool:
     def __init__(self, id_, name, category):
-        self.meta = ToolMeta(
-            id=id_, name=name, description="d", icon=ft.Icons.MERGE, category=category
-        )
+        self.meta = ToolMeta(id=id_, name=name, description="d", category=category)
+        self.icon = ft.Icons.MERGE
 
 
 TOOLS = [

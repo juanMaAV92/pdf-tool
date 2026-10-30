@@ -29,7 +29,6 @@ class ToolMeta:
     id: str
     name: str
     description: str
-    icon: str
     category: str
     # Posición en la navegación (menor primero); a igualdad, por nombre.
     order: int = 100
@@ -55,6 +54,16 @@ class BaseParams(BaseModel):
     """
 
     output_dir: Path | None = None
+
+
+@dataclass(frozen=True)
+class ToolSpec:
+    """Definición de una herramienta sin UI: la comparten la app y la CLI."""
+
+    meta: ToolMeta
+    params: type[BaseParams]
+    # run(inputs: list[Path], params, progress=...) -> ToolResult
+    run: Callable[..., ToolResult]
 
 
 # Reporta avance: fracción 0..1 y un mensaje de estado.

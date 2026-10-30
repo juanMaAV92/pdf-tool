@@ -3,11 +3,10 @@ from __future__ import annotations
 import flet as ft
 from pydantic import ValidationError
 
-from pdftool.core.plugin import ToolMeta
-from pdftool.core.registry import register
-from pdftool.tools.watermark.logic import watermark
 from pdftool.tools.watermark.params import WatermarkParams
+from pdftool.tools.watermark.spec import SPEC
 from pdftool.ui.panel_base import InvalidParams, SingleFileToolPanel
+from pdftool.ui.registry import register
 
 _COLORS = {
     "Gris": (0.5, 0.5, 0.5),
@@ -19,15 +18,8 @@ _COLORS = {
 
 @register
 class WatermarkTool(SingleFileToolPanel):
-    meta = ToolMeta(
-        id="watermark",
-        name="Marca de agua",
-        description="Repite un texto en diagonal sobre todas las páginas.",
-        icon=ft.Icons.BRANDING_WATERMARK,
-        category="Editar",
-        order=50,
-    )
-    logic = staticmethod(watermark)
+    spec = SPEC
+    icon = ft.Icons.BRANDING_WATERMARK
     run_label = "Añadir marca de agua"
     run_icon = ft.Icons.BRANDING_WATERMARK
     pick_label = "Elegir PDF"

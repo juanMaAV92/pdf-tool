@@ -45,9 +45,10 @@ jobs:
           poetry self add poetry-plugin-export==1.10.1
           poetry export --without dev -f requirements.txt -o requirements.txt
       - name: Audit dependencies
-        # PYSEC-2026-4114 (oauthlib): el arreglo está en 4.0, pero flet 0.28.2
-        # exige oauthlib<4. La app no usa las funciones OAuth de flet. Revisar
-        # al actualizar flet.
+        # PYSEC-2026-4114 y CVE-2026-49272 (oauthlib): el arreglo está en 4.0,
+        # pero flet 0.28.2 exige oauthlib<4. La app no usa las funciones OAuth
+        # de flet. Revisar al actualizar flet.
         run: >-
           pipx run pip-audit==2.10.1 -r requirements.txt --require-hashes
           --disable-pip --ignore-vuln PYSEC-2026-4114
+          --ignore-vuln CVE-2026-49272
