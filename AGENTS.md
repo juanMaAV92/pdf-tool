@@ -26,8 +26,8 @@ pipx install pre-commit && pre-commit install   # opcional: lo anterior en cada 
 pdftool/
 ├── main.py                 # entrypoint -> ft.app(target=build_app)
 ├── core/                   # SIN dependencia de Flet (testeable en aislamiento)
-│   ├── plugin.py           # contrato: ToolMeta, ToolResult, ToolContext, Progress, PdfTool
-│   ├── registry.py         # @register, get_tools(), discover()
+│   ├── plugin.py           # contrato: ToolMeta, ToolSpec, ToolResult, ToolContext, Progress, PdfTool
+│   ├── registry.py         # specs sin Flet: register(), get_specs(), discover() (app y CLI)
 │   ├── jobs.py             # run_job(...) con JobHandle, cancelación y generaciones
 │   ├── atomic.py           # publicación atómica de PDFs y copias
 │   ├── batch.py            # run_batch(): bucle común de lotes (errores por archivo)
@@ -40,6 +40,7 @@ pdftool/
 ├── ui/
 │   ├── app.py              # host: NavigationRail + contenido + menú + banner update
 │   ├── panel_base.py       # BaseToolPanel / SingleFileToolPanel: plantilla de panel
+│   ├── registry.py         # paneles: @register, get_tools(), discover()
 │   ├── file_list.py        # MultiFileToolPanel: lista de lote, resultados, miniaturas
 │   ├── output_dir.py       # campo «Guardar en» (persistido en Settings)
 │   ├── errors.py           # humanize_error() para la UI (delega en core/errors)
@@ -54,10 +55,10 @@ pdftool/
     ├── merge/
     ├── protect/
     ├── split/
-    └── watermark/          # cada carpeta contiene params.py, logic.py, panel.py e __init__.py
+    └── watermark/          # cada carpeta: params.py, logic.py, spec.py, panel.py e __init__.py vacío
 ```
 
-**Regla de oro:** `core/` no importa Flet. La lógica de cada herramienta (`logic.py`) es **pura** (sin Flet) y se testea sola; el `panel.py` solo arma la UI y delega en la lógica.
+**Regla de oro:** `core/` no importa Flet. La lógica de cada herramienta (`logic.py`) es **pura** (sin Flet) y se testea sola; su `spec.py` la publica sin Flet para la app y la futura CLI; el `panel.py` solo arma la UI y delega en la spec.
 
 ## Cómo agregar una herramienta nueva
 
@@ -95,13 +96,21 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    **Errores para el usuario:** lanza `UserError("mensaje en español")`
    (`pdftool/core/errors.py`) cuando el mensaje deba verse tal cual. Cualquier
    otra excepción se muestra como un mensaje genérico con el detalle plegado.
-3. `panel.py` — clase decorada con `@register` que hereda la plantilla de la
-   UI: `MultiFileToolPanel` (`pdftool/ui/file_list.py`) para lotes o
-   `SingleFileToolPanel` (`pdftool/ui/panel_base.py`) para un archivo. Define
-   `meta: ToolMeta` (con `order` para su posición en la navegación),
-   `run_label`/`run_icon`/`pick_label` e implementa los hooks
-   `extra_controls()` y `make_params()`, y declara la lógica con
-   `logic = staticmethod(<función de logic.py>)`.
+3. `spec.py` — **sin Flet**. Declara y registra la herramienta para la app y
+   la CLI:
+   ```python
+   SPEC = register(ToolSpec(meta=ToolMeta(id=..., name=..., description=...,
+                                          category=..., order=...),
+                            params=<Params>, run=<función de logic.py>))
+   ```
+   (`register` de `pdftool/core/registry.py`; `order` fija su posición en la
+   navegación).
+4. `panel.py` — clase decorada con `@register` (`pdftool/ui/registry.py`) que
+   hereda la plantilla de la UI: `MultiFileToolPanel` (`pdftool/ui/file_list.py`)
+   para lotes o `SingleFileToolPanel` (`pdftool/ui/panel_base.py`) para un
+   archivo. Declara `spec = SPEC` (de ahí salen `meta` y la lógica),
+   `icon = ft.Icons.*`, `run_label`/`run_icon`/`pick_label` e implementa los
+   hooks `extra_controls()` y `make_params()`.
    `make_params()` lanza `InvalidParams("mensaje", field=campo)` para marcar el
    error también en el campo. En lotes, `reorderable = True` solo si el orden
    cambia el resultado (como en Unir).
@@ -111,7 +120,12 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    se conservan. También ejecuta la lógica en segundo plano con `ctx.run_job`
    (con botón Cancelar); no lo llames tú salvo para lecturas propias del panel
    (p. ej. Dividir lee el número de páginas así, nunca en el hilo de la UI).
-4. `__init__.py` — `from pdftool.tools.<id>.panel import <Tool>  # noqa: F401` para disparar el registro.
+5. `__init__.py` — vacío. El descubrimiento importa `spec.py` (núcleo) y
+   `panel.py` (UI) por su cuenta.
+
+**App y CLI a la par:** toda spec necesita su panel y viceversa; lo exige
+`tests/ui/test_registry.py::test_every_spec_has_a_panel_and_vice_versa`. Y
+`tests/core/test_no_flet.py` comprueba que las specs se descubren sin Flet.
 
 `discover()` la encuentra automáticamente y aparece en la barra lateral, en el
 grupo de su `meta.category` (la barra tiene scroll, así que caben muchas). Si una

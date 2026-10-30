@@ -11,4 +11,4 @@ Esta es la guía del proyecto para Claude Code.
 - **TDD:** test que falla → implementación, sobre la lógica pura.
 - **Flet 0.28.x:** `ft.Icons.*` / `ft.Colors.*` (enums, con mayúscula).
 - **Commits:** mensajes planos, Conventional Commits. **Nunca** añadir `Co-Authored-By: Claude` ni "Generated with Claude Code" ni ninguna atribución de IA.
-- **Agregar herramienta:** `params.py` + `logic.py` + `panel.py` con `@register` + import en `__init__.py`. El host no se toca.
+- **Agregar herramienta:** `params.py` + `logic.py` + `spec.py` (sin Flet, registra la `ToolSpec`) + `panel.py` con `@register` y `spec = SPEC`; `__init__.py` vacío. El host no se toca; toda spec necesita panel (app y CLI a la par).

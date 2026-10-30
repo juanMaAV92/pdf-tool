@@ -4,14 +4,14 @@ import logging
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import flet as ft
 
 from pdftool.core.errors import UserError
 from pdftool.core.jobs import JobHandle
 from pdftool.core.naming import parse_output_name
-from pdftool.core.plugin import BaseParams, PdfTool, ToolContext, ToolResult
+from pdftool.core.plugin import BaseParams, PdfTool, ToolContext, ToolResult, ToolSpec
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.output_dir import OutputDirField
@@ -95,6 +95,17 @@ class BaseToolPanel(PdfTool):
     expand_body_when_ready = True
     # Función pura de la herramienta: run(inputs, params, progress) -> ToolResult.
     logic: Callable[..., ToolResult] | None = None
+    # Definición sin Flet de la herramienta (`tools/<id>/spec.py`). Al
+    # declararla, `meta` y `logic` salen de ella; un panel sin spec (p. ej. un
+    # stub de test) los declara a mano.
+    spec: ClassVar[ToolSpec | None] = None
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        spec = cls.__dict__.get("spec")
+        if spec is not None:
+            cls.meta = spec.meta
+            cls.logic = staticmethod(spec.run)
 
     # Controles que `build_panel` crea una vez por página (ver ese método).
     _root: ft.Column | None = None

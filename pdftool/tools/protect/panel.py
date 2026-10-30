@@ -3,9 +3,9 @@ from __future__ import annotations
 import flet as ft
 from pydantic import ValidationError
 
-from pdftool.core.plugin import ToolMeta, ToolResult
-from pdftool.tools.protect.logic import protect
+from pdftool.core.plugin import ToolResult
 from pdftool.tools.protect.params import ProtectParams
+from pdftool.tools.protect.spec import SPEC
 from pdftool.ui.file_list import MultiFileToolPanel
 from pdftool.ui.panel_base import InvalidParams
 from pdftool.ui.registry import register
@@ -13,15 +13,8 @@ from pdftool.ui.registry import register
 
 @register
 class ProtectTool(MultiFileToolPanel):
-    meta = ToolMeta(
-        id="protect",
-        name="Proteger PDF",
-        description="Añade o quita la contraseña de uno o varios PDFs.",
-        category="Seguridad",
-        order=60,
-    )
+    spec = SPEC
     icon = ft.Icons.LOCK
-    logic = staticmethod(protect)
     run_label = "Proteger"
     run_icon = ft.Icons.LOCK
     pick_label = "Añadir PDFs"

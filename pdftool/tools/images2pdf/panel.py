@@ -2,24 +2,16 @@ from __future__ import annotations
 
 import flet as ft
 
-from pdftool.core.plugin import ToolMeta
-from pdftool.tools.images2pdf.logic import images_to_pdf
 from pdftool.tools.images2pdf.params import ImagesToPdfParams
+from pdftool.tools.images2pdf.spec import SPEC
 from pdftool.ui.file_list import MultiFileToolPanel
 from pdftool.ui.registry import register
 
 
 @register
 class ImagesToPdfTool(MultiFileToolPanel):
-    meta = ToolMeta(
-        id="images2pdf",
-        name="Imágenes a PDF",
-        description="Crea un PDF por cada imagen (JPG o PNG).",
-        category="Convertir",
-        order=40,
-    )
+    spec = SPEC
     icon = ft.Icons.PHOTO_LIBRARY
-    logic = staticmethod(images_to_pdf)
     run_label = "Convertir"
     run_icon = ft.Icons.PICTURE_AS_PDF
     pick_label = "Añadir imágenes"

@@ -1011,7 +1011,8 @@ def test_run_logic_defaults_to_the_declared_logic():
 @pytest.mark.parametrize("tool", _tools(), ids=lambda t: t.meta.id)
 def test_real_tools_declare_their_logic(tool):
     assert "run_logic" not in type(tool).__dict__
-    assert callable(type(tool).logic)
+    assert type(tool).spec is not None
+    assert type(tool).logic is type(tool).spec.run
 
 
 # ── Entradas bloqueadas mientras corre un trabajo ────────────────────────────

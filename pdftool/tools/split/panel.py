@@ -6,9 +6,9 @@ import flet as ft
 from pydantic import ValidationError
 
 from pdftool.core.errors import UserError
-from pdftool.core.plugin import ToolMeta
-from pdftool.tools.split.logic import page_count, parse_ranges, resolve_ranges, split
+from pdftool.tools.split.logic import page_count, parse_ranges, resolve_ranges
 from pdftool.tools.split.params import SplitParams
+from pdftool.tools.split.spec import SPEC
 from pdftool.ui.accessibility import HelpButton
 from pdftool.ui.panel_base import InvalidParams, SingleFileToolPanel
 from pdftool.ui.registry import register
@@ -26,15 +26,8 @@ _RANGES_HELP = (
 
 @register
 class SplitTool(SingleFileToolPanel):
-    meta = ToolMeta(
-        id="split",
-        name="Dividir PDF",
-        description="Separa un PDF en varios, por rangos o por páginas.",
-        category="Organizar",
-        order=20,
-    )
+    spec = SPEC
     icon = ft.Icons.CONTENT_CUT
-    logic = staticmethod(split)
     run_label = "Dividir"
     run_icon = ft.Icons.CONTENT_CUT
     pick_label = "Elegir PDF"

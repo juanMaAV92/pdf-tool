@@ -87,3 +87,18 @@ def test_real_tools_are_ordered_by_task():
     ids = [t.meta.id for t in registry.get_tools()]
     expected = ["merge", "split", "compress", "images2pdf", "watermark", "protect"]
     assert [i for i in ids if i in expected] == expected
+
+
+def test_every_spec_has_a_panel_and_vice_versa():
+    # App y CLI crecen a la par: ninguna herramienta existe solo en una.
+    from pdftool.core import registry as specs
+
+    specs.clear()
+    registry.clear()
+    specs.discover()
+    registry.discover()
+    by_id = {s.meta.id: s for s in specs.get_specs()}
+    panels = {t.meta.id: type(t) for t in registry.get_tools()}
+    assert set(by_id) == set(panels)
+    for tool_id, cls in panels.items():
+        assert cls.spec is by_id[tool_id]

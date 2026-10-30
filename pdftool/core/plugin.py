@@ -56,6 +56,16 @@ class BaseParams(BaseModel):
     output_dir: Path | None = None
 
 
+@dataclass(frozen=True)
+class ToolSpec:
+    """Definición de una herramienta sin UI: la comparten la app y la CLI."""
+
+    meta: ToolMeta
+    params: type[BaseParams]
+    # run(inputs: list[Path], params, progress=...) -> ToolResult
+    run: Callable[..., ToolResult]
+
+
 # Reporta avance: fracción 0..1 y un mensaje de estado.
 Progress = Callable[[float, str], None]
 
