@@ -71,7 +71,7 @@ Ve a la **[página de descargas](https://github.com/juanMaAV92/pdf-tool/releases
 ¡Las contribuciones son bienvenidas! Puedes abrir un *issue* con ideas o errores,
 o mandar un *pull request*. La arquitectura es modular: añadir una herramienta nueva
 es crear una carpeta y la app la descubre sola. En el [roadmap](docs/roadmap.md)
-está lo que viene (y lo que se descartó, con sus porqués).
+está lo que viene: una CLI para agentes de IA, a la par con la app.
 
 <details>
 <summary><b>🛠️ Para desarrolladores (montar el proyecto en local)</b></summary>

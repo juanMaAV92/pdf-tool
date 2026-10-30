@@ -143,4 +143,4 @@ sigue funcionando; dos herramientas con el mismo `meta.id` son un error.
 ## Notas
 
 - El proyecto usa **Flet 0.28.x**. CI fija **Flutter 3.29.3** (compatible con flet 0.28 y con VS 2022) y **Python 3.12** para `flet build`. flet 0.24.1 quedó obsoleto: no compilaba para Windows en los runners actuales.
-- Las decisiones vigentes se documentan en `docs/roadmap.md` y `docs/deuda-tecnica.md`. Los specs y planes temporales no forman parte del repositorio y no se conservan cuando la funcionalidad ya está implementada.
+- La dirección vigente está en `docs/roadmap.md` (CLI para agentes en PyPI, a la par con la app). El pin de Flet 0.28.2 se explica en `pyproject.toml`. Los specs y planes temporales no forman parte del repositorio y no se conservan cuando la funcionalidad ya está implementada.
