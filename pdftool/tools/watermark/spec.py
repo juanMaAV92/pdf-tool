@@ -14,5 +14,6 @@ SPEC = register(
         ),
         params=WatermarkParams,
         run=watermark,
+        max_inputs=1,
     )
 )

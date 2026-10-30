@@ -102,3 +102,19 @@ def test_every_spec_has_a_panel_and_vice_versa():
     assert set(by_id) == set(panels)
     for tool_id, cls in panels.items():
         assert cls.spec is by_id[tool_id]
+
+
+def test_panels_take_input_rules_from_their_spec():
+    from pdftool.core import registry as specs
+    from pdftool.ui.file_list import MultiFileToolPanel
+    from pdftool.ui.panel_base import SingleFileToolPanel
+
+    specs.discover()
+    registry.discover()
+    for tool in registry.get_tools():
+        cls, spec = type(tool), type(tool).spec
+        assert cls.allowed_extensions == spec.extensions
+        if issubclass(cls, MultiFileToolPanel):
+            assert cls.min_files == spec.min_inputs
+        if issubclass(cls, SingleFileToolPanel):
+            assert spec.max_inputs == 1

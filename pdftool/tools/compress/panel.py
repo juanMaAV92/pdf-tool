@@ -25,7 +25,6 @@ class CompressTool(MultiFileToolPanel):
     run_label = "Comprimir"
     run_icon = ft.Icons.PLAY_ARROW
     pick_label = "Añadir PDFs"
-    min_files = 1
 
     def extra_controls(self) -> list[ft.Control]:
         self._target_field = ft.TextField(

@@ -89,6 +89,7 @@ class BaseToolPanel(PdfTool):
     pick_label: str = "Elegir PDF"
     pick_icon = ft.Icons.UPLOAD_FILE
     allowed_extensions: tuple[str, ...] = ("pdf",)
+    min_files: int = 1
     # Las listas de lotes necesitan ocupar el espacio disponible cuando hay
     # archivos. Los paneles de un solo archivo no: un cuerpo vacío solo aleja la
     # acción principal de los controles que la preparan.
@@ -106,6 +107,8 @@ class BaseToolPanel(PdfTool):
         if spec is not None:
             cls.meta = spec.meta
             cls.logic = staticmethod(spec.run)
+            cls.min_files = spec.min_inputs
+            cls.allowed_extensions = spec.extensions
 
     # Controles que `build_panel` crea una vez por página (ver ese método).
     _root: ft.Column | None = None
@@ -200,7 +203,7 @@ class BaseToolPanel(PdfTool):
 
     def _empty_action_hint(self) -> str:
         """Explica junto al botón qué falta para poder ejecutar."""
-        required = getattr(self, "min_files", 1)
+        required = self.min_files
         selected = sum(path is not None for path in self.collect_inputs())
         remaining = max(required - selected, 0)
         if remaining == 0:

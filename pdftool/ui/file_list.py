@@ -16,7 +16,6 @@ from pdftool.ui.thumbnails import MISSING, ThumbnailTask, get_cached, load_async
 class MultiFileToolPanel(BaseToolPanel):
     """Panel de lotes con lista, orden, resultados y miniaturas opcionales."""
 
-    min_files: int = 1
     show_thumbnails: bool = False  # solo tools donde el orden/identidad importa
     # Flechas de orden solo donde el orden cambia el resultado (Unir): en las
     # herramientas 1→1 sugieren algo que no ocurre.

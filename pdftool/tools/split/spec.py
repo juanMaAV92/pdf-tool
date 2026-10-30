@@ -14,5 +14,6 @@ SPEC = register(
         ),
         params=SplitParams,
         run=split,
+        max_inputs=1,
     )
 )

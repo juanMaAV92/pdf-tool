@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from pdftool.core.config import Settings
 
@@ -53,7 +53,10 @@ class BaseParams(BaseModel):
     siempre); una ruta → todas las salidas van a esa carpeta.
     """
 
-    output_dir: Path | None = None
+    output_dir: Path | None = Field(
+        default=None,
+        description="Carpeta de salida (por defecto, junto al original).",
+    )
 
 
 @dataclass(frozen=True)
@@ -64,6 +67,11 @@ class ToolSpec:
     params: type[BaseParams]
     # run(inputs: list[Path], params, progress=...) -> ToolResult
     run: Callable[..., ToolResult]
+    # Reglas de entrada que comparten la app y la CLI: cuántos archivos
+    # (max None = sin límite) y con qué extensiones.
+    min_inputs: int = 1
+    max_inputs: int | None = None
+    extensions: tuple[str, ...] = ("pdf",)
 
 
 # Reporta avance: fracción 0..1 y un mensaje de estado.
