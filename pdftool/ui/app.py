@@ -75,7 +75,7 @@ def _tool_card(index, tool, on_open):
                 # agrupa sin añadir altura (la barra lateral ya muestra grupos).
                 ft.Row(
                     [
-                        ft.Icon(tool.meta.icon, size=30),
+                        ft.Icon(tool.icon, size=30),
                         ft.Text(
                             tool.meta.category,
                             size=12,
@@ -181,7 +181,7 @@ class _Sidebar(ft.Container):
             ft.Icons.GRID_VIEW, "Inicio", lambda _e: on_home()
         )
         self.tool_buttons: list[ft.TextButton] = [
-            _nav_button(tool.meta.icon, tool.meta.name, lambda _e, i=index: on_tool(i))
+            _nav_button(tool.icon, tool.meta.name, lambda _e, i=index: on_tool(i))
             for index, tool in enumerate(tools)
         ]
         controls: list[ft.Control] = [self.home_button]

@@ -25,10 +25,10 @@ class CompressTool(MultiFileToolPanel):
         id="compress",
         name="Comprimir PDF",
         description="Reduce el tamaño de uno o varios PDFs a un objetivo en MB.",
-        icon=ft.Icons.COMPRESS,
         category="Optimizar",
         order=30,
     )
+    icon = ft.Icons.COMPRESS
     logic = staticmethod(compress)
     run_label = "Comprimir"
     run_icon = ft.Icons.PLAY_ARROW

@@ -30,10 +30,10 @@ class SplitTool(SingleFileToolPanel):
         id="split",
         name="Dividir PDF",
         description="Separa un PDF en varios, por rangos o por páginas.",
-        icon=ft.Icons.CONTENT_CUT,
         category="Organizar",
         order=20,
     )
+    icon = ft.Icons.CONTENT_CUT
     logic = staticmethod(split)
     run_label = "Dividir"
     run_icon = ft.Icons.CONTENT_CUT

@@ -21,12 +21,12 @@ def test_help_can_be_read_on_keyboard_focus_and_hides_on_blur():
 def test_home_card_is_standard_button_and_opens_selected_tool():
     opened = []
     tool = SimpleNamespace(
+        icon=ft.Icons.COMPRESS,
         meta=SimpleNamespace(
-            icon=ft.Icons.COMPRESS,
             name="Comprimir PDF",
             description="Reduce el tamaño.",
             category="Optimizar",
-        )
+        ),
     )
     card = _tool_card(2, tool, opened.append)
     assert isinstance(card, ft.OutlinedButton)

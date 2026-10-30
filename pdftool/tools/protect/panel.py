@@ -17,10 +17,10 @@ class ProtectTool(MultiFileToolPanel):
         id="protect",
         name="Proteger PDF",
         description="Añade o quita la contraseña de uno o varios PDFs.",
-        icon=ft.Icons.LOCK,
         category="Seguridad",
         order=60,
     )
+    icon = ft.Icons.LOCK
     logic = staticmethod(protect)
     run_label = "Proteger"
     run_icon = ft.Icons.LOCK

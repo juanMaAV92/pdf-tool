@@ -15,10 +15,10 @@ class ImagesToPdfTool(MultiFileToolPanel):
         id="images2pdf",
         name="Imágenes a PDF",
         description="Crea un PDF por cada imagen (JPG o PNG).",
-        icon=ft.Icons.PHOTO_LIBRARY,
         category="Convertir",
         order=40,
     )
+    icon = ft.Icons.PHOTO_LIBRARY
     logic = staticmethod(images_to_pdf)
     run_label = "Convertir"
     run_icon = ft.Icons.PICTURE_AS_PDF

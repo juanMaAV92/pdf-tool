@@ -29,7 +29,6 @@ class ToolMeta:
     id: str
     name: str
     description: str
-    icon: str
     category: str
     # Posición en la navegación (menor primero); a igualdad, por nombre.
     order: int = 100

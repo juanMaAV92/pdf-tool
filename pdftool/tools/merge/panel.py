@@ -19,10 +19,10 @@ class MergeTool(MultiFileToolPanel):
         id="merge",
         name="Unir PDFs",
         description="Combina varios PDFs en uno solo, en el orden que elijas.",
-        icon=ft.Icons.MERGE,
         category="Organizar",
         order=10,
     )
+    icon = ft.Icons.MERGE
     logic = staticmethod(merge)
     run_label = "Unir"
     run_icon = ft.Icons.MERGE_TYPE

@@ -83,6 +83,7 @@ class OutputNameField(ft.TextField):
 
 class BaseToolPanel(PdfTool):
     # Rellenados por cada herramienta:
+    icon: str = ""
     run_label: str = "Aplicar"
     run_icon = ft.Icons.PLAY_ARROW
     pick_label: str = "Elegir PDF"

@@ -9,7 +9,7 @@ def test_register_and_get_tools():
 
     @registry.register
     class Dummy(PdfTool):
-        meta = ToolMeta(id="dummy", name="D", description="d", icon="i", category="c")
+        meta = ToolMeta(id="dummy", name="D", description="d", category="c")
 
         def build_panel(self, ctx: ToolContext):
             return None
@@ -21,9 +21,7 @@ def test_register_and_get_tools():
 
 def _tool(id_, name="T", order=100):
     class T(PdfTool):
-        meta = ToolMeta(
-            id=id_, name=name, description="d", icon="i", category="c", order=order
-        )
+        meta = ToolMeta(id=id_, name=name, description="d", category="c", order=order)
 
         def build_panel(self, ctx):
             return None
@@ -65,8 +63,8 @@ def test_a_tool_that_fails_to_import_does_not_break_discovery(tmp_path, monkeypa
         "from pdftool.core.plugin import PdfTool, ToolMeta\n"
         "@registry.register\n"
         "class Good(PdfTool):\n"
-        "    meta = ToolMeta(id='good', name='G', description='d', icon='i',"
-        " category='c')\n"
+        "    meta = ToolMeta(id='good', name='G', description='d', "
+        "category='c')\n"
         "    def build_panel(self, ctx):\n"
         "        return None\n"
     )

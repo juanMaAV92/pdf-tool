@@ -23,10 +23,10 @@ class WatermarkTool(SingleFileToolPanel):
         id="watermark",
         name="Marca de agua",
         description="Repite un texto en diagonal sobre todas las páginas.",
-        icon=ft.Icons.BRANDING_WATERMARK,
         category="Editar",
         order=50,
     )
+    icon = ft.Icons.BRANDING_WATERMARK
     logic = staticmethod(watermark)
     run_label = "Añadir marca de agua"
     run_icon = ft.Icons.BRANDING_WATERMARK
