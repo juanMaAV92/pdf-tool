@@ -113,3 +113,31 @@ def test_human_output_goes_to_stdout_errors_to_stderr(small_pdf, tmp_path, capsy
     assert main(["compress", str(tmp_path / "nope.pdf")]) == 2
     captured = capsys.readouterr()
     assert not captured.out and captured.err.startswith("pdf-tool: ")
+
+
+def test_usage_errors_are_json_with_json_flag(small_pdf, capsys):
+    for argv in (
+        ["split", str(small_pdf), "--mode", "nope", "--json"],
+        ["compress", "--json"],
+        ["compress", str(small_pdf), "--bogus", "--json"],
+    ):
+        assert main(argv) == 2
+        data = _json(capsys)
+        assert data["ok"] is False and data["error"]["message"]
+
+
+def test_missing_output_dir_is_a_usage_error(small_pdf, tmp_path, capsys):
+    missing = tmp_path / "no" / "existe"
+    code = main(
+        ["watermark", str(small_pdf), "--text", "x", "--output-dir", str(missing)]
+    )
+    assert code == 2
+    assert "carpeta de salida" in capsys.readouterr().err
+
+
+def test_cli_parser_builds_for_all_real_specs():
+    from pdftool.cli import _build_parser
+    from pdftool.core import registry
+
+    registry.discover()
+    _build_parser(registry.get_specs())

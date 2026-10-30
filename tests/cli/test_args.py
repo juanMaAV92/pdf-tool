@@ -99,3 +99,17 @@ def test_every_real_spec_maps_to_a_parser():
     registry.discover()
     for spec in registry.get_specs():
         add_params(argparse.ArgumentParser(), spec.params)
+
+
+@pytest.mark.parametrize("reserved", ["json", "inputs", "command", "help", "version"])
+def test_reserved_field_names_are_rejected(reserved):
+    model = type(
+        "Clash",
+        (BaseParams,),
+        {
+            "__annotations__": {reserved: str},
+            reserved: Field(default="", description="x"),
+        },
+    )
+    with pytest.raises(TypeError, match=reserved):
+        add_params(argparse.ArgumentParser(), model)

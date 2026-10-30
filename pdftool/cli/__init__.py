@@ -28,8 +28,22 @@ EXIT_ERROR = 1
 EXIT_USAGE = 2
 
 
+class _UsageError(Exception):
+    def __init__(self, message: str, usage: str) -> None:
+        super().__init__(message)
+        self.usage = usage
+
+
+class _Parser(argparse.ArgumentParser):
+    """Un uso inválido lanza en vez de salir: así `--json` también lo reporta
+    en JSON. Los subcomandos heredan esta clase."""
+
+    def error(self, message: str):  # type: ignore[override]
+        raise _UsageError(f"{self.prog}: {message}", self.format_usage())
+
+
 def _build_parser(specs: Sequence[ToolSpec]) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = _Parser(
         prog="pdf-tool",
         description="Herramientas locales para PDFs: nada sale de tu equipo.",
     )
@@ -115,6 +129,8 @@ def _run(spec: ToolSpec, ns: argparse.Namespace, env, stdin) -> int:
     try:
         inputs = _check_inputs(spec, ns.inputs)
         params = build_params(ns, spec.params, env=env, stdin=stdin)
+        if params.output_dir is not None and not params.output_dir.is_dir():
+            raise UserError(f"No existe la carpeta de salida: {params.output_dir}")
     except UserError as exc:
         return _fail(spec, exc, ns.json, EXIT_USAGE)
     try:
@@ -140,10 +156,18 @@ def main(
     registry.discover()
     specs = registry.get_specs()
     parser = _build_parser(specs)
+    args = sys.argv[1:] if argv is None else argv
     try:
-        ns = parser.parse_args(sys.argv[1:] if argv is None else argv)
-    except SystemExit as exc:  # --help/--version (0) o uso inválido (2)
-        return exc.code if isinstance(exc.code, int) else EXIT_USAGE
+        ns = parser.parse_args(args)
+    except SystemExit as exc:  # --help/--version
+        return exc.code if isinstance(exc.code, int) else 0
+    except _UsageError as exc:
+        if "--json" in args:
+            tool_id = next((a for a in args if a in {s.meta.id for s in specs}), None)
+            _print_json(error_to_dict(tool_id, UserError(str(exc))))
+        else:
+            print(f"{exc.usage}{exc}", file=sys.stderr)
+        return EXIT_USAGE
     if ns.command == "list":
         return _list(specs, ns.json)
     spec = next(s for s in specs if s.meta.id == ns.command)

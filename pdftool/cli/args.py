@@ -12,7 +12,7 @@ import argparse
 import types
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal, TextIO, Union, get_args, get_origin
+from typing import Annotated, Any, Literal, TextIO, Union, get_args, get_origin
 
 from pydantic import ValidationError
 from pydantic.fields import FieldInfo
@@ -21,6 +21,8 @@ from pdftool.core.errors import UserError
 from pdftool.core.plugin import BaseParams
 
 _SCALARS = (int, float, str, Path)
+# Nombres que ya usa el comando (`pdf-tool <id> ARCHIVO... --json`) o argparse.
+RESERVED = frozenset({"json", "inputs", "command", "help", "version"})
 
 
 def _flag(name: str) -> str:
@@ -44,13 +46,19 @@ def _strip_optional(annotation: Any) -> Any:
     return annotation
 
 
+def _unannotated(annotation: Any) -> Any:
+    if get_origin(annotation) is Annotated:
+        return get_args(annotation)[0]
+    return annotation
+
+
 def _type_kwargs(name: str, annotation: Any) -> dict[str, Any]:
     annotation = _strip_optional(annotation)
     origin = get_origin(annotation)
     if origin is Literal:
         return {"choices": list(get_args(annotation))}
     if origin is tuple:
-        items = get_args(annotation)
+        items = tuple(_unannotated(i) for i in get_args(annotation))
         if items and all(i in _SCALARS for i in items) and len(set(items)) == 1:
             return {"type": items[0], "nargs": len(items)}
     if annotation in _SCALARS:
@@ -70,6 +78,8 @@ def _help(field: FieldInfo) -> str:
 
 def add_params(parser: argparse.ArgumentParser, params: type[BaseParams]) -> None:
     for name, field in params.model_fields.items():
+        if name in RESERVED:
+            raise TypeError(f"Campo {name!r}: nombre reservado por la CLI")
         if _is_secret(field):
             parser.add_argument(
                 f"{_flag(name)}-stdin",
