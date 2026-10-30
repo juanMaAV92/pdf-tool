@@ -6,11 +6,11 @@ from collections.abc import Callable
 import flet as ft
 
 from pdftool import __version__
-from pdftool.core import registry
 from pdftool.core.config import load_settings, save_settings
 from pdftool.core.jobs import run_job, shutdown_job_executor
 from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import GITHUB_REPO, check_for_update
+from pdftool.ui import registry
 from pdftool.ui.accessibility import icon_content
 from pdftool.ui.logs import LOG_LABEL, download_log_button, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode

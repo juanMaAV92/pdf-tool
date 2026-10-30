@@ -5,7 +5,6 @@ import fitz
 import flet as ft
 import pytest
 
-from pdftool.core import registry
 from pdftool.core.errors import GENERIC_MESSAGE, UserError
 from pdftool.core.jobs import JobHandle
 from pdftool.core.plugin import (
@@ -15,6 +14,7 @@ from pdftool.core.plugin import (
     ToolMeta,
     ToolResult,
 )
+from pdftool.ui import registry
 from pdftool.ui.file_list import MultiFileToolPanel
 from pdftool.ui.panel_base import SingleFileToolPanel
 

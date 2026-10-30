@@ -7,11 +7,11 @@ from pydantic import ValidationError
 
 from pdftool.core.errors import UserError
 from pdftool.core.plugin import ToolMeta
-from pdftool.core.registry import register
 from pdftool.tools.split.logic import page_count, parse_ranges, resolve_ranges, split
 from pdftool.tools.split.params import SplitParams
 from pdftool.ui.accessibility import HelpButton
 from pdftool.ui.panel_base import InvalidParams, SingleFileToolPanel
+from pdftool.ui.registry import register
 
 _RANGES_HELP = (
     "Cómo escribir rangos:\n"

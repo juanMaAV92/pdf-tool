@@ -4,10 +4,10 @@ import flet as ft
 from pydantic import ValidationError
 
 from pdftool.core.plugin import ToolMeta
-from pdftool.core.registry import register
 from pdftool.tools.watermark.logic import watermark
 from pdftool.tools.watermark.params import WatermarkParams
 from pdftool.ui.panel_base import InvalidParams, SingleFileToolPanel
+from pdftool.ui.registry import register
 
 _COLORS = {
     "Gris": (0.5, 0.5, 0.5),

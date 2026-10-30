@@ -4,12 +4,12 @@ import flet as ft
 from pydantic import ValidationError
 
 from pdftool.core.plugin import ToolMeta
-from pdftool.core.registry import register
 from pdftool.tools.compress.logic import compress
 from pdftool.tools.compress.params import CompressParams
 from pdftool.ui.accessibility import HelpButton
 from pdftool.ui.file_list import MultiFileToolPanel
 from pdftool.ui.panel_base import InvalidParams
+from pdftool.ui.registry import register
 
 _MODE_HELP = (
     "Reducir al máximo: busca el archivo más pequeño posible. Algunas páginas "

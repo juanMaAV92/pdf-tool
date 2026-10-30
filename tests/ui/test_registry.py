@@ -1,7 +1,7 @@
 import pytest
 
-from pdftool.core import registry
 from pdftool.core.plugin import PdfTool, ToolContext, ToolMeta
+from pdftool.ui import registry
 
 
 def test_register_and_get_tools():
@@ -58,8 +58,10 @@ def test_a_tool_that_fails_to_import_does_not_break_discovery(tmp_path, monkeypa
     pkg = tmp_path / "fake_tools"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("")
-    (pkg / "good.py").write_text(
-        "from pdftool.core import registry\n"
+    (pkg / "good").mkdir()
+    (pkg / "good" / "__init__.py").write_text("")
+    (pkg / "good" / "panel.py").write_text(
+        "from pdftool.ui import registry\n"
         "from pdftool.core.plugin import PdfTool, ToolMeta\n"
         "@registry.register\n"
         "class Good(PdfTool):\n"
@@ -68,7 +70,11 @@ def test_a_tool_that_fails_to_import_does_not_break_discovery(tmp_path, monkeypa
         "    def build_panel(self, ctx):\n"
         "        return None\n"
     )
-    (pkg / "broken.py").write_text("raise ImportError('falta una dependencia')\n")
+    (pkg / "broken").mkdir()
+    (pkg / "broken" / "__init__.py").write_text("")
+    (pkg / "broken" / "panel.py").write_text(
+        "raise ImportError('falta una dependencia')\n"
+    )
     monkeypatch.syspath_prepend(str(tmp_path))
     registry.clear()
 

@@ -40,7 +40,7 @@ def get_tools() -> list[PdfTool]:
 
 
 def discover(package: str = "pdftool.tools") -> list[str]:
-    """Importa cada subpaquete de `package` para disparar @register.
+    """Importa el `panel.py` de cada subpaquete de `package` para disparar @register.
 
     Una herramienta que falla al importarse se registra en el log y se omite:
     el resto de la app sigue funcionando. Devuelve los nombres que fallaron.
@@ -48,7 +48,7 @@ def discover(package: str = "pdftool.tools") -> list[str]:
     pkg = importlib.import_module(package)
     failed: list[str] = []
     for mod in pkgutil.iter_modules(pkg.__path__):
-        name = f"{package}.{mod.name}"
+        name = f"{package}.{mod.name}.panel"
         try:
             importlib.import_module(name)
         except Exception:
