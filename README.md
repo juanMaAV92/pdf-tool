@@ -82,6 +82,18 @@ Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Códigos de salida
 `0` ok · `1` error al procesar · `2` uso inválido · `3` algún archivo del lote falló.
 `pipx install 'pdf-tool-cli[gui]'` instala además la app (comando `pdftool`).
 
+### Plugin para Claude Code
+
+Una [skill](https://github.com/juanMaAV92/pdf-tool/blob/main/skills/pdf-tool/SKILL.md)
+le enseña a Claude Code a usar `pdf-tool` para crear o modificar PDFs en lugar de
+escribir scripts: pide permiso antes de instalar la CLI, ejecuta las herramientas
+con `--json` y te explica el resultado. Para instalarla, dentro de Claude Code:
+
+```text
+/plugin marketplace add juanMaAV92/pdf-tool
+/plugin install pdf-tool@pdf-tool
+```
+
 ---
 
 ## 🤝 Contribuir
