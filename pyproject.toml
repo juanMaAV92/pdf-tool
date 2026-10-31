@@ -35,7 +35,7 @@ gui = ["flet"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
-ruff = "^0.16.8"
+ruff = ">=0.16.8,<0.18.0"
 mypy = "^2.3.1"
 pytest-cov = "^7.1.0"
 # flet lo instala solo al primer `flet build`; declararlo deja el entorno
