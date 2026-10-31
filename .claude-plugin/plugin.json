@@ -1,0 +1,11 @@
+{
+  "name": "pdf-tool",
+  "description": "Teaches Claude Code to create and modify PDFs (merge, split, compress, images to PDF, watermark, password) with the local pdf-tool CLI instead of ad-hoc scripts.",
+  "author": {
+    "name": "Juan Manuel Armero"
+  },
+  "homepage": "https://github.com/juanMaAV92/pdf-tool",
+  "repository": "https://github.com/juanMaAV92/pdf-tool",
+  "license": "MIT",
+  "keywords": ["pdf", "cli", "merge", "split", "compress", "password"]
+}
