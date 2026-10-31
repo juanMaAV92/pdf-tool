@@ -72,7 +72,13 @@ def _tool_ids() -> list[str]:
     from pdftool.core import registry
 
     registry.discover()
-    return [spec.meta.id for spec in registry.get_specs()]
+    # Solo las herramientas reales: otros tests registran herramientas falsas
+    # en el registro global y pueden seguir ahí según el orden de ejecución.
+    return [
+        spec.meta.id
+        for spec in registry.get_specs()
+        if spec.run.__module__.startswith("pdftool.tools.")
+    ]
 
 
 def test_skill_frontmatter():
