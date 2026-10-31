@@ -53,7 +53,7 @@ jobs:
           --disable-pip --ignore-vuln PYSEC-2026-4114
           --ignore-vuln CVE-2026-49272
 
-  # Lo que recibe quien hace `pipx install pdf-tool`: el wheel sin extras, sin
+  # Lo que recibe quien hace `pipx install pdf-tool-cli`: el wheel sin extras, sin
   # Flet, con las dependencias más recientes que permite pyproject.
   cli-wheel:
     runs-on: ubuntu-latest

@@ -79,7 +79,7 @@ jobs:
         # Python embebido solo para la arch del runner (Apple Silicon), y en un
         # Mac Intel la ventana abre pero el backend Python no arranca -> pantalla
         # en blanco. El universal mete ambas arches en el mismo .app/.dmg.
-        run: poetry run flet build macos --arch arm64 x86_64 --build-version "$VERSION" --product "pdf-tool" --org "com.juanmaav" -v
+        run: poetry run flet build macos --arch arm64 x86_64 --build-version "$VERSION" --project "pdf-tool" --product "pdf-tool" --org "com.juanmaav" -v
       - name: Verify universal binary (arm64 + x86_64)
         run: |
           APP=$(ls -d build/macos/*.app | head -1)
@@ -141,7 +141,7 @@ jobs:
         run: poetry install --all-extras
       - name: Build Windows app
         shell: pwsh
-        run: poetry run flet build windows --build-version "$env:VERSION" --product "pdf-tool" --org "com.juanmaav" -v
+        run: poetry run flet build windows --build-version "$env:VERSION" --project "pdf-tool" --product "pdf-tool" --org "com.juanmaav" -v
       - name: List build output (debug)
         shell: bash
         run: ls -la build/windows
@@ -190,7 +190,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/pdf-tool
+      url: https://pypi.org/p/pdf-tool-cli
     permissions:
       id-token: write # Trusted Publishing
     steps:

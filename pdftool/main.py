@@ -6,13 +6,13 @@ from pdftool.core.logger import setup_logging
 
 GUI_MISSING = (
     "La app de escritorio necesita Flet, que no está instalado.\n"
-    "Instálala con:  pipx install 'pdf-tool[gui]'\n"
+    "Instálala con:  pipx install 'pdf-tool-cli[gui]'\n"
     "Para la línea de comandos usa:  pdf-tool --help"
 )
 
 
 def main() -> None:
-    # Flet es opcional (extra [gui]): `pip install pdf-tool` trae solo la CLI.
+    # Flet es opcional (extra [gui]): `pip install pdf-tool-cli` trae solo la CLI.
     try:
         import flet as ft
 

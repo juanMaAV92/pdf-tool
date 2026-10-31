@@ -72,7 +72,7 @@ Las mismas herramientas están disponibles como comando, pensado para agentes
 (Claude Code, Cursor, Copilot…) y scripts. Todo sigue ocurriendo en tu equipo.
 
 ```bash
-pipx install pdf-tool                        # solo la CLI (sin la app de escritorio)
+pipx install pdf-tool-cli                    # solo la CLI (sin la app de escritorio)
 pdf-tool list --json                         # qué herramientas hay y qué aceptan
 pdf-tool compress informe.pdf --json         # comprimir y obtener el resultado en JSON
 pdf-tool merge a.pdf b.pdf --output-name todo
@@ -81,7 +81,7 @@ echo "$CLAVE" | pdf-tool protect a.pdf --password-stdin
 
 Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Códigos de salida:
 `0` ok · `1` error al procesar · `2` uso inválido · `3` algún archivo del lote falló.
-`pipx install 'pdf-tool[gui]'` instala además la app (comando `pdftool`).
+`pipx install 'pdf-tool-cli[gui]'` instala además la app (comando `pdftool`).
 
 ---
 

@@ -45,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: poetry install --all-extras
       - name: Build universal macOS app
-        run: poetry run flet build macos --arch arm64 x86_64 --build-version "0.0.0" --product "pdf-tool" --org "com.juanmaav" -v
+        run: poetry run flet build macos --arch arm64 x86_64 --build-version "0.0.0" --project "pdf-tool" --product "pdf-tool" --org "com.juanmaav" -v
       - name: Verify app bundle
         run: |
           APP=$(ls -d build/macos/*.app | head -1)
@@ -92,7 +92,7 @@ jobs:
       - name: Install dependencies
         run: poetry install --all-extras
       - name: Build Windows app
-        run: poetry run flet build windows --build-version "0.0.0" --product "pdf-tool" --org "com.juanmaav" -v
+        run: poetry run flet build windows --build-version "0.0.0" --project "pdf-tool" --product "pdf-tool" --org "com.juanmaav" -v
       - name: Install Inno Setup
         run: choco install innosetup --version=6.7.1 -y --no-progress
       - name: Package and install smoke artifact
