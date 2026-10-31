@@ -1,10 +1,19 @@
 [tool.poetry]
 name = "pdf-tool"
 version = "0.1.0"
-description = "App de escritorio para gestionar PDFs (modular)."
+description = "Herramientas PDF (unir, dividir, comprimir, proteger…) como CLI para agentes y app de escritorio."
 authors = ["Juan Manuel Armero <juanmanuel.armero@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://github.com/juanMaAV92/pdf-tool"
+repository = "https://github.com/juanMaAV92/pdf-tool"
+keywords = ["pdf", "cli", "agents", "merge", "split", "compress"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Topic :: Utilities",
+]
 packages = [{ include = "pdftool" }]
 
 [tool.poetry.dependencies]
@@ -12,9 +21,12 @@ python = "^3.11"
 # 0.28.2 fijo: 0.28.3 tiene una regresión en macOS donde el FilePicker no abre
 # (flet issue #5334). 0.28.2 es la última sana de la serie 0.28.
 flet = "0.28.2"
-pymupdf = "^1.24.0"
+pymupdf = "^1.24.3"
 pydantic = "^2.6.0"
 platformdirs = "^4.2.0"
+
+[tool.poetry.extras]
+gui = ["flet"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
@@ -23,6 +35,7 @@ mypy = "^2.3.1"
 pytest-cov = "^7.1.0"
 
 [tool.poetry.scripts]
+# App de escritorio (requiere el extra [gui]).
 pdftool = "pdftool.main:main"
 # CLI para agentes y scripts (sin Flet).
 pdf-tool = "pdftool.cli:main"
