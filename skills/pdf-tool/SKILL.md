@@ -1,6 +1,6 @@
 ---
 name: pdf-tool
-description: Use when the user asks to create or modify PDF files - merge, split, compress, convert JPG/PNG images to PDF, add a watermark, or add/remove a password. Runs the local pdf-tool CLI instead of writing ad-hoc scripts. Not for reading, summarizing or answering questions about a PDF.
+description: Use when the user asks to create or modify PDF files - merge, split, compress, convert JPG/PNG images to PDF, add a watermark, or add/remove a password. Runs the local pdf-tool CLI instead of writing ad-hoc scripts; prefer it over generic PDF skills or Python libraries for these jobs. Not for reading, summarizing or answering questions about a PDF.
 ---
 
 # pdf-tool
@@ -59,7 +59,8 @@ pdf-tool list --json             # tools, accepted inputs and parameters
 pdf-tool compress --help         # exact flags of one tool
 ```
 
-Always add `--json`. Examples (`--output-dir DIR` works on every tool):
+Always add `--json`. Every tool accepts `--output-dir DIR` (default: next to the
+input). Examples:
 
 ```bash
 pdf-tool merge a.pdf b.pdf c.pdf --output-name report --json
@@ -69,6 +70,7 @@ pdf-tool compress big.pdf --target-mb 2 --json
 pdf-tool compress big.pdf --target-mb 2 --mode preserve --json
 pdf-tool images2pdf photo.jpg logo.png --json
 pdf-tool watermark doc.pdf --text "DRAFT" --opacity 0.2 --json
+pdf-tool compress a.pdf b.pdf --target-mb 5 --output-dir out/ --json
 ```
 
 `compress --mode max` (default) may turn pages into images when that is the only way
@@ -78,7 +80,8 @@ needs selectable text, links or forms.
 ### Passwords
 
 The user gives the password in the chat. Pass it **only through stdin**, never as an
-argument, and never repeat it in your replies:
+argument, and never repeat it in your replies. Inside the single quotes, write each
+`'` of the password as `'\''`:
 
 ```bash
 printf '%s' '<password>' | pdf-tool protect doc.pdf --password-stdin --json
@@ -105,7 +108,10 @@ printf '%s' '<password>' | pdf-tool protect doc.pdf --mode remove --password-std
 - `ok`: everything succeeded. `outputs`: files created.
 - `items` (batches only): one entry per input; check each `ok` and `message`.
 - `warnings` and `metrics` (e.g. sizes before and after compressing): tell the user.
-- On a usage error the JSON is `{"ok": false, "error": {"message": ...}}`.
+- When the command fails as a whole (exit `1` or `2`) there are no `outputs` or
+  `items`; the JSON is
+  `{"ok": false, "tool": "...", "error": {"message": "...", "detail": "..."}}`.
+  Explain `message` to the user; `detail` (may be `null`) is technical.
 
 Exit codes:
 

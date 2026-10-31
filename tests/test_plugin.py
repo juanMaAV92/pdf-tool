@@ -89,6 +89,8 @@ def test_skill_frontmatter():
         assert word in description
     # Leer o resumir un PDF no es su caso.
     assert "summar" in description
+    # Compite con skills genéricas de PDF: debe pedir que se la prefiera.
+    assert "prefer" in description
 
 
 def test_skill_covers_every_registered_tool():
@@ -98,22 +100,60 @@ def test_skill_covers_every_registered_tool():
         assert f"`pdf-tool {tool}`" in body or tool in used, tool
 
 
-def test_skill_flags_exist_in_the_cli(capsys):
-    from pdftool.cli import main
+def _cli_options(tool: str) -> dict[str, list[str] | None]:
+    """Opciones exactas del subcomando y sus valores permitidos (si los hay)."""
+    from pdftool.cli import _build_parser
+    from pdftool.core import registry
 
+    registry.discover()
+    parser = _build_parser(registry.get_specs())
+    subparsers = next(a for a in parser._actions if a.choices and tool in a.choices)
+    sub = subparsers.choices[tool]
+    return {
+        opt: (list(a.choices) if a.choices else None)
+        for a in sub._actions
+        for opt in a.option_strings
+    }
+
+
+def test_skill_flags_exist_in_the_cli():
+    """Coincidencia exacta: `--out` no vale aunque exista `--output-dir`."""
     _, body = _skill()
     tools = set(_tool_ids())
     checked = 0
     for cmd in _commands(body):
         if len(cmd) < 2 or cmd[1] not in tools:
             continue
-        main([cmd[1], "--help"])
-        help_text = capsys.readouterr().out
-        for token in cmd[2:]:
-            if token.startswith("--"):
-                assert token in help_text, f"{cmd[1]}: {token}"
-                checked += 1
+        options = _cli_options(cmd[1])
+        for i, token in enumerate(cmd[2:], start=2):
+            if not token.startswith("--"):
+                continue
+            assert token in options, f"{cmd[1]}: {token}"
+            choices = options[token]
+            if choices is not None:
+                assert cmd[i + 1] in choices, f"{cmd[1]} {token} {cmd[i + 1]}"
+            checked += 1
     assert checked > 0
+
+
+def test_output_dir_works_on_every_tool_and_the_skill_shows_it():
+    # La skill dice que `--output-dir` vale en todas: comprobarlo y que haya
+    # al menos un ejemplo real (los ejemplos sí se validan contra la CLI).
+    for tool in _tool_ids():
+        assert "--output-dir" in _cli_options(tool), tool
+    _, body = _skill()
+    assert any("--output-dir" in cmd for cmd in _commands(body))
+
+
+def test_skill_describes_the_cli_error_json():
+    from pdftool.cli.report import error_to_dict
+
+    error = error_to_dict("split", FileNotFoundError("x"))
+    _, body = _skill()
+    for key in error:
+        assert f'"{key}"' in body, key
+    for key in error["error"]:
+        assert f'"{key}"' in body, key
 
 
 def test_skill_exit_codes_match_the_cli():
@@ -133,6 +173,8 @@ def test_skill_passes_passwords_only_through_stdin():
         assert "--password-stdin" in cmd
     assert "--password " not in body
     assert "PDFTOOL_PASSWORD=" not in body
+    # Una comilla simple en la contraseña rompería `printf '%s' '...'`.
+    assert "'\\''" in body
 
 
 def test_skill_tells_claude_to_answer_in_the_user_language():
