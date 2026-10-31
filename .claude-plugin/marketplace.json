@@ -1,0 +1,17 @@
+{
+  "name": "pdf-tool",
+  "description": "pdf-tool for Claude Code: local PDF tools for agents.",
+  "owner": {
+    "name": "Juan Manuel Armero",
+    "url": "https://github.com/juanMaAV92"
+  },
+  "plugins": [
+    {
+      "name": "pdf-tool",
+      "description": "Teaches Claude Code to create and modify PDFs with the local pdf-tool CLI instead of ad-hoc scripts.",
+      "source": "./",
+      "category": "productivity",
+      "tags": ["pdf", "cli"]
+    }
+  ]
+}
