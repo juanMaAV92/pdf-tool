@@ -9,7 +9,7 @@ App de escritorio (Flet) **modular** para gestionar PDFs, pensada para usuarios 
 ## Comandos
 
 ```bash
-poetry install          # instalar dependencias
+poetry install --all-extras   # instalar dependencias (con Flet, extra [gui])
 poetry run pdftool      # abrir la app de escritorio
 poetry run pdf-tool list            # CLI: herramientas disponibles (--json para agentes)
 poetry run pdf-tool compress a.pdf --json   # CLI: ejecutar una herramienta
@@ -163,6 +163,8 @@ sigue funcionando; dos herramientas con el mismo `meta.id` son un error.
 
 - macOS: `poetry run flet build macos` → `.app` → envolver en `.dmg`.
 - Windows: `poetry run flet build windows` → compilar `installer/windows.iss` con Inno Setup → `pdf-tool-setup.exe` (actualiza en sitio, mismo `AppId`).
+- **PyPI** (`pdf-tool`): `pip install pdf-tool` trae solo la CLI; Flet es el extra `[gui]` (comando `pdftool`, que sin Flet explica cómo instalarlo). Flet sigue en `[tool.poetry.dependencies]` (opcional) y no en `[project]`, porque `flet build` lee esa tabla e ignora `optional`: así el bundle conserva Flet. No migrar a `[project]` sin revisar eso. El job `cli-wheel` de CI instala el wheel sin extras y prueba la CLI.
+- El workflow de release publica en PyPI con Trusted Publishing (job `publish-pypi`, entorno `pypi`) después de construir DMG e instalador, porque una versión subida a PyPI no se puede reemplazar.
 - Distribución por **GitHub Releases** con tag `vX.Y.Z`. El workflow de release toma la versión del tag; el repo del chequeo de actualizaciones está en `GITHUB_REPO` (`core/updater.py`).
 - La release publica `SHA256SUMS.txt` y una attestation de procedencia (`gh attestation verify`). Las actions van fijadas por SHA (Dependabot las actualiza) y Poetry, el plugin de export e Inno Setup por versión.
 - CI corre `pip-audit` sobre las dependencias de ejecución. Una vulnerabilidad sin arreglo compatible se ignora explícitamente en `ci.yml`, con el motivo.

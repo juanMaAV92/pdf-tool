@@ -41,9 +41,9 @@ jobs:
       - name: Export runtime requirements
         run: |
           poetry self add poetry-plugin-export==1.10.1
-          poetry export --without dev -f requirements.txt -o requirements.txt
+          poetry export --without dev --all-extras -f requirements.txt -o requirements.txt
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --all-extras
       - name: Build universal macOS app
         run: poetry run flet build macos --arch arm64 x86_64 --build-version "0.0.0" --product "pdf-tool" --org "com.juanmaav" -v
       - name: Verify app bundle
@@ -88,9 +88,9 @@ jobs:
         shell: bash
         run: |
           poetry self add poetry-plugin-export==1.10.1
-          poetry export --without dev -f requirements.txt -o requirements.txt
+          poetry export --without dev --all-extras -f requirements.txt -o requirements.txt
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --all-extras
       - name: Build Windows app
         run: poetry run flet build windows --build-version "0.0.0" --product "pdf-tool" --org "com.juanmaav" -v
       - name: Install Inno Setup

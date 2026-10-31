@@ -72,6 +72,7 @@ Las mismas herramientas están disponibles como comando, pensado para agentes
 (Claude Code, Cursor, Copilot…) y scripts. Todo sigue ocurriendo en tu equipo.
 
 ```bash
+pipx install pdf-tool                        # solo la CLI (sin la app de escritorio)
 pdf-tool list --json                         # qué herramientas hay y qué aceptan
 pdf-tool compress informe.pdf --json         # comprimir y obtener el resultado en JSON
 pdf-tool merge a.pdf b.pdf --output-name todo
@@ -80,7 +81,7 @@ echo "$CLAVE" | pdf-tool protect a.pdf --password-stdin
 
 Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Códigos de salida:
 `0` ok · `1` error al procesar · `2` uso inválido · `3` algún archivo del lote falló.
-Por ahora se usa desde el repo con `poetry run pdf-tool`; pronto en PyPI.
+`pipx install 'pdf-tool[gui]'` instala además la app (comando `pdftool`).
 
 ---
 
@@ -99,7 +100,7 @@ está lo que viene: una CLI para agentes de IA, a la par con la app.
 
 ### Arrancar
 ```bash
-poetry install
+poetry install --all-extras   # incluye Flet (extra [gui]) para la app
 poetry run pdftool        # abre la app
 poetry run pytest         # corre los tests
 ```
@@ -122,6 +123,8 @@ Eso dispara `release.yml`, que corre los tests, construye macOS (`.dmg`) y Windo
 (instalador Inno Setup) en paralelo, hornea la versión del tag en el build y crea
 un **GitHub Release en borrador** con ambos instaladores. Revísalo y pulsa
 **Publish release** para que las apps instaladas detecten la actualización.
+Si los instaladores se construyen bien, publica también el paquete en **PyPI**
+(Trusted Publishing, entorno `pypi` de GitHub; sin tokens).
 
 Los PRs que cambian la app, el empaquetado o sus dependencias ejecutan además
 **Package smoke**: construye e inspecciona el DMG de macOS y compila e instala de

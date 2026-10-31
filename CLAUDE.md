@@ -6,7 +6,7 @@ Esta es la guía del proyecto para Claude Code.
 
 ## Recordatorios clave (resumen)
 
-- **Comandos:** `poetry install` · `poetry run pdftool` · `poetry run pytest`. Nunca actives venvs a mano; usa `poetry run`.
+- **Comandos:** `poetry install --all-extras` · `poetry run pdftool` · `poetry run pytest`. Nunca actives venvs a mano; usa `poetry run`.
 - **Arquitectura:** `core/` sin Flet; cada herramienta separa `logic.py` (puro, testeable) de `panel.py` (UI). `inputs` siempre `list[Path]`; la ruta de salida la decide `core/naming.py` (destino elegido o junto al original, sin pisar nada) — nunca se compone a mano.
 - **TDD:** test que falla → implementación, sobre la lógica pura.
 - **Flet 0.28.x:** `ft.Icons.*` / `ft.Colors.*` (enums, con mayúscula).
