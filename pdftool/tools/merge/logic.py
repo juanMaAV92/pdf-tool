@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress
@@ -43,9 +43,9 @@ def merge(
     total = len(paths)
     progress(0.0, f"Uniendo {total} PDFs…")
 
-    with atomic_output(out) as temporary, fitz.open() as out_doc:
+    with atomic_output(out) as temporary, pymupdf.open() as out_doc:
         for i, p in enumerate(paths):
-            with fitz.open(str(p)) as src:
+            with pymupdf.open(str(p)) as src:
                 out_doc.insert_pdf(src)
             progress((i + 1) / (total + 1), f"Añadido {p.name}")
         out_doc.save(str(temporary), garbage=4, deflate=True)

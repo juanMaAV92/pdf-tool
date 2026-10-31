@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress
@@ -23,7 +23,7 @@ def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> 
     return output_path(input_path, "marca", out_dir=out_dir)
 
 
-def _stamp_count(rect: fitz.Rect, sx: float, sy: float, text_w: float) -> int:
+def _stamp_count(rect: pymupdf.Rect, sx: float, sy: float, text_w: float) -> int:
     """Sellos que pondrá el mosaico (mismos límites que el bucle de `watermark`)."""
     cols = math.ceil((rect.width + sx + text_w) / sx)
     rows = math.ceil((rect.height + sy / 2) / sy)
@@ -31,7 +31,7 @@ def _stamp_count(rect: fitz.Rect, sx: float, sy: float, text_w: float) -> int:
 
 
 def _grid_steps(
-    rect: fitz.Rect, step_x: float, step_y: float, text_w: float
+    rect: pymupdf.Rect, step_x: float, step_y: float, text_w: float
 ) -> tuple[float, float]:
     """Separación del mosaico, ampliada si la página pediría demasiados sellos."""
     stamps = _stamp_count(rect, step_x, step_y, text_w)
@@ -46,10 +46,10 @@ def _grid_steps(
 
 
 def _tile_page(
-    page: fitz.Page,
+    page: pymupdf.Page,
     text: str,
     params: WatermarkParams,
-    font: fitz.Font,
+    font: pymupdf.Font,
     step_x: float,
     step_y: float,
     text_w: float,
@@ -64,16 +64,16 @@ def _tile_page(
     """
     rect = page.rect
     sx, sy = _grid_steps(rect, step_x, step_y, text_w)
-    center = fitz.Point(rect.width / 2, rect.height / 2)
+    center = pymupdf.Point(rect.width / 2, rect.height / 2)
     # `morph` gira en el sistema de PDF (y hacia arriba); en coordenadas de
     # página la rotación inversa equivale a la misma matriz.
-    rot = fitz.Matrix(_ANGLE)
-    writer = fitz.TextWriter(rect, opacity=params.opacity, color=tuple(params.color))
+    rot = pymupdf.Matrix(_ANGLE)
+    writer = pymupdf.TextWriter(rect, opacity=params.opacity, color=tuple(params.color))
     y = sy / 2
     while y < rect.height + sy:
         x = -text_w
         while x < rect.width + sx:
-            start = (fitz.Point(x, y) - center) * rot + center
+            start = (pymupdf.Point(x, y) - center) * rot + center
             writer.append(start, text, font=font, fontsize=params.font_size)
             x += sx
         y += sy
@@ -91,14 +91,14 @@ def watermark(
 
     out = output_path_for_watermark(input_path, params.output_dir)
     text = params.text
-    text_w = fitz.get_text_length(text, fontsize=params.font_size)
+    text_w = pymupdf.get_text_length(text, fontsize=params.font_size)
     # Separación de la rejilla (mosaico): ancho del texto + holgura.
     step_x = max(text_w + params.font_size * 2, params.font_size * 4)
     step_y = params.font_size * 4
 
     progress(0.0, "Aplicando marca de agua…")
-    font = fitz.Font("helv")
-    with atomic_output(out) as temporary, fitz.open(str(input_path)) as doc:
+    font = pymupdf.Font("helv")
+    with atomic_output(out) as temporary, pymupdf.open(str(input_path)) as doc:
         total = doc.page_count
         for pno in range(total):
             page = doc[pno]

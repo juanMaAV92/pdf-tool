@@ -2,7 +2,7 @@ import io
 import json
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 from pdftool import __version__
 from pdftool.cli import main
@@ -88,7 +88,7 @@ def test_protect_reads_password_from_stdin(small_pdf, capsys):
     )
     data = _json(capsys)
     assert code == 0
-    with fitz.open(data["outputs"][0]) as doc:
+    with pymupdf.open(data["outputs"][0]) as doc:
         assert doc.needs_pass
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 THUMBNAIL_HEIGHT_PX = 56
 # Tope de proporción: una página degenerada (p. ej. 14400×1 pt) pediría un
@@ -21,7 +21,7 @@ def render_thumbnail(
     (rotar/reordenar/dividir); hoy solo se consume con 0.
     """
     try:
-        with fitz.open(str(path)) as doc:
+        with pymupdf.open(str(path)) as doc:
             if doc.needs_pass or not 0 <= page_index < doc.page_count:
                 return None
             page = doc[page_index]
@@ -31,7 +31,7 @@ def render_thumbnail(
                 height_px / page.rect.height,
                 height_px * _MAX_ASPECT / page.rect.width,
             )
-            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False)
             return pix.tobytes("png")
     except Exception:  # corrupto/ilegible: estado esperado, no excepción
         return None

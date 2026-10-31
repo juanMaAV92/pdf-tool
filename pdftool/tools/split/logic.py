@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress
@@ -86,7 +86,7 @@ def resolve_ranges(parsed: list[Range], page_count: int) -> list[tuple[int, int]
 
 def page_count(path: Path) -> int:
     """Número de páginas de un PDF; lanza si no se puede abrir."""
-    with fitz.open(str(path)) as doc:
+    with pymupdf.open(str(path)) as doc:
         return doc.page_count
 
 
@@ -118,7 +118,7 @@ def split(
         raise FileNotFoundError(src_path)
 
     outputs: list[Path] = []
-    with fitz.open(str(src_path)) as src:
+    with pymupdf.open(str(src_path)) as src:
         page_count = src.page_count
         ranges = _ranges_for(params, page_count)
         width = len(str(page_count))
@@ -129,7 +129,7 @@ def split(
             out = output_path(
                 src_path, _label(start, end, width), out_dir=params.output_dir
             )
-            with atomic_output(out) as temporary, fitz.open() as dst:
+            with atomic_output(out) as temporary, pymupdf.open() as dst:
                 dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)
                 dst.save(str(temporary), garbage=4, deflate=True)
             outputs.append(out)

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 import pytest
 from pydantic import ValidationError
 
@@ -9,16 +9,18 @@ from pdftool.tools.protect.params import ProtectParams
 
 
 def _pdf(path: Path) -> Path:
-    with fitz.open() as d:
+    with pymupdf.open() as d:
         d.new_page().insert_text((72, 72), "Hola")
         d.save(str(path))
     return path
 
 
 def _protected_pdf(path: Path, pw: str = "clave") -> Path:
-    with fitz.open() as d:
+    with pymupdf.open() as d:
         d.new_page().insert_text((72, 72), "Secreto")
-        d.save(str(path), encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw=pw, user_pw=pw)
+        d.save(
+            str(path), encryption=pymupdf.PDF_ENCRYPT_AES_256, owner_pw=pw, user_pw=pw
+        )
     return path
 
 
@@ -46,7 +48,7 @@ def test_protect_makes_pdf_need_password(tmp_path):
     plain = _pdf(tmp_path / "doc.pdf")
     out = protect([plain], ProtectParams(mode="protect", password="clave")).outputs[0]
     assert out.exists()
-    d = fitz.open(str(out))
+    d = pymupdf.open(str(out))
     try:
         assert d.needs_pass
         assert d.authenticate("clave")
@@ -58,7 +60,7 @@ def test_remove_clears_password(tmp_path):
     prot = _protected_pdf(tmp_path / "sec.pdf", pw="clave")
     out = protect([prot], ProtectParams(mode="remove", password="clave")).outputs[0]
     assert out.exists()
-    d = fitz.open(str(out))
+    d = pymupdf.open(str(out))
     try:
         assert not d.needs_pass
     finally:
@@ -94,7 +96,7 @@ def test_protect_multiple_pdfs(tmp_path):
     ]
     assert all(item.ok for item in res.items)
     for out in res.outputs:
-        d = fitz.open(str(out))
+        d = pymupdf.open(str(out))
         try:
             assert d.needs_pass
             assert d.authenticate("clave")
@@ -109,7 +111,7 @@ def test_remove_multiple_pdfs(tmp_path):
     assert len(res.outputs) == 2
     assert res.summary == "2 contraseñas removidas"
     for out in res.outputs:
-        d = fitz.open(str(out))
+        d = pymupdf.open(str(out))
         try:
             assert not d.needs_pass
         finally:
@@ -169,10 +171,10 @@ def test_protect_does_not_overwrite_a_previous_output(tmp_path):
 def test_remove_password_does_not_overwrite_a_previous_output(tmp_path):
     a = _pdf(tmp_path / "a.pdf")
     protected = tmp_path / "a_protegido.pdf"
-    with fitz.open(str(a)) as doc:
+    with pymupdf.open(str(a)) as doc:
         doc.save(
             str(protected),
-            encryption=fitz.PDF_ENCRYPT_AES_256,
+            encryption=pymupdf.PDF_ENCRYPT_AES_256,
             owner_pw="clave",
             user_pw="clave",
         )

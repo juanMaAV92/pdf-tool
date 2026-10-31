@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 from pdftool.core.atomic import atomic_copy
 from pdftool.core.batch import Outcome, noop_progress, run_batch
@@ -73,7 +73,7 @@ def output_path_for(
 
 
 def _simple_compress(src: Path, dst: Path) -> None:
-    with fitz.open(src) as doc:
+    with pymupdf.open(src) as doc:
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
 
 
@@ -91,9 +91,9 @@ def _rerender(
     jpg_quality: int,
     progress: Progress = noop_progress,
 ) -> None:
-    with fitz.open(src) as source:
+    with pymupdf.open(src) as source:
         total = len(source)
-        doc = fitz.open()
+        doc = pymupdf.open()
         flushed = False
         try:
             for page_num in range(total):
@@ -106,7 +106,7 @@ def _rerender(
                         max_dimension / rect.width, max_dimension / rect.height, 2.0
                     )
                     pix = src_page.get_pixmap(
-                        matrix=fitz.Matrix(zoom, zoom), alpha=False
+                        matrix=pymupdf.Matrix(zoom, zoom), alpha=False
                     )
                     img_bytes = pix.tobytes("jpg", jpg_quality=jpg_quality)
                     new_page = doc.new_page(width=rect.width, height=rect.height)
@@ -120,7 +120,7 @@ def _rerender(
                         doc.save(str(dst))
                         flushed = True
                     doc.close()
-                    doc = fitz.open(str(dst))
+                    doc = pymupdf.open(str(dst))
                 # Un punto de progreso (y de cancelación) por página: un intento
                 # sobre un PDF largo puede durar decenas de segundos.
                 progress(done / total, f"página {done} de {total}")
@@ -133,7 +133,7 @@ def _rerender(
     # Los volcados incrementales dejan versiones intermedias: se compacta.
     compact = dst.with_name(f".{dst.name}.compact")
     try:
-        with fitz.open(str(dst)) as doc:
+        with pymupdf.open(str(dst)) as doc:
             doc.save(str(compact), garbage=4, deflate=True)
         os.replace(compact, dst)
     finally:
@@ -144,7 +144,7 @@ def _preserve_compress(
     src: Path, dst: Path, *, dpi_threshold: int, dpi_target: int, quality: int
 ) -> None:
     """Optimiza imágenes sin convertir las páginas completas en imágenes."""
-    with fitz.open(src) as doc:
+    with pymupdf.open(src) as doc:
         rewrite_images = getattr(doc, "rewrite_images", None)
         if rewrite_images is not None:
             rewrite_images(

@@ -1,8 +1,8 @@
 import logging
 from pathlib import Path
 
-import fitz
 import flet as ft
+import pymupdf
 import pytest
 
 from pdftool.core.errors import GENERIC_MESSAGE, UserError
@@ -722,7 +722,7 @@ def test_after_pick_failure_resets_selection_and_shows_error(tmp_path):
     from pdftool.tools.split.panel import SplitTool
 
     good = tmp_path / "bueno.pdf"
-    with fitz.open() as d:
+    with pymupdf.open() as d:
         for _ in range(3):
             d.new_page()
         d.save(str(good))
@@ -819,7 +819,7 @@ def test_split_reads_the_page_count_in_the_background(tmp_path):
     from pdftool.tools.split.panel import SplitTool
 
     pdf = tmp_path / "doc.pdf"
-    with fitz.open() as d:
+    with pymupdf.open() as d:
         for _ in range(4):
             d.new_page()
         d.save(str(pdf))

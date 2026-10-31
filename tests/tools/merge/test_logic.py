@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 import pytest
 
 from pdftool.tools.merge.logic import merge, output_path_for_merge
@@ -8,7 +8,7 @@ from pdftool.tools.merge.params import MergeParams
 
 
 def _pdf(path: Path, pages: int, text: str) -> Path:
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         for i in range(pages):
             page = doc.new_page()
             page.insert_text((72, 72), f"{text}-{i}")
@@ -41,7 +41,7 @@ def test_merge_sums_pages(tmp_path):
     result = merge([a, b], MergeParams())
     out = result.outputs[0]
     assert out.exists()
-    with fitz.open(str(out)) as d:
+    with pymupdf.open(str(out)) as d:
         assert d.page_count == 5
 
 
@@ -49,7 +49,7 @@ def test_merge_preserves_order(tmp_path):
     a = _pdf(tmp_path / "a.pdf", 1, "AAA")
     b = _pdf(tmp_path / "b.pdf", 1, "BBB")
     result = merge([b, a], MergeParams())  # b primero
-    with fitz.open(str(result.outputs[0])) as d:
+    with pymupdf.open(str(result.outputs[0])) as d:
         first_page_text = d[0].get_text()
     assert "BBB" in first_page_text
 
@@ -107,9 +107,9 @@ def test_two_runs_with_same_custom_name_keep_both(tmp_path):
     assert first.outputs[0] == tmp_path / "2022.pdf"
     assert second.outputs[0] == tmp_path / "2022 (1).pdf"
     # El primero conserva su contenido original: 1 + 1 páginas.
-    with fitz.open(str(first.outputs[0])) as doc:
+    with pymupdf.open(str(first.outputs[0])) as doc:
         assert doc.page_count == 2
-    with fitz.open(str(second.outputs[0])) as doc:
+    with pymupdf.open(str(second.outputs[0])) as doc:
         assert doc.page_count == 4
 
 

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 import pytest
 
 from pdftool.tools.compress.logic import compress, output_path_for
@@ -40,7 +40,7 @@ def test_compress_reduces_size(big_pdf):
     out = result.outputs[0]
     assert out.exists()
     assert out.stat().st_size < big_pdf.stat().st_size
-    with fitz.open(out) as doc:
+    with pymupdf.open(out) as doc:
         assert len(doc) > 0
 
 
@@ -70,7 +70,7 @@ def test_best_effort_branch(big_pdf):
 def test_preserve_mode_keeps_text_when_target_is_impossible(big_pdf):
     result = compress([big_pdf], CompressParams(target_mb=0.0001, mode="preserve"))
 
-    with fitz.open(result.outputs[0]) as doc:
+    with pymupdf.open(result.outputs[0]) as doc:
         assert "Hola pdf-tool" in doc[0].get_text()
     assert "contenido preservado" in result.summary
 
@@ -258,21 +258,21 @@ def test_rerender_bounds_the_pixmap_of_a_huge_page(tmp_path):
     from pdftool.tools.compress.logic import _rerender
 
     src = tmp_path / "poster.pdf"
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         doc.new_page(width=14400, height=14400)
         doc.save(str(src))
     dst = tmp_path / "out.pdf"
 
     _rerender(src, dst, max_dimension=600, jpg_quality=25)
 
-    with fitz.open(str(dst)) as doc:
+    with pymupdf.open(str(dst)) as doc:
         xref = doc[0].get_images()[0][0]
-        pix = fitz.Pixmap(doc, xref)
+        pix = pymupdf.Pixmap(doc, xref)
         assert max(pix.width, pix.height) <= 600
 
 
 def _pages_pdf(path, n):
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         for i in range(n):
             doc.new_page().insert_text((72, 72), f"pagina {i}")
         doc.save(str(path))
@@ -438,7 +438,7 @@ def test_rerender_in_chunks_keeps_every_page(tmp_path, monkeypatch):
         progress=lambda p, m: seen.append(p),
     )
 
-    with fitz.open(str(dst)) as doc:
+    with pymupdf.open(str(dst)) as doc:
         assert doc.page_count == 5
         assert all(len(page.get_images()) == 1 for page in doc)
     assert seen[-1] == 1.0
