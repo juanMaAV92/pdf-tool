@@ -26,7 +26,7 @@ python = "^3.11"
 # Se queda en [tool.poetry.dependencies] (no en [project]) porque `flet build`
 # lee esta tabla e ignora `optional`, así que el bundle sigue incluyendo Flet.
 flet = { version = "0.28.2", optional = true }
-pymupdf = "^1.24.3"
+pymupdf = ">=1.24.3,<3.0.0"
 pydantic = "^2.6.0"
 platformdirs = "^4.2.0"
 
