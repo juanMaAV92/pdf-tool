@@ -232,6 +232,31 @@ def _saved_label(original: float, final: float) -> str:
     return f" · {saved:.0f} % menos" if saved >= 0.5 else ""
 
 
+def _reduce_images(
+    candidates: _Candidates,
+    src: Path,
+    target_mb: float,
+    progress: Progress,
+    span: float,
+) -> bool:
+    """Prueba a recomprimir solo las imágenes. True si alcanzó el objetivo."""
+    n = len(_PRESERVE_ATTEMPTS)
+    for i, attempt in enumerate(_PRESERVE_ATTEMPTS):
+        progress(0.1 + span * i / n, f"Reduciendo imágenes (paso {i + 1} de {n})…")
+        size = candidates.attempt(
+            partial(
+                _preserve_compress,
+                src,
+                dpi_threshold=attempt["dpi_threshold"],
+                dpi_target=attempt["dpi_target"],
+                quality=attempt["quality"],
+            )
+        )
+        if size <= target_mb:
+            return True
+    return False
+
+
 def _compress_one(
     input_path: Path,
     out: Path,
@@ -243,6 +268,9 @@ def _compress_one(
     progress(0.0, f"Tamaño original: {original:.2f} MB")
 
     if original <= target_mb:
+        # Abrirlo antes de copiar: un archivo dañado o que no es PDF debe
+        # fallar aquí, no reportarse como «sin cambios».
+        pymupdf.open(str(input_path)).close()
         atomic_copy(input_path, out)
         progress(1.0, "Ya está bajo el objetivo")
         return _Compressed(
@@ -275,38 +303,30 @@ def _compress_one(
         ):
             return publish()
 
+        # Primero se recomprimen solo las imágenes: conserva texto y enlaces y,
+        # con fotos de mucha resolución, suele dar el archivo más pequeño.
+        span = 0.9 if mode == "preserve" else 0.2
+        if _reduce_images(candidates, input_path, target_mb, progress, span):
+            return publish(" (contenido preservado)")
         if mode == "preserve":
-            n = len(_PRESERVE_ATTEMPTS)
-            for i, attempt in enumerate(_PRESERVE_ATTEMPTS):
-                progress(
-                    0.1 + 0.9 * i / n, f"Reduciendo imágenes (paso {i + 1} de {n})…"
-                )
-                size = candidates.attempt(
-                    partial(
-                        _preserve_compress,
-                        input_path,
-                        dpi_threshold=attempt["dpi_threshold"],
-                        dpi_target=attempt["dpi_target"],
-                        quality=attempt["quality"],
-                    )
-                )
-                if size <= target_mb:
-                    return publish(" (contenido preservado)")
             return publish(
                 " (no se alcanzó el objetivo; se guardó la versión más pequeña "
                 "con el contenido preservado)"
             )
 
+        # `max`: si no bastó, convertir páginas en imagen. Gana el intento más
+        # pequeño de todos, también si fue uno de los anteriores.
+        start = 0.1 + span
         n = len(_ATTEMPTS)
         for i, attempt in enumerate(_ATTEMPTS):
-            base = 0.1 + 0.9 * i / n
+            base = start + (1 - start) * i / n
             step = f"Reduciendo calidad (paso {i + 1} de {n})"
             progress(base, f"{step}…")
 
             def step_progress(
                 pct: float, msg: str, _base: float = base, _step: str = step
             ) -> None:
-                progress(_base + 0.9 / n * pct, f"{_step}: {msg}")
+                progress(_base + (1 - start) / n * pct, f"{_step}: {msg}")
 
             size = candidates.attempt(
                 partial(
