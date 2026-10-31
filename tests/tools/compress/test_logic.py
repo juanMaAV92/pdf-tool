@@ -3,7 +3,11 @@ from pathlib import Path
 import pymupdf
 import pytest
 
-from pdftool.tools.compress.logic import compress, output_path_for
+from pdftool.tools.compress.logic import (
+    RASTERIZED_WARNING,
+    compress,
+    output_path_for,
+)
 from pdftool.tools.compress.params import CompressParams
 
 
@@ -73,6 +77,34 @@ def test_preserve_mode_keeps_text_when_target_is_impossible(big_pdf):
     with pymupdf.open(result.outputs[0]) as doc:
         assert "Hola pdf-tool" in doc[0].get_text()
     assert "contenido preservado" in result.summary
+
+
+def _catalog_pdf(path: Path) -> Path:
+    """Foto de mucha resolución mostrada pequeña (~580 ppp), como en un catálogo."""
+    import os
+
+    with pymupdf.open() as doc:
+        page = doc.new_page(width=595, height=842)
+        page.insert_text((72, 72), "Catálogo pdf-tool")
+        px = 1600
+        pix = pymupdf.Pixmap(pymupdf.csRGB, px, px, os.urandom(px * px * 3), 0)
+        page.insert_image(pymupdf.Rect(72, 100, 272, 300), pixmap=pix)
+        doc.save(str(path))
+    return path
+
+
+def test_max_mode_reduces_images_before_rasterizing(tmp_path):
+    """Si recomprimir las imágenes basta, `max` no convierte páginas en imagen:
+    se conservan el texto y no hay aviso de rasterizado."""
+    src = _catalog_pdf(tmp_path / "catalogo.pdf")
+    assert src.stat().st_size > 5 * 1024 * 1024
+
+    result = compress([src], CompressParams(target_mb=1.0))
+
+    assert result.outputs[0].stat().st_size <= 1024 * 1024
+    assert RASTERIZED_WARNING not in result.warnings
+    with pymupdf.open(result.outputs[0]) as doc:
+        assert "Catálogo pdf-tool" in doc[0].get_text()
 
 
 # ---------------------------------------------------------------------------
@@ -442,7 +474,9 @@ def test_batch_rows_carry_their_own_warnings(tmp_path, big_pdf, small_pdf):
 
     big = Path(shutil.copy2(big_pdf, tmp_path / "grande.pdf"))
     small = Path(shutil.copy2(small_pdf, tmp_path / "chico.pdf"))
-    target = (big.stat().st_size / (1024 * 1024)) / 4
+    # ⅙ del original: recomprimir solo las imágenes no llega (~¼), así que
+    # `max` tiene que convertir páginas en imagen y avisarlo.
+    target = (big.stat().st_size / (1024 * 1024)) / 6
     result = compress([big, small], CompressParams(target_mb=target))
     big_row, small_row = result.items
     assert any(_RASTER in w for w in big_row.warnings)
