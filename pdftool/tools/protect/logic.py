@@ -31,7 +31,7 @@ def _protect_one(
                 )
             doc.save(
                 str(temporary),
-                encryption=pymupdf.mupdf.PDF_ENCRYPT_AES_256,
+                encryption=pymupdf.PDF_ENCRYPT_AES_256,  # type: ignore[attr-defined]
                 owner_pw=params.password,
                 user_pw=params.password,
             )
@@ -44,7 +44,7 @@ def _protect_one(
     with atomic_output(out) as temporary, pymupdf.open(str(input_path)) as doc:
         if doc.needs_pass and not doc.authenticate(params.password):
             raise UserError("Contraseña incorrecta.")
-        doc.save(str(temporary), encryption=pymupdf.mupdf.PDF_ENCRYPT_NONE)
+        doc.save(str(temporary), encryption=pymupdf.PDF_ENCRYPT_NONE)  # type: ignore[attr-defined]
     progress(1.0, "Listo")
     return out, f"→ {out.name}"
 
