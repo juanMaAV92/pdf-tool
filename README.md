@@ -5,7 +5,7 @@
 **Herramientas para tus PDFs — sin subir nada a internet. Como app de escritorio
 o como comando para agentes de IA y scripts.**
 
-<img width="980" height="680" alt="Screenshot 2026-06-15 at 6 54 49 PM" src="https://github.com/user-attachments/assets/adf416d8-bb05-478d-8a6d-31a35410af28" />
+<img width="980" alt="pdf-tool: pantalla de inicio con las seis herramientas" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot.png" />
 
 Comprime, une, divide, protege y marca tus documentos —y conviértelos desde imágenes—
 desde tu propio ordenador. Gratis, de código abierto y sin anuncios.
