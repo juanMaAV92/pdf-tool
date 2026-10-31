@@ -34,6 +34,8 @@ def _protect_one(
                 encryption=pymupdf.PDF_ENCRYPT_AES_256,  # type: ignore[attr-defined]
                 owner_pw=params.password,
                 user_pw=params.password,
+                garbage=4,
+                deflate=True,
             )
         progress(1.0, "Listo")
         return out, f"→ {out.name}"
@@ -44,7 +46,14 @@ def _protect_one(
     with atomic_output(out) as temporary, pymupdf.open(str(input_path)) as doc:
         if doc.needs_pass and not doc.authenticate(params.password):
             raise UserError("Contraseña incorrecta.")
-        doc.save(str(temporary), encryption=pymupdf.PDF_ENCRYPT_NONE)  # type: ignore[attr-defined]
+        # garbage=4 descarta objetos sin referencias: si no, el PDF conserva el
+        # diccionario de cifrado viejo con los hashes de la contraseña quitada.
+        doc.save(
+            str(temporary),
+            encryption=pymupdf.PDF_ENCRYPT_NONE,  # type: ignore[attr-defined]
+            garbage=4,
+            deflate=True,
+        )
     progress(1.0, "Listo")
     return out, f"→ {out.name}"
 

@@ -213,3 +213,35 @@ def test_cancellation_stops_the_batch(tmp_path):
     with pytest.raises(JobCancelled):
         protect([a, b], ProtectParams(mode="protect", password="x"), progress=cancel)
     assert len(calls) == 1
+
+
+# Un PDF al que se le quitó la contraseña puede conservar el diccionario de
+# cifrado viejo como objeto suelto, con los hashes (/O, /U) de esa contraseña.
+STALE_ENCRYPT = "<</Filter/Standard/V 2/R 3/Length 128/P -1836/O<{h}>/U<{h}>>>"
+
+
+def _pdf_with_stale_encryption(path: Path) -> Path:
+    with pymupdf.open() as d:
+        d.new_page().insert_text((72, 72), "Hola")
+        xref = d.get_new_xref()
+        d.update_object(xref, STALE_ENCRYPT.format(h="AB" * 32))
+        d.save(str(path))
+    assert path.read_bytes().count(b"/Filter/Standard") == 1
+    return path
+
+
+def test_remove_drops_stale_encryption_objects(tmp_path):
+    src = _pdf_with_stale_encryption(tmp_path / "a.pdf")
+    res = protect([src], ProtectParams(mode="remove", password="x"))
+    assert b"/Filter/Standard" not in res.outputs[0].read_bytes()
+
+
+def test_protect_keeps_only_the_new_encryption(tmp_path):
+    src = _pdf_with_stale_encryption(tmp_path / "a.pdf")
+    res = protect([src], ProtectParams(mode="protect", password="nueva"))
+    data = res.outputs[0].read_bytes()
+    assert data.count(b"/Filter/Standard") == 1
+    assert b"/V 2" not in data
+    with pymupdf.open(str(res.outputs[0])) as d:
+        assert d.needs_pass and d.authenticate("nueva")
+        assert "Hola" in d[0].get_text()
