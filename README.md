@@ -2,7 +2,8 @@
 
 # 📄 PDF Tool
 
-**Una app de escritorio sencilla para trabajar con tus PDFs — sin subir nada a internet.**
+**Herramientas para tus PDFs — sin subir nada a internet. Como app de escritorio
+o como comando para agentes de IA y scripts.**
 
 <img width="980" height="680" alt="Screenshot 2026-06-15 at 6 54 49 PM" src="https://github.com/user-attachments/assets/adf416d8-bb05-478d-8a6d-31a35410af28" />
 
@@ -13,14 +14,11 @@ desde tu propio ordenador. Gratis, de código abierto y sin anuncios.
 
 [![CI](https://github.com/juanMaAV92/pdf-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/juanMaAV92/pdf-tool/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/juanMaAV92/pdf-tool?label=versión)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
-[![License: MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/pdf-tool-cli?label=PyPI)](https://pypi.org/project/pdf-tool-cli/)
+[![License: MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](https://github.com/juanMaAV92/pdf-tool/blob/main/LICENSE)
 ![Platform](https://img.shields.io/badge/macOS_·_Windows-lightgrey)
 
 </div>
-
-<!-- 📸 Añade aquí un screenshot o GIF de la app:
-     ![PDF Tool](docs/screenshot.png)
-     Es lo que más convence a quien entra al repo. -->
 
 ---
 
@@ -37,9 +35,10 @@ desde tu propio ordenador. Gratis, de código abierto y sin anuncios.
 
 > 🔐 **Todo ocurre en tu equipo.** Tus archivos nunca salen de tu ordenador.
 
-En **Comprimir PDF**, el modo predeterminado busca la reducción máxima. También
-puedes elegir **Conservar texto y enlaces** desde el selector de modo; el icono
-de ayuda explica la diferencia.
+En **Comprimir PDF**, el modo predeterminado busca la reducción máxima: primero
+reduce las imágenes y, solo si no basta, convierte páginas en imagen (lo avisa,
+porque se pierde el texto seleccionable). Con **Conservar texto y enlaces** nunca
+lo hace; el icono de ayuda explica la diferencia.
 
 ---
 
@@ -89,8 +88,8 @@ Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Códigos de salida
 
 ¡Las contribuciones son bienvenidas! Puedes abrir un *issue* con ideas o errores,
 o mandar un *pull request*. La arquitectura es modular: añadir una herramienta nueva
-es crear una carpeta y la app la descubre sola. En el [roadmap](docs/roadmap.md)
-está lo que viene: una CLI para agentes de IA, a la par con la app.
+es crear una carpeta y la app y la CLI la descubren solas. En el [roadmap](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/roadmap.md)
+está lo que viene: una skill para que los agentes de IA usen la CLI.
 
 <details>
 <summary><b>🛠️ Para desarrolladores (montar el proyecto en local)</b></summary>
@@ -112,38 +111,42 @@ poetry run pytest         # corre los tests
    las dos automáticamente.
 
 La **lógica** (`logic.py`) no importa Flet y se prueba sin UI; la **UI** (`panel.py`)
-solo arma controles. Detalles en [AGENTS.md](AGENTS.md).
+solo arma controles. Detalles en [AGENTS.md](https://github.com/juanMaAV92/pdf-tool/blob/main/AGENTS.md).
 
 ### Publicar una versión (automatizado con GitHub Actions)
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 Eso dispara `release.yml`, que corre los tests, construye macOS (`.dmg`) y Windows
 (instalador Inno Setup) en paralelo, hornea la versión del tag en el build y crea
 un **GitHub Release en borrador** con ambos instaladores. Revísalo y pulsa
 **Publish release** para que las apps instaladas detecten la actualización.
 Si los instaladores se construyen bien, publica también el paquete en **PyPI**
-(Trusted Publishing, entorno `pypi` de GitHub; sin tokens).
+(`pdf-tool-cli`, por Trusted Publishing y sin tokens). Ese paso espera a que lo
+apruebes en Actions (entorno `pypi`), porque una versión en PyPI no se puede
+reemplazar.
 
 Los PRs que cambian la app, el empaquetado o sus dependencias ejecutan además
 **Package smoke**: construye e inspecciona el DMG de macOS y compila e instala de
 forma silenciosa el instalador de Windows. Antes de una release importante,
-seguir la [checklist manual](docs/release-smoke.md) para validar la ventana y los
+seguir la [checklist manual](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/release-smoke.md) para validar la ventana y los
 diálogos nativos.
 
 El número de versión es **el tag** — única fuente de verdad.
 
 ### Build local (para depurar el empaquetado)
 ```bash
-poetry run flet build macos      # -> build/macos/pdf-tool.app
-poetry run flet build windows    # -> build/windows/
+poetry run flet build macos --project pdf-tool --product pdf-tool     # -> build/macos/pdf-tool.app
+poetry run flet build windows --project pdf-tool --product pdf-tool   # -> build/windows/
 ```
+`--project pdf-tool` es obligatorio: sin él, `flet build` toma el nombre del
+paquete (`pdf-tool-cli`) y la app cambia de identidad.
 
 </details>
 
 ---
 
 <div align="center">
-<sub>Hecho con 🐍 Python + <a href="https://flet.dev">Flet</a> · Licencia <a href="LICENSE">MIT</a></sub>
+<sub>Hecho con 🐍 Python + <a href="https://flet.dev">Flet</a> · Licencia <a href="https://github.com/juanMaAV92/pdf-tool/blob/main/LICENSE">MIT</a></sub>
 </div>

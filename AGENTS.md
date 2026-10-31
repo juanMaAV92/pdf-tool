@@ -161,8 +161,8 @@ sigue funcionando; dos herramientas con el mismo `meta.id` son un error.
 
 ## Empaquetado y distribución
 
-- macOS: `poetry run flet build macos` → `.app` → envolver en `.dmg`.
-- Windows: `poetry run flet build windows` → compilar `installer/windows.iss` con Inno Setup → `pdf-tool-setup.exe` (actualiza en sitio, mismo `AppId`).
+- macOS: `poetry run flet build macos --project pdf-tool --product pdf-tool` → `.app` → envolver en `.dmg`.
+- Windows: `poetry run flet build windows --project pdf-tool --product pdf-tool` → compilar `installer/windows.iss` con Inno Setup → `pdf-tool-setup.exe` (actualiza en sitio, mismo `AppId`).
 - **PyPI** (`pdf-tool-cli`, porque `pdf-tool` choca con el `pdftool` existente): `pip install pdf-tool-cli` trae solo la CLI (comando `pdf-tool`); Flet es el extra `[gui]` (comando `pdftool`, que sin Flet explica cómo instalarlo). Flet sigue en `[tool.poetry.dependencies]` (opcional) y no en `[project]`, porque `flet build` lee esa tabla e ignora `optional`: así el bundle conserva Flet. No migrar a `[project]` sin revisar eso. `flet build` también toma de `tool.poetry.name` el nombre interno del bundle: por eso los workflows pasan `--project "pdf-tool"` (cambiarlo rompería la identidad de la app instalada). El job `cli-wheel` de CI instala el wheel sin extras y prueba la CLI.
 - El workflow de release publica en PyPI con Trusted Publishing (job `publish-pypi`, entorno `pypi`) después de construir DMG e instalador, porque una versión subida a PyPI no se puede reemplazar.
 - Distribución por **GitHub Releases** con tag `vX.Y.Z`. El workflow de release toma la versión del tag; el repo del chequeo de actualizaciones está en `GITHUB_REPO` (`core/updater.py`).
