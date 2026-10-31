@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress, run_batch
@@ -95,9 +95,9 @@ def _convert_one(
     progress(0.0, "Convirtiendo imagen…")
     out = output_path_for_images(input_path, out_dir)
     # convert_to_pdf genera una página del tamaño exacto de la imagen.
-    with fitz.open(str(input_path)) as img:
+    with pymupdf.open(str(input_path)) as img:
         pdf_bytes = img.convert_to_pdf()
-    with atomic_output(out) as temporary, fitz.open("pdf", pdf_bytes) as pdf:
+    with atomic_output(out) as temporary, pymupdf.open("pdf", pdf_bytes) as pdf:
         pdf.save(str(temporary), garbage=4, deflate=True)
     progress(1.0, "Listo")
     return out, f"→ {out.name}"

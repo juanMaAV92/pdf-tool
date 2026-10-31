@@ -1,12 +1,12 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX, render_thumbnail
 
 
 def _pdf(path: Path, pages: int = 1) -> Path:
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         for i in range(pages):
             page = doc.new_page()
             page.insert_text((72, 72), f"pagina {i}")
@@ -15,23 +15,23 @@ def _pdf(path: Path, pages: int = 1) -> Path:
 
 
 def _protected_pdf(path: Path) -> Path:
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         doc.new_page()
         doc.save(
-            str(path), encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw="x", user_pw="x"
+            str(path), encryption=pymupdf.PDF_ENCRYPT_AES_256, owner_pw="x", user_pw="x"
         )
     return path
 
 
 def _img(path: Path, w: int = 120, h: int = 90) -> Path:
-    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, w, h))
+    pix = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, w, h))
     pix.clear_with(200)
     pix.save(str(path))
     return path
 
 
 def _height(png: bytes) -> int:
-    return fitz.Pixmap(png).height
+    return pymupdf.Pixmap(png).height
 
 
 def test_pdf_renders_at_default_height(tmp_path):
@@ -74,13 +74,13 @@ def test_page_out_of_range_returns_none(tmp_path):
 def test_degenerate_page_does_not_produce_a_huge_pixmap(tmp_path):
     """Una página de 14400×1 pt pedía un pixmap de ~800000 px de ancho."""
     path = tmp_path / "tira.pdf"
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         doc.new_page(width=14400, height=1)
         doc.save(str(path))
 
     png = render_thumbnail(path)
 
     assert png is not None
-    pix = fitz.Pixmap(png)
+    pix = pymupdf.Pixmap(png)
     assert pix.width <= 4 * THUMBNAIL_HEIGHT_PX
     assert pix.height <= THUMBNAIL_HEIGHT_PX

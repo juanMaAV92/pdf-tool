@@ -39,13 +39,13 @@ funcionan sin Flet instalado, la app se comporta igual y la suite sigue verde.
 
 ## Fase 3 — Publicación en PyPI
 
-- Nombre del paquete: `pdf-tool` (libre en PyPI; `pdftool` está ocupado).
-- `pip install pdf-tool` instala solo la CLI; Flet pasa a un extra `[gui]`.
+- Nombre del paquete: `pdf-tool-cli` (PyPI rechaza `pdf-tool` por parecerse a `pdftool`); el comando sigue siendo `pdf-tool`.
+- `pip install pdf-tool-cli` instala solo la CLI; Flet pasa a un extra `[gui]`.
 - Riesgo principal: comprobar que `flet build` sigue empaquetando la app con
   Flet como dependencia opcional.
 - Publicación automática desde el workflow de release (mismo tag `vX.Y.Z`).
 
-**Hecho cuando:** `pipx install pdf-tool` en una máquina limpia funciona y la
+**Hecho cuando:** `pipx install pdf-tool-cli` en una máquina limpia funciona y la
 release sigue generando DMG e instalador.
 
 ## Fase 4 — Skill para agentes

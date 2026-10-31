@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 import pytest
 
 from pdftool.tools.split.logic import (
@@ -13,7 +13,7 @@ from pdftool.tools.split.params import SplitParams
 
 def _pdf(path: Path, pages: int) -> Path:
     """PDF con texto identificable por página: 'PAGE-0', 'PAGE-1', ..."""
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         for i in range(pages):
             page = doc.new_page()
             page.insert_text((72, 72), f"PAGE-{i}")
@@ -117,16 +117,16 @@ def test_split_ranges_creates_one_file_per_range(tmp_path):
     src = _pdf(tmp_path / "doc.pdf", 10)
     result = split([src], SplitParams(mode="ranges", ranges="1-3, 5"))
     assert len(result.outputs) == 2
-    with fitz.open(str(result.outputs[0])) as d:
+    with pymupdf.open(str(result.outputs[0])) as d:
         assert d.page_count == 3
-    with fitz.open(str(result.outputs[1])) as d:
+    with pymupdf.open(str(result.outputs[1])) as d:
         assert d.page_count == 1
 
 
 def test_split_ranges_keeps_correct_pages(tmp_path):
     src = _pdf(tmp_path / "doc.pdf", 10)
     result = split([src], SplitParams(mode="ranges", ranges="5"))
-    with fitz.open(str(result.outputs[0])) as d:
+    with pymupdf.open(str(result.outputs[0])) as d:
         assert "PAGE-4" in d[0].get_text()  # página 5 (1-indexed) == índice 4
 
 
@@ -135,7 +135,7 @@ def test_split_single_page_per_file(tmp_path):
     result = split([src], SplitParams(mode="single"))
     assert len(result.outputs) == 4
     for out in result.outputs:
-        with fitz.open(str(out)) as d:
+        with pymupdf.open(str(out)) as d:
             assert d.page_count == 1
 
 
@@ -146,7 +146,7 @@ def test_split_every_n_pages(tmp_path):
     assert len(result.outputs) == 3
     counts = []
     for out in result.outputs:
-        with fitz.open(str(out)) as d:
+        with pymupdf.open(str(out)) as d:
             counts.append(d.page_count)
     assert counts == [4, 4, 2]
 

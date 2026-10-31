@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 import pytest
 
 from pdftool.tools.images2pdf.logic import images_to_pdf, output_path_for_images
@@ -9,7 +9,7 @@ from pdftool.tools.images2pdf.params import ImagesToPdfParams
 
 def _img(path: Path, w: int, h: int) -> Path:
     """Imagen sólida del tamaño pedido; el formato lo decide la extensión."""
-    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, w, h))
+    pix = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, w, h))
     pix.clear_with(200)
     pix.save(str(path))
     return path
@@ -46,7 +46,7 @@ def test_one_pdf_per_image(tmp_path):
     assert [item.message for item in res.items] == ["→ a.pdf", "→ b.pdf", "→ c.pdf"]
     assert all(item.ok for item in res.items)
     for out in res.outputs:
-        with fitz.open(str(out)) as d:
+        with pymupdf.open(str(out)) as d:
             assert d.page_count == 1
 
 
@@ -54,9 +54,9 @@ def test_page_keeps_image_proportions(tmp_path):
     wide = _img(tmp_path / "wide.png", 200, 100)  # apaisada (2:1)
     tall = _img(tmp_path / "tall.png", 100, 200)  # vertical (1:2)
     res = images_to_pdf([wide, tall], ImagesToPdfParams())
-    with fitz.open(str(res.outputs[0])) as d:
+    with pymupdf.open(str(res.outputs[0])) as d:
         r0 = d[0].rect
-    with fitz.open(str(res.outputs[1])) as d:
+    with pymupdf.open(str(res.outputs[1])) as d:
         r1 = d[0].rect
     assert r0.width / r0.height == pytest.approx(2.0, rel=0.02)
     assert r1.width / r1.height == pytest.approx(0.5, rel=0.02)

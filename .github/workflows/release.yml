@@ -35,7 +35,7 @@ jobs:
       - name: Install Poetry
         run: pipx install poetry==2.4.1
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --all-extras
       - name: Check formatting
         run: poetry run ruff format --check pdftool tests
       - name: Lint
@@ -48,7 +48,7 @@ jobs:
   # 2a) Build macOS -> .dmg
   build-macos:
     needs: test
-    runs-on: macos-14 # Apple Silicon
+    runs-on: macos-15 # Apple Silicon (macos-14 se retira el 2-nov-2026)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -71,15 +71,15 @@ jobs:
       - name: Export runtime requirements for the bundle
         run: |
           poetry self add poetry-plugin-export==1.10.1
-          poetry export --without dev -f requirements.txt -o requirements.txt
+          poetry export --without dev --all-extras -f requirements.txt -o requirements.txt
       - name: Install deps (for flet CLI)
-        run: poetry install
+        run: poetry install --all-extras
       - name: Build macOS app
         # --arch arm64 x86_64: bundle universal. Sin esto, flet empaqueta el
         # Python embebido solo para la arch del runner (Apple Silicon), y en un
         # Mac Intel la ventana abre pero el backend Python no arranca -> pantalla
         # en blanco. El universal mete ambas arches en el mismo .app/.dmg.
-        run: poetry run flet build macos --arch arm64 x86_64 --build-version "$VERSION" --product "pdf-tool" --org "com.juanmaav" -v
+        run: poetry run flet build macos --arch arm64 x86_64 --build-version "$VERSION" --project "pdf-tool" --product "pdf-tool" --org "com.juanmaav" -v
       - name: Verify universal binary (arm64 + x86_64)
         run: |
           APP=$(ls -d build/macos/*.app | head -1)
@@ -136,12 +136,12 @@ jobs:
         shell: bash
         run: |
           poetry self add poetry-plugin-export==1.10.1
-          poetry export --without dev -f requirements.txt -o requirements.txt
+          poetry export --without dev --all-extras -f requirements.txt -o requirements.txt
       - name: Install deps (for flet CLI)
-        run: poetry install
+        run: poetry install --all-extras
       - name: Build Windows app
         shell: pwsh
-        run: poetry run flet build windows --build-version "$env:VERSION" --product "pdf-tool" --org "com.juanmaav" -v
+        run: poetry run flet build windows --build-version "$env:VERSION" --project "pdf-tool" --product "pdf-tool" --org "com.juanmaav" -v
       - name: List build output (debug)
         shell: bash
         run: ls -la build/windows
@@ -158,7 +158,49 @@ jobs:
           name: windows-setup
           path: "pdf-tool-*-windows-setup.exe"
 
-  # 3) Publica el GitHub Release (en BORRADOR) con ambos instaladores, sus
+  # 2c) Paquete Python (wheel + sdist) para PyPI, con la versión del tag.
+  build-dist:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry==2.4.1
+      - name: Derive version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - name: Stamp version (pyproject + __init__)
+        run: |
+          poetry version "$VERSION"
+          sed -i "s/^__version__ = .*/__version__ = \"$VERSION\"/" pdftool/__init__.py
+      - name: Build
+        run: poetry build
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: python-dist
+          path: dist/
+
+  # 3a) Publica en PyPI con Trusted Publishing (OIDC, sin token guardado).
+  #     Espera a los instaladores: subir a PyPI no se puede deshacer para una
+  #     versión, así que si falla el DMG o el EXE no se publica nada.
+  publish-pypi:
+    needs: [build-dist, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pdf-tool-cli
+    permissions:
+      id-token: write # Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: python-dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+  # 3b) Publica el GitHub Release (en BORRADOR) con ambos instaladores, sus
   #    checksums y una attestation de procedencia.
   release:
     needs: [build-macos, build-windows]

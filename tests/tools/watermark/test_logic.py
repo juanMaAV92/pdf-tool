@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 import pytest
 from pydantic import ValidationError
 
@@ -9,7 +9,7 @@ from pdftool.tools.watermark.params import WatermarkParams
 
 
 def _pdf(path: Path, pages: int = 1, text: str = "Hola") -> Path:
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         for _ in range(pages):
             page = doc.new_page()
             page.insert_text((72, 72), text)
@@ -51,7 +51,7 @@ def test_watermark_adds_text_and_keeps_pages(tmp_path):
     result = watermark([a], WatermarkParams(text="SECRETO", opacity=0.2))
     out = result.outputs[0]
     assert out.exists()
-    with fitz.open(str(out)) as d:
+    with pymupdf.open(str(out)) as d:
         assert d.page_count == 2
         page_text = d[0].get_text()
     assert "SECRETO" in page_text
@@ -94,11 +94,11 @@ def test_watermark_writes_to_output_dir(tmp_path):
 def test_huge_page_bounds_the_number_of_stamps(tmp_path, monkeypatch):
     """Los bucles del mosaico crecían con el tamaño de la página."""
     src = tmp_path / "poster.pdf"
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         doc.new_page(width=14400, height=14400)
         doc.save(str(src))
     calls = []
-    original = fitz.TextWriter.append
+    original = pymupdf.TextWriter.append
 
     def counting(self, *args, **kwargs):
         calls.append(1)
@@ -107,7 +107,7 @@ def test_huge_page_bounds_the_number_of_stamps(tmp_path, monkeypatch):
     import pdftool.tools.watermark.logic as logic
 
     monkeypatch.setattr(logic, "_MAX_STAMPS_PER_PAGE", 200)
-    monkeypatch.setattr(fitz.TextWriter, "append", counting)
+    monkeypatch.setattr(pymupdf.TextWriter, "append", counting)
     watermark([src], WatermarkParams(text="X", font_size=8))
     assert 0 < len(calls) <= 200
 
@@ -116,9 +116,9 @@ def test_huge_page_bounds_the_number_of_stamps(tmp_path, monkeypatch):
 def test_cap_does_not_change_spacing_on_real_page_sizes(size):
     from pdftool.tools.watermark.logic import _grid_steps
 
-    text_w = fitz.get_text_length("X", fontsize=8)
+    text_w = pymupdf.get_text_length("X", fontsize=8)
     step_x, step_y = max(text_w + 16, 32), 32
-    assert _grid_steps(fitz.Rect(0, 0, *size), step_x, step_y, text_w) == (
+    assert _grid_steps(pymupdf.Rect(0, 0, *size), step_x, step_y, text_w) == (
         step_x,
         step_y,
     )
@@ -126,15 +126,15 @@ def test_cap_does_not_change_spacing_on_real_page_sizes(size):
 
 def _reference_tiles(page, text, font_size, color, opacity):
     """Implementación original (un insert_text por sello), como referencia."""
-    rot = fitz.Matrix(45)
-    text_w = fitz.get_text_length(text, fontsize=font_size)
+    rot = pymupdf.Matrix(45)
+    text_w = pymupdf.get_text_length(text, fontsize=font_size)
     step_x = max(text_w + font_size * 2, font_size * 4)
     step_y = font_size * 4
     y = step_y / 2
     while y < page.rect.height + step_y:
         x = -text_w
         while x < page.rect.width + step_x:
-            pivot = fitz.Point(x, y)
+            pivot = pymupdf.Point(x, y)
             page.insert_text(
                 pivot,
                 text,
@@ -150,13 +150,13 @@ def _reference_tiles(page, text, font_size, color, opacity):
 
 def test_output_matches_the_original_tiling_pixel_for_pixel(tmp_path):
     src = tmp_path / "doc.pdf"
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         doc.new_page(width=595, height=842)
         doc.save(str(src))
     params = WatermarkParams(text="CONFIDENCIAL", font_size=40, opacity=0.3)
     out = watermark([src], params).outputs[0]
 
-    with fitz.open() as ref, fitz.open(str(out)) as got:
+    with pymupdf.open() as ref, pymupdf.open(str(out)) as got:
         page = ref.new_page(width=595, height=842)
         _reference_tiles(page, "CONFIDENCIAL", 40, tuple(params.color), 0.3)
         expected = page.get_pixmap(dpi=36).samples
@@ -169,7 +169,7 @@ def test_large_page_with_small_text_is_fast(tmp_path):
     import time
 
     src = tmp_path / "a0.pdf"
-    with fitz.open() as doc:
+    with pymupdf.open() as doc:
         doc.new_page(width=2384, height=3370)
         doc.save(str(src))
     started = time.monotonic()
