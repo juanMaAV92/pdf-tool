@@ -20,7 +20,10 @@ packages = [{ include = "pdftool" }]
 python = "^3.11"
 # 0.28.2 fijo: 0.28.3 tiene una regresión en macOS donde el FilePicker no abre
 # (flet issue #5334). 0.28.2 es la última sana de la serie 0.28.
-flet = "0.28.2"
+# Opcional: `pip install pdf-tool` trae solo la CLI; la app va en el extra [gui].
+# Se queda en [tool.poetry.dependencies] (no en [project]) porque `flet build`
+# lee esta tabla e ignora `optional`, así que el bundle sigue incluyendo Flet.
+flet = { version = "0.28.2", optional = true }
 pymupdf = "^1.24.3"
 pydantic = "^2.6.0"
 platformdirs = "^4.2.0"
