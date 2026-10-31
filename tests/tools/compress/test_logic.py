@@ -225,6 +225,35 @@ def test_corrupt_file_does_not_abort_the_batch(tmp_path, small_pdf):
     assert result.summary.startswith("2 de 3 archivos")
 
 
+@pytest.mark.parametrize(
+    "content",
+    [b"esto no es un pdf\n", b"%PDF-1.7\n1 0 obj\n<</Type/Catalog"],
+    ids=["texto", "truncado"],
+)
+def test_invalid_file_under_target_is_reported_not_copied(tmp_path, content):
+    """Pesar menos que el objetivo no exime de abrirlo: si no es un PDF válido,
+    falla en vez de copiarse y reportarse como «sin cambios»."""
+    bad = tmp_path / "roto.pdf"
+    bad.write_bytes(content)
+
+    with pytest.raises(Exception):  # noqa: B017 - el error lo traduce run_batch
+        compress([bad], CompressParams(target_mb=50.0))
+    assert list(tmp_path.iterdir()) == [bad]
+
+
+def test_invalid_file_under_target_fails_its_batch_item(tmp_path, small_pdf):
+    import shutil
+
+    good = shutil.copy2(small_pdf, tmp_path / "uno.pdf")
+    bad = tmp_path / "roto.pdf"
+    bad.write_bytes(b"esto no es un pdf\n")
+
+    result = compress([Path(good), bad], CompressParams(target_mb=50.0))
+
+    assert [item.ok for item in result.items] == [True, False]
+    assert result.items[1].output_path is None
+
+
 def test_failed_file_leaves_no_partial_output(tmp_path, big_pdf, monkeypatch):
     """Si un intento falla tras escribir una salida intermedia, se retira."""
     import pdftool.tools.compress.logic as logic

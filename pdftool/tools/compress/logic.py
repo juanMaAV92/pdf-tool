@@ -243,6 +243,9 @@ def _compress_one(
     progress(0.0, f"Tamaño original: {original:.2f} MB")
 
     if original <= target_mb:
+        # Abrirlo antes de copiar: un archivo dañado o que no es PDF debe
+        # fallar aquí, no reportarse como «sin cambios».
+        pymupdf.open(str(input_path)).close()
         atomic_copy(input_path, out)
         progress(1.0, "Ya está bajo el objetivo")
         return _Compressed(
