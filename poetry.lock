@@ -532,22 +532,22 @@ web = ["flet-web (==0.28.2)"]
 
 [[package]]
 name = "flet-cli"
-version = "0.28.2"
+version = "0.81.0"
 description = "Flet CLI"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["dev"]
 files = [
-    {file = "flet_cli-0.28.2-py3-none-any.whl", hash = "sha256:724b59ebc4f01949ac8bc15b35d430723022023e62725d1af4a384f4cc33dd0c"},
+    {file = "flet_cli-0.81.0-py3-none-any.whl", hash = "sha256:040df1520b78da1553dc74e84016d49c51818f52303a8dd6bbb48ce1fdfa2b98"},
+    {file = "flet_cli-0.81.0.tar.gz", hash = "sha256:e38f01b4500f108c3a146e307b7dca3edc8f54e14b054004f1f7e812b2e528b9"},
 ]
 
 [package.dependencies]
-cookiecutter = ">=2.6.0,<3.0.0"
-flet = "0.28.2"
-packaging = "*"
-qrcode = ">=7.4.2,<8.0.0"
-toml = ">=0.10.2,<0.11.0"
-watchdog = ">=4.0.0,<5.0.0"
+cookiecutter = ">=2.6.0"
+flet = "*"
+packaging = ">=25.0"
+qrcode = ">=7.4.2"
+watchdog = ">=4.0.0"
 
 [[package]]
 name = "h11"
@@ -1113,14 +1113,14 @@ signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
 name = "packaging"
-version = "23.2"
+version = "26.3"
 description = "Core utilities for Python packages"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "packaging-23.2-py3-none-any.whl", hash = "sha256:8c491190033a9af7e1d931d0b5dacc2ef47509b34dd0de67ed209b5203fc88c7"},
-    {file = "packaging-23.2.tar.gz", hash = "sha256:048fb0e9405036518eaaf48a55953c750c11e1a1b68e0dd1a9d62ed0c092cfc5"},
+    {file = "packaging-26.3-py3-none-any.whl", hash = "sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"},
+    {file = "packaging-26.3.tar.gz", hash = "sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79"},
 ]
 
 [[package]]
@@ -1681,18 +1681,6 @@ files = [
 ]
 
 [[package]]
-name = "toml"
-version = "0.10.2"
-description = "Python Library for Tom's Obvious, Minimal Language"
-optional = false
-python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
-groups = ["dev"]
-files = [
-    {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
-    {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
-]
-
-[[package]]
 name = "typing-extensions"
 version = "4.16.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -1803,4 +1791,4 @@ gui = ["flet"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "d2dc996ee7c91c6d9170395ccc89cfcc83084f01b2d1bed7479b47a648e9f1bf"
+content-hash = "59c0c787d57d2cd72ffff9e38a25a9affe4371e125f5024b402d74492145effc"

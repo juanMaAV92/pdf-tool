@@ -40,7 +40,7 @@ mypy = "^2.3.1"
 pytest-cov = "^7.1.0"
 # flet lo instala solo al primer `flet build`; declararlo deja el entorno
 # reproducible y permite testear cómo arma el bundle (tests/core/test_packaging.py).
-flet-cli = "0.28.2"
+flet-cli = "0.81.0"
 
 [tool.poetry.scripts]
 # App de escritorio (requiere el extra [gui]).
