@@ -12,9 +12,9 @@ from pdftool.ui.registry import register
 class ImagesToPdfTool(MultiFileToolPanel):
     spec = SPEC
     icon = ft.Icons.PHOTO_LIBRARY
-    run_label = "Convertir"
+    run_label_key = "tool.images2pdf.ui.run"
     run_icon = ft.Icons.PICTURE_AS_PDF
-    pick_label = "Añadir imágenes"
+    pick_label_key = "tool.images2pdf.ui.pick"
     pick_icon = ft.Icons.ADD_PHOTO_ALTERNATE
     show_thumbnails = True
 

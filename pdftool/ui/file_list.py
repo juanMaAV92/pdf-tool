@@ -7,8 +7,9 @@ import flet as ft
 
 from pdftool.core.plugin import ToolResult
 from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX
+from pdftool.i18n import t
 from pdftool.ui.accessibility import NamedIconButton
-from pdftool.ui.panel_base import WEB_MODE_MSG, BaseToolPanel
+from pdftool.ui.panel_base import BaseToolPanel
 from pdftool.ui.platform import open_file, shortcut_label
 from pdftool.ui.thumbnails import MISSING, ThumbnailTask, get_cached, load_async
 
@@ -35,15 +36,17 @@ class MultiFileToolPanel(BaseToolPanel):
         self._thumb_generation = getattr(self, "_thumb_generation", -1) + 1
         self._picker.on_result = self._on_pick
         self._clear_btn = ft.OutlinedButton(
-            "Limpiar lista",
+            t("ui.files.clear"),
             icon=ft.Icons.CLEAR_ALL,
             disabled=True,
             on_click=self._clear_all,
         )
         self._pick_btn = ft.FilledTonalButton(
-            self.pick_label,
+            t(self.pick_label_key),
             icon=self.pick_icon,
-            tooltip=f"{self.pick_label} ({shortcut_label('O')})",
+            tooltip=t(
+                "ui.shortcut", label=t(self.pick_label_key), keys=shortcut_label("O")
+            ),
             on_click=lambda _e: self._picker.pick_files(
                 allow_multiple=True,
                 allowed_extensions=list(self.allowed_extensions),
@@ -136,13 +139,13 @@ class MultiFileToolPanel(BaseToolPanel):
                         size=20,
                         color=ft.Colors.TERTIARY,
                         tooltip=text,
-                        semantics_label=f"Aviso: {text}",
+                        semantics_label=t("ui.files.warning", text=text),
                     )
                 )
             controls += [
                 NamedIconButton(
                     ft.Icons.OPEN_IN_NEW,
-                    f"Abrir resultado de {path.name}",
+                    t("ui.files.open_result", name=path.name),
                     visible=row_path is not None,
                     on_click=lambda _e, p=row_path: open_file(p),
                 ),
@@ -151,13 +154,13 @@ class MultiFileToolPanel(BaseToolPanel):
                 controls += [
                     NamedIconButton(
                         ft.Icons.ARROW_UPWARD,
-                        f"Subir {path.name}",
+                        t("ui.files.move_up", name=path.name),
                         disabled=index == 0 or self._running,
                         on_click=lambda _e, i=index: self._move(i, -1),
                     ),
                     NamedIconButton(
                         ft.Icons.ARROW_DOWNWARD,
-                        f"Bajar {path.name}",
+                        t("ui.files.move_down", name=path.name),
                         disabled=index == len(self._files) - 1 or self._running,
                         on_click=lambda _e, i=index: self._move(i, 1),
                     ),
@@ -165,7 +168,7 @@ class MultiFileToolPanel(BaseToolPanel):
             controls += [
                 NamedIconButton(
                     ft.Icons.CLOSE,
-                    f"Quitar {path.name} de la lista",
+                    t("ui.files.remove", name=path.name),
                     disabled=self._running,
                     on_click=lambda _e, i=index: self._remove(i),
                 ),
@@ -186,9 +189,7 @@ class MultiFileToolPanel(BaseToolPanel):
         self._sync_ready_state()
         self._clear_btn.disabled = not self._files or self._running
         n = len(self._files)
-        self._counter.value = (
-            "" if n == 0 else "1 archivo" if n == 1 else f"{n} archivos"
-        )
+        self._counter.value = "" if n == 0 else t("ui.files.count", count=n)
         self._page.update()
 
     def _clear_results(self) -> None:
@@ -225,8 +226,8 @@ class MultiFileToolPanel(BaseToolPanel):
         self._refresh()
         if removed:
             self._notify(
-                "Lista vaciada.",
-                action="Deshacer",
+                t("ui.files.cleared"),
+                action=t("ui.files.undo"),
                 on_action=lambda _e: self._restore(removed),
             )
 
@@ -252,7 +253,7 @@ class MultiFileToolPanel(BaseToolPanel):
                 self._files.append(path)
                 added += 1
         if added == 0 and e.files:
-            self._set_status(WEB_MODE_MSG)
+            self._set_status(t("ui.web_mode"))
         else:
             self._hide_result_actions()
             self._set_status("")

@@ -17,9 +17,9 @@ from pdftool.ui.registry import register
 class MergeTool(MultiFileToolPanel):
     spec = SPEC
     icon = ft.Icons.MERGE
-    run_label = "Unir"
+    run_label_key = "tool.merge.ui.run"
     run_icon = ft.Icons.MERGE_TYPE
-    pick_label = "Añadir PDFs"
+    pick_label_key = "ui.panel.add_pdfs"
     pick_icon = ft.Icons.UPLOAD_FILE
     show_thumbnails = True
     reorderable = True

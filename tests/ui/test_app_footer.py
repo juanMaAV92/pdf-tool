@@ -14,14 +14,15 @@ def _footer(called):
 
 
 def test_author_credit_is_visible_in_the_footer():
-    """La firma del autor se ve sin abrir menús, discreta y con enlace."""
+    """La firma del autor se ve sin abrir menús, discreta y con enlace a la
+    página de pdf-tool."""
     called = []
     footer, _theme_item = _footer(called)
     credit = footer.controls[0]
 
     assert isinstance(credit, ft.TextButton)
-    assert credit.text == "Hecho por @juanmaav92"
-    assert credit.tooltip == "Visitar el sitio del autor"
+    assert credit.text == "Powered by @juanmaav92"
+    assert credit.tooltip == "Visitar la página de pdf-tool"
     credit.on_click(None)
     assert called == ["author"]
 

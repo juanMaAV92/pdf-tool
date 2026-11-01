@@ -10,17 +10,27 @@ from pdftool.core.config import load_settings, save_settings
 from pdftool.core.jobs import run_job, shutdown_job_executor
 from pdftool.core.plugin import ToolContext
 from pdftool.core.updater import GITHUB_REPO, check_for_update
+from pdftool.i18n import (
+    available_languages,
+    current_language,
+    resolve_language,
+    set_language,
+    t,
+)
 from pdftool.ui import registry
 from pdftool.ui.accessibility import icon_content
-from pdftool.ui.logs import LOG_LABEL, download_log_button, make_log_picker
+from pdftool.ui.logs import download_log_button, log_label, make_log_picker
 from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 from pdftool.ui.thumbnails import shutdown_thumbnail_executor
 
 AUTHOR_HANDLE = "@juanmaav92"
-AUTHOR_SITE = "https://juanMaAV92.github.io"
+# El pie lleva a la página del producto (ayuda, instalación, novedades).
+PRODUCT_SITE = "https://juanmaav92.github.io/pdf-tool"
 
 
-def _build_footer(theme_label, on_theme, on_log, on_author):
+def _build_footer(
+    theme_label, on_theme, on_log, on_site, language_item=None, on_menu_open=None
+):
     """Pie: firma del autor a la izquierda; versión y utilidades a la derecha.
 
     Devuelve (pie, ítem del tema): el ítem se reetiqueta al cambiar el tema.
@@ -28,13 +38,19 @@ def _build_footer(theme_label, on_theme, on_log, on_author):
     theme_item = ft.PopupMenuItem(
         text=theme_label, icon=ft.Icons.BRIGHTNESS_6, on_click=on_theme
     )
+    items = [theme_item]
+    if language_item is not None:
+        items.append(language_item)
+    items.append(
+        ft.PopupMenuItem(text=log_label(), icon=ft.Icons.DOWNLOAD, on_click=on_log)
+    )
     # Visible en todas las pantallas pero discreta: mismo tono apagado y
     # tamaño que la versión, sin competir con el resultado del panel.
     credit = ft.TextButton(
-        f"Hecho por {AUTHOR_HANDLE}",
+        t("ui.footer.credit", handle=AUTHOR_HANDLE),
         icon=ft.Icons.OPEN_IN_NEW,
-        tooltip="Visitar el sitio del autor",
-        on_click=on_author,
+        tooltip=t("ui.footer.credit_tooltip"),
+        on_click=on_site,
         style=ft.ButtonStyle(
             color=ft.Colors.ON_SURFACE_VARIANT,
             icon_size=14,
@@ -50,17 +66,13 @@ def _build_footer(theme_label, on_theme, on_log, on_author):
                 f"v{__version__}",
                 size=11,
                 color=ft.Colors.ON_SURFACE_VARIANT,
-                tooltip=f"Versión de la aplicación: {__version__}",
+                tooltip=t("ui.footer.version", version=__version__),
             ),
             ft.PopupMenuButton(
-                content=icon_content(ft.Icons.MORE_HORIZ, "Opciones de la aplicación"),
-                tooltip="Opciones de la aplicación",
-                items=[
-                    theme_item,
-                    ft.PopupMenuItem(
-                        text=LOG_LABEL, icon=ft.Icons.DOWNLOAD, on_click=on_log
-                    ),
-                ],
+                content=icon_content(ft.Icons.MORE_HORIZ, t("ui.footer.options")),
+                tooltip=t("ui.footer.options"),
+                items=items,
+                on_open=on_menu_open,
             ),
         ],
     )
@@ -135,8 +147,8 @@ def _build_home(tools, on_open):
     )
     return ft.Column(
         [
-            ft.Text("Herramientas PDF", size=28, weight=ft.FontWeight.BOLD),
-            ft.Text("Elige una herramienta para empezar."),
+            ft.Text(t("ui.home.title"), size=28, weight=ft.FontWeight.BOLD),
+            ft.Text(t("ui.home.subtitle")),
             ft.Container(height=8),
             cards,
         ],
@@ -178,7 +190,7 @@ class _Sidebar(ft.Container):
 
     def __init__(self, tools, on_home, on_tool) -> None:
         self.home_button = _nav_button(
-            ft.Icons.GRID_VIEW, "Inicio", lambda _e: on_home()
+            ft.Icons.GRID_VIEW, t("ui.nav.home"), lambda _e: on_home()
         )
         self.tool_buttons: list[ft.TextButton] = [
             _nav_button(tool.icon, tool.meta.name, lambda _e, i=index: on_tool(i))
@@ -221,14 +233,16 @@ class _UpdateBanner(ft.Container):
         self._app_page = page
         self._url: str | None = None
         self.text = ft.Text(
-            "Hay una nueva versión disponible. ¿Descargarla ahora?",
+            t("ui.update.text"),
             color=ft.Colors.ON_PRIMARY_CONTAINER,
             weight=ft.FontWeight.W_500,
             expand=True,
         )
-        self.download_button = ft.FilledButton("Descargar", on_click=self._download)
+        self.download_button = ft.FilledButton(
+            t("ui.update.download"), on_click=self._download
+        )
         self.dismiss_button = ft.TextButton(
-            "Ahora no",
+            t("ui.update.dismiss"),
             on_click=self._dismiss,
             style=ft.ButtonStyle(color=ft.Colors.ON_PRIMARY_CONTAINER),
         )
@@ -288,11 +302,12 @@ def _start_update_check(
     return thread
 
 
-_MODE_NAMES = {"system": "Sistema", "light": "Claro", "dark": "Oscuro"}
-
-
 def _theme_label(mode: str) -> str:
-    return f"Tema: {_MODE_NAMES[mode]} · cambiar a {_MODE_NAMES[next_mode(mode)]}"
+    return t(
+        "ui.theme.label",
+        current=t(f"ui.theme.{mode}"),
+        next=t(f"ui.theme.{next_mode(mode)}"),
+    )
 
 
 def _configure_window(page) -> None:
@@ -339,10 +354,69 @@ def _notify(page, message: str) -> None:
     page.open(ft.SnackBar(ft.Text(message)))
 
 
+def any_task_running(tools) -> bool:
+    """Alguna herramienta tiene una tarea en curso (bloquea cambiar el idioma)."""
+    return any(getattr(tool, "_running", False) for tool in tools)
+
+
+def _language_label() -> str:
+    names = dict(available_languages())
+    return t("ui.language.menu", name=names.get(current_language(), current_language()))
+
+
+def _language_dialog(page, settings, on_choose) -> ft.AlertDialog:
+    """Diálogo con «Idioma del sistema» y cada idioma por su nombre propio."""
+    options = [("system", t("ui.language.system")), *available_languages()]
+    group = ft.RadioGroup(
+        value=settings.language,
+        content=ft.Column([ft.Radio(value=code, label=name) for code, name in options]),
+    )
+    dialog = ft.AlertDialog(title=ft.Text(t("ui.language.title")), content=group)
+
+    def chosen(_e) -> None:
+        page.close(dialog)
+        if group.value and group.value != settings.language:
+            on_choose(group.value)
+
+    group.on_change = chosen
+    dialog.actions = [
+        ft.TextButton(t("ui.language.cancel"), on_click=lambda _e: page.close(dialog))
+    ]
+    return dialog
+
+
+# Estado de la app montada por página: herramientas e ítem de idioma.
+_STATE: dict[int, dict] = {}
+
+
+def current_tools(page) -> list:
+    return _STATE[id(page)]["tools"]
+
+
+def refresh_language_item(page) -> None:
+    """Desactiva el ítem de idioma mientras haya una tarea en curso."""
+    state = _STATE[id(page)]
+    item = state["language_item"]
+    busy = any_task_running(state["tools"])
+    item.disabled = busy
+    item.text = _language_label()
+    item.tooltip = t("ui.language.busy") if busy else None
+
+
+def choose_language(page, settings, code: str) -> None:
+    """Guarda el idioma y reconstruye la interfaz en él, al momento."""
+    if any_task_running(current_tools(page)):
+        return
+    settings.language = code
+    save_settings(settings)
+    set_language(resolve_language(code))
+    _mount(page, settings)
+    page.update()
+
+
 def build_app(page: ft.Page) -> None:
-    registry.discover()
-    tools = registry.get_tools()
     settings = load_settings()
+    set_language(resolve_language(settings.language))
 
     # Libera los workers compartidos cuando Flet cierra la sesión de escritorio
     # o desconecta la vista web. Las tareas en curso ya tienen además su propio
@@ -357,6 +431,28 @@ def build_app(page: ft.Page) -> None:
     page.theme = build_theme()
     page.theme_mode = resolve_mode(settings.theme_mode)
     _configure_window(page)
+    _mount(page, settings)
+
+    def _on_update(url: str) -> None:
+        _STATE[id(page)]["update_url"] = url
+        _STATE[id(page)]["banner"].show(url)
+
+    _start_update_check(
+        _on_update, lambda: check_for_update(current=__version__, repo=GITHUB_REPO)
+    )
+
+
+def _mount(page, settings) -> None:
+    """Monta (o vuelve a montar, al cambiar de idioma) toda la interfaz.
+
+    Herramientas nuevas: sus textos se crean en el idioma activo. Se retiran
+    los controles y los `FilePicker` del montaje anterior.
+    """
+    previous = _STATE.get(id(page), {})
+    page.controls.clear()
+    page.overlay.clear()
+    registry.discover()
+    tools = registry.get_tools()
 
     ctx = ToolContext(page=page, run_job=run_job, settings=settings)
     content = ft.Container(expand=True, padding=24)
@@ -392,17 +488,41 @@ def build_app(page: ft.Page) -> None:
     update_banner = _build_update_banner(page)
 
     log_picker = make_log_picker(
-        on_saved=lambda path: _notify(page, f"Informe guardado en «{path.name}».")
+        on_saved=lambda path: _notify(page, t("ui.log.saved", name=path.name))
     )
     page.overlay.append(log_picker)
 
+    language_item = ft.PopupMenuItem(
+        text=_language_label(), icon=ft.Icons.TRANSLATE, data="language"
+    )
+
+    def open_language(_e) -> None:
+        if any_task_running(tools):
+            return
+        page.open(
+            _language_dialog(
+                page, settings, lambda code: choose_language(page, settings, code)
+            )
+        )
+
+    language_item.on_click = open_language
+
     footer, theme_item = _build_footer(
-        "Cambiar tema",
+        _theme_label(settings.theme_mode),
         toggle_theme,
         download_log_button(log_picker).on_click,
-        lambda _e: page.launch_url(AUTHOR_SITE),
+        lambda _e: page.launch_url(PRODUCT_SITE),
+        language_item,
+        # Al abrir el menú: el ítem de idioma refleja si hay una tarea en curso.
+        lambda _e: refresh_language_item(page),
     )
-    refresh_theme_label()
+
+    _STATE[id(page)] = {
+        "tools": tools,
+        "language_item": language_item,
+        "banner": update_banner,
+        "update_url": previous.get("update_url"),
+    }
 
     page.add(
         ft.Column(
@@ -416,10 +536,5 @@ def build_app(page: ft.Page) -> None:
         )
     )
     open_home()
-
-    def _on_update(url: str) -> None:
-        update_banner.show(url)
-
-    _start_update_check(
-        _on_update, lambda: check_for_update(current=__version__, repo=GITHUB_REPO)
-    )
+    if previous.get("update_url"):
+        update_banner.show(previous["update_url"])
