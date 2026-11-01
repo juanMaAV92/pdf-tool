@@ -269,3 +269,28 @@ def test_skill_install_and_upgrade_commands():
     ):
         assert text in body, text
     assert "pdf-tool-cli[gui]" not in body
+
+
+def test_skill_follows_the_agent_skills_standard():
+    """Formato abierto (agentskills.io) para que la usen Codex, Cursor, Gemini…"""
+    import re
+
+    meta, body = _skill()
+    name = meta["name"]
+    assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name)
+    assert len(name) <= 64
+    # El nombre debe coincidir con su carpeta.
+    assert name == SKILL.parent.name
+    assert 0 < len(meta["description"]) <= 1024
+    # Neutral: nada que solo entienda un agente concreto.
+    assert "claude" not in (meta["description"] + body).lower()
+
+
+def test_readme_offers_every_install_route():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for text in (
+        "/plugin marketplace add juanMaAV92/pdf-tool",
+        "npx skills add juanMaAV92/pdf-tool",
+        "skills/pdf-tool",
+    ):
+        assert text in readme, text

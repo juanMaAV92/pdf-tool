@@ -82,17 +82,39 @@ Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Códigos de salida
 `0` ok · `1` error al procesar · `2` uso inválido · `3` algún archivo del lote falló.
 `pipx install 'pdf-tool-cli[gui]'` instala además la app (comando `pdftool`).
 
-### Plugin para Claude Code
+### Instalar la skill en tu agente
 
 Una [skill](https://github.com/juanMaAV92/pdf-tool/blob/main/skills/pdf-tool/SKILL.md)
-le enseña a Claude Code a usar `pdf-tool` para crear o modificar PDFs en lugar de
+le enseña a tu agente a usar `pdf-tool` para crear o modificar PDFs en lugar de
 escribir scripts: pide permiso antes de instalar la CLI, ejecuta las herramientas
-con `--json` y te explica el resultado. Para instalarla, dentro de Claude Code:
+con `--json` y te explica el resultado. Sigue el formato abierto
+[Agent Skills](https://agentskills.io), así que sirve para Claude Code, Codex,
+Cursor, Gemini CLI, GitHub Copilot y otros. Elige **una** de estas vías:
+
+**1. Claude Code (plugin, recomendado):** se actualiza solo desde `main`.
 
 ```text
 /plugin marketplace add juanMaAV92/pdf-tool
 /plugin install pdf-tool@pdf-tool
 ```
+
+**2. Cualquier agente, con [`skills`](https://github.com/vercel-labs/skills)**
+(requiere Node.js): detecta tus agentes y copia la skill a la carpeta de cada uno.
+Añade `-g` para tenerla en todos tus proyectos; para actualizarla,
+`npx skills update`.
+
+```bash
+npx skills add juanMaAV92/pdf-tool
+```
+
+**3. A mano:** copia la carpeta
+[`skills/pdf-tool`](https://github.com/juanMaAV92/pdf-tool/tree/main/skills/pdf-tool)
+en la carpeta de skills de tu agente
+([rutas por agente](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)).
+Para actualizarla, vuelve a copiarla.
+
+En las tres vías la CLI se instala aparte (`pipx install pdf-tool-cli`); si falta,
+la skill pide permiso para instalarla.
 
 ---
 
