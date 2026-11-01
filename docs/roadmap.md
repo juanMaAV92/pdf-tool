@@ -47,9 +47,10 @@ el que **añadir un idioma sea añadir un diccionario**, sin tocar código.
     "batch.summary": { "one": "{count} PDF processed", "other": "{count} PDFs processed" }
   }
   ```
-- `t("clave", **datos)` devuelve el texto en el idioma activo. Si una clave
-  falta, usa el idioma base (**español**, el que se mantiene completo) y nunca
-  rompe la app.
+- `t("clave", **datos)` devuelve el texto en el idioma activo. **El inglés es el
+  idioma de referencia:** si a un diccionario le falta una clave, se usa la
+  inglesa, y nunca rompe la app. Español e inglés se mantienen siempre completos
+  (lo exigen los tests); el respaldo solo actúa en idiomas aportados por otros.
 - Plurales: variantes `one` / `other` elegidas por `count`. Suficiente para
   español, inglés, portugués, francés…; los idiomas con más formas quedan para
   cuando alguien los pida.
@@ -78,8 +79,9 @@ el que **añadir un idioma sea añadir un diccionario**, sin tocar código.
 
 ### Garantías (tests)
 
-- Cada diccionario tiene exactamente las claves del español y los mismos
-  marcadores (`{page}`, `{total}`…) en cada texto.
+- `es.json` y `en.json` tienen exactamente las mismas claves. Ningún diccionario
+  tiene claves que no estén en el inglés, y todos usan los mismos marcadores
+  (`{page}`, `{total}`…) en cada texto.
 - Ningún texto visible queda escrito en el código: un test recorre `pdftool/` y
   falla si encuentra frases en literales fuera de `locales/` (salvo una lista
   corta de excepciones justificadas).
