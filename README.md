@@ -181,6 +181,16 @@ paquete (`pdf-tool-cli`) y la app cambia de identidad.
 
 ---
 
+## 📄 Licencia
+
+El código de pdf-tool es [MIT](https://github.com/juanMaAV92/pdf-tool/blob/main/LICENSE).
+Usa [PyMuPDF](https://pymupdf.readthedocs.io), con licencia AGPL, así que los
+instaladores y el paquete de PyPI, que la incluyen, se distribuyen bajo los
+términos de la AGPL. Para tus documentos no cambia nada: siguen siendo tuyos y no
+salen de tu equipo.
+
+---
+
 <div align="center">
 <sub>Hecho con 🐍 Python + <a href="https://flet.dev">Flet</a> · Licencia <a href="https://github.com/juanMaAV92/pdf-tool/blob/main/LICENSE">MIT</a></sub>
 </div>
