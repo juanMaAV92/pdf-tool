@@ -15,6 +15,8 @@ updates:
     ignore:
       # Fijado a propósito (ver pyproject.toml): 0.28.3 rompe el FilePicker en macOS.
       - dependency-name: flet
+      # Va a la par de flet: `flet build` debe usar la misma versión que la app.
+      - dependency-name: flet-cli
       # PyMuPDF 2 arrastra onnxruntime, numpy… (~67 MB) que no usamos.
       - dependency-name: pymupdf
         update-types: ["version-update:semver-major"]
