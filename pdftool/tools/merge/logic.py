@@ -6,7 +6,7 @@ import pymupdf
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress
-from pdftool.core.naming import unique_path
+from pdftool.core.naming import localized_suffix, unique_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.i18n import t
 from pdftool.tools.merge.params import MergeParams
@@ -25,7 +25,7 @@ def output_path_for_merge(
     Si `out_dir` es None, la salida va junto al primer PDF.
     """
     first = Path(inputs[0])
-    base = name or f"{first.stem}_{t('tool.merge.suffix')}"
+    base = name or f"{first.stem}_{localized_suffix('tool.merge.suffix')}"
     carpeta = Path(out_dir) if out_dir is not None else first.parent
     return unique_path(carpeta / f"{base}.pdf", taken=inputs)
 

@@ -7,7 +7,7 @@ import pymupdf
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress, run_batch
 from pdftool.core.errors import UserError
-from pdftool.core.naming import output_path
+from pdftool.core.naming import localized_suffix, output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.i18n import t
 from pdftool.tools.protect.params import ProtectParams
@@ -24,7 +24,11 @@ def _protect_one(
     """Procesa un archivo. Devuelve (salida, etiqueta); un error lanza."""
     if params.mode == "protect":
         progress(0.0, t("tool.protect.progress.protecting"))
-        out = _output(input_path, t("tool.protect.suffix.protect"), params.output_dir)
+        out = _output(
+            input_path,
+            localized_suffix("tool.protect.suffix.protect"),
+            params.output_dir,
+        )
         with atomic_output(out) as temporary, pymupdf.open(str(input_path)) as doc:
             if doc.needs_pass:
                 raise UserError(t("tool.protect.error.already"))
@@ -41,7 +45,9 @@ def _protect_one(
 
     # mode == "remove"
     progress(0.0, t("tool.protect.progress.removing"))
-    out = _output(input_path, t("tool.protect.suffix.remove"), params.output_dir)
+    out = _output(
+        input_path, localized_suffix("tool.protect.suffix.remove"), params.output_dir
+    )
     with atomic_output(out) as temporary, pymupdf.open(str(input_path)) as doc:
         if doc.needs_pass and not doc.authenticate(params.password):
             raise UserError(t("tool.protect.error.wrong_password"))

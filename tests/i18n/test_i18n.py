@@ -121,3 +121,24 @@ def test_attribute_or_index_placeholders_never_raise(locales):
     )
     i18n.set_language("xx")
     assert i18n.t("greet", name=5) == "Hello 5"
+
+
+def test_macos_detection_falls_back_to_lang_env(monkeypatch):
+    import subprocess
+
+    def boom(*a, **k):
+        raise FileNotFoundError("defaults")
+
+    monkeypatch.setattr(i18n.sys, "platform", "darwin")
+    monkeypatch.setattr(subprocess, "run", boom)
+    monkeypatch.setenv("LANG", "es_CO.UTF-8")
+    for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES"):
+        monkeypatch.delenv(var, raising=False)
+    # `_ui_language` lo parchea la fixture; la detección real vive aquí.
+    assert i18n._detect_ui_language() == "es_CO.UTF-8"
+
+
+def test_fmt_number_with_bad_separator(locales):
+    _write(locales, "xx", {"_meta": {"name": "Xx", "decimal_separator": 0}})
+    i18n.set_language("xx")
+    assert i18n.fmt_number(2.5, 2) == "2.50"

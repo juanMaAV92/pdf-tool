@@ -428,6 +428,9 @@ def build_app(page: ft.Page) -> None:
     def shutdown_resources() -> None:
         shutdown_job_executor()
         shutdown_thumbnail_executor()
+        # La sesión terminó: su estado no debe quedarse (ni reaparecer si se
+        # reutiliza el `id` de la página en modo web).
+        _STATE.pop(id(page), None)
 
     _install_shutdown_hooks(page, shutdown_resources)
 

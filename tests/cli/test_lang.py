@@ -109,3 +109,38 @@ def test_list_json_keeps_params_description():
     _, out, _ = _run(["--lang", "en", "list", "--json"])
     merge = next(t for t in json.loads(out) if t["id"] == "merge")
     assert merge["params"]["description"] == i18n.t("tool.merge.description")
+
+
+def test_abbreviated_lang_is_rejected_not_ignored():
+    code, _, _err = _run(["--lan", "es", "list"])
+    assert code == 2
+
+
+def test_lang_after_double_dash_is_an_operand():
+    from pdftool.cli import resolve_cli_language
+
+    _, rest = resolve_cli_language(["merge", "--", "--lang", "a.pdf"], {})
+    assert rest == ["merge", "--", "--lang", "a.pdf"]
+
+
+def test_explicit_lang_skips_system_detection(monkeypatch):
+    calls = []
+
+    def detector():
+        calls.append(1)
+        return "es-ES"
+
+    monkeypatch.setattr(i18n, "_ui_language", detector)
+    _run(["--lang", "en", "list"])
+    assert calls == []
+
+
+def test_help_uses_whole_sentences():
+    _code, out, _ = _run(["--lang", "en", "compress", "--help"])
+    flat = " ".join(out.split())
+    expected = i18n.t(
+        "cli.help.with_default",
+        help=i18n.t("tool.compress.param.target_mb"),
+        value=5.0,
+    )
+    assert expected in flat

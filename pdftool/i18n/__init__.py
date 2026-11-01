@@ -13,6 +13,8 @@ import logging
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -84,26 +86,49 @@ def current_language() -> str:
     return _active
 
 
+@contextmanager
+def using_language(code: str) -> Iterator[None]:
+    """Activa `code` temporalmente (p. ej. para el respaldo en inglés)."""
+    global _active
+    previous = _active
+    set_language(code)
+    try:
+        yield
+    finally:
+        _active = previous
+
+
 def _ui_language() -> str:
     """Idioma de la interfaz del sistema (no la región), p. ej. «es-CO»."""
-    if sys.platform == "darwin":
-        out = subprocess.run(
-            ["defaults", "read", "-g", "AppleLanguages"],
-            capture_output=True,
-            text=True,
-            timeout=2,
-            check=True,
-        ).stdout
-        # Formato: ( "es-CO", "en-US" )
-        for token in out.replace("(", " ").replace(")", " ").split(","):
-            token = token.strip().strip('"')
-            if token:
-                return token
-    elif sys.platform == "win32":
-        import ctypes
+    return _detect_ui_language()
 
-        lcid = ctypes.windll.kernel32.GetUserDefaultUILanguage()  # type: ignore[attr-defined]
-        return locale.windows_locale.get(lcid, "")
+
+def _detect_ui_language() -> str:
+    # Si la vía propia de la plataforma falla (p. ej. `defaults` no está
+    # disponible), se prueban las variables de entorno antes de rendirse.
+    try:
+        if sys.platform == "darwin":
+            out = subprocess.run(
+                ["defaults", "read", "-g", "AppleLanguages"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=True,
+            ).stdout
+            # Formato: ( "es-CO", "en-US" )
+            for token in out.replace("(", " ").replace(")", " ").split(","):
+                token = token.strip().strip('"')
+                if token:
+                    return token
+        elif sys.platform == "win32":
+            import ctypes
+
+            lcid = ctypes.windll.kernel32.GetUserDefaultUILanguage()  # type: ignore[attr-defined]
+            found = locale.windows_locale.get(lcid, "")
+            if found:
+                return found
+    except Exception as exc:  # cualquier fallo → variables de entorno
+        log.info("No se pudo leer el idioma del sistema: %s", exc)
     for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
         value = os.environ.get(var)
         if value:
@@ -166,6 +191,8 @@ def fmt_number(value: float, decimals: int) -> str:
     """Número con el separador decimal del idioma activo."""
     data = _load(_active) or {}
     sep = data.get("_meta", {}).get("decimal_separator", ".")
+    if not isinstance(sep, str):
+        sep = "."
     return f"{value:.{decimals}f}".replace(".", sep)
 
 

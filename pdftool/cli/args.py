@@ -76,12 +76,12 @@ def _help(tool_id: str, name: str, field: FieldInfo) -> str:
             t("cli.help.choice", value=v, label=choice_label(tool_id, name, v))
             for v in get_args(field.annotation)
         )
-        text = f"{text} {choices}."
+        text = t("cli.help.with_choices", help=text, choices=choices)
     if not field.is_required() and field.default not in (None, ""):
         default = field.default
         if isinstance(default, tuple):
             default = " ".join(str(v) for v in default)
-        text = f"{text} {t('cli.help.default', value=default)}"
+        text = t("cli.help.with_default", help=text, value=default)
     return text
 
 

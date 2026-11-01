@@ -55,3 +55,13 @@ def test_plurals_have_one_and_other():
         for key, value in data.items():
             if key != "_meta" and isinstance(value, dict):
                 assert set(value) == {"one", "other"}, (code, key)
+
+
+def test_suffixes_are_valid_file_name_parts():
+    from pdftool.core.naming import _FORBIDDEN_NAME_CHARS
+
+    for code, data in _all().items():
+        for key, value in data.items():
+            if ".suffix" in key:
+                assert value.strip(), (code, key)
+                assert not set(value) & set(_FORBIDDEN_NAME_CHARS), (code, key)

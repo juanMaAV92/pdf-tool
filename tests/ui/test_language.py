@@ -180,3 +180,11 @@ def test_language_dialog_is_compact():
     dialog = app._language_dialog(page, Settings(), lambda code: None)
     # Sin `tight`, la columna se estira y el diálogo ocupa todo el alto.
     assert dialog.content.content.tight is True
+
+
+def test_closing_the_page_forgets_its_state(mounted):
+    import asyncio
+
+    assert id(mounted.page) in app._STATE
+    asyncio.run(mounted.page.on_close(None))
+    assert id(mounted.page) not in app._STATE

@@ -7,7 +7,7 @@ import pymupdf
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress
-from pdftool.core.naming import output_path
+from pdftool.core.naming import localized_suffix, output_path
 from pdftool.core.plugin import Progress, ToolResult
 from pdftool.i18n import t
 from pdftool.tools.watermark.params import WatermarkParams
@@ -21,7 +21,9 @@ _MAX_STAMPS_PER_PAGE = 20_000
 
 def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> Path:
     """Política de nombre de Marca de agua; la colisión la resuelve el helper."""
-    return output_path(input_path, t("tool.watermark.suffix"), out_dir=out_dir)
+    return output_path(
+        input_path, localized_suffix("tool.watermark.suffix"), out_dir=out_dir
+    )
 
 
 def _stamp_count(rect: pymupdf.Rect, sx: float, sy: float, text_w: float) -> int:

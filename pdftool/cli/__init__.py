@@ -53,6 +53,8 @@ class _Parser(argparse.ArgumentParser):
 def _build_parser(specs: Sequence[ToolSpec]) -> argparse.ArgumentParser:
     parser = _Parser(
         prog="pdf-tool",
+        # Sin abreviaturas: `--lan es` no debe aceptarse e ignorarse en silencio.
+        allow_abbrev=False,
         description=t("cli.description"),
     )
     parser.add_argument("--version", action="version", version=__version__)
@@ -195,6 +197,11 @@ def resolve_cli_language(
     rest: list[str] = []
     it = iter(args)
     for arg in it:
+        if arg == "--":
+            # Tras `--` todo son operandos (archivos), también un «--lang».
+            rest.append(arg)
+            rest.extend(it)
+            break
         if arg == "--lang":
             flag = next(it, "")
         elif arg.startswith("--lang="):
@@ -204,14 +211,14 @@ def resolve_cli_language(
     # Solo cuenta la fuente de mayor prioridad: un `PDFTOOL_LANG` inválido no
     # debe bloquear un `--lang` válido.
     code = flag if flag is not None else env.get("PDFTOOL_LANG")
+    if code is not None and _known_language(code):
+        # Idioma explícito: no hace falta detectar el del sistema.
+        set_language(code)
+        return current_language(), rest
     set_language(system_language())
     if code is not None:
-        if not _known_language(code):
-            languages = ", ".join(c for c, _ in available_languages())
-            raise UserError(
-                t("cli.error.unknown_language", code=code, languages=languages)
-            )
-        set_language(code)
+        languages = ", ".join(c for c, _ in available_languages())
+        raise UserError(t("cli.error.unknown_language", code=code, languages=languages))
     return current_language(), rest
 
 
