@@ -9,6 +9,7 @@ from pdftool.core.batch import noop_progress
 from pdftool.core.errors import UserError
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
+from pdftool.i18n import t
 from pdftool.tools.split.params import SplitParams
 
 # Rango 1-indexed e inclusivo. None = extremo abierto (inicio o final del PDF).
@@ -27,7 +28,7 @@ def parse_ranges(spec: str) -> list[Range]:
     Lanza ``ValueError`` si la sintaxis es inválida o el rango está invertido.
     """
     if not spec or not spec.strip():
-        raise UserError("Indica al menos un rango (ej: 1-3, 5, 8-)")
+        raise UserError(t("tool.split.error.no_ranges"))
 
     out: list[Range] = []
     for raw in spec.split(","):
@@ -36,18 +37,16 @@ def parse_ranges(spec: str) -> list[Range]:
             continue
         out.append(_parse_token(token))
     if not out:
-        raise UserError("Indica al menos un rango (ej: 1-3, 5, 8-)")
+        raise UserError(t("tool.split.error.no_ranges"))
     return out
 
 
 def _parse_int(text: str) -> int:
     if not text.isdigit():
-        raise UserError(
-            f"«{text}» no es un número de página válido. Usa por ejemplo 1-3, 5"
-        )
+        raise UserError(t("tool.split.error.bad_page", text=text))
     value = int(text)
     if value < 1:
-        raise UserError("Las páginas empiezan en 1")
+        raise UserError(t("tool.split.error.first_page"))
     return value
 
 
@@ -58,17 +57,15 @@ def _parse_token(token: str) -> Range:
 
     parts = token.split("-")
     if len(parts) != 2:
-        raise UserError(f"«{token}» no es un rango válido. Usa por ejemplo 1-3, 5")
+        raise UserError(t("tool.split.error.bad_range", token=token))
     left, right = parts[0].strip(), parts[1].strip()
 
     start = _parse_int(left) if left else None
     end = _parse_int(right) if right else None
     if not left and not right:
-        raise UserError(f"«{token}» no es un rango válido. Usa por ejemplo 1-3, 5")
+        raise UserError(t("tool.split.error.bad_range", token=token))
     if start is not None and end is not None and start > end:
-        raise UserError(
-            f"El rango «{token}» está al revés: escribe primero la página menor."
-        )
+        raise UserError(t("tool.split.error.reversed", token=token))
     return (start, end)
 
 
@@ -79,7 +76,9 @@ def resolve_ranges(parsed: list[Range], page_count: int) -> list[tuple[int, int]
         s = 1 if start is None else start
         e = page_count if end is None else end
         if s > page_count or e > page_count:
-            raise UserError(f"El rango {s}-{e} excede el total de {page_count} páginas")
+            raise UserError(
+                t("tool.split.error.out_of_bounds", start=s, end=e, count=page_count)
+            )
         resolved.append((s, e))
     return resolved
 
@@ -123,7 +122,7 @@ def split(
         ranges = _ranges_for(params, page_count)
         width = len(str(page_count))
         total = len(ranges)
-        progress(0.0, f"Dividiendo en {total} archivos…")
+        progress(0.0, t("tool.split.progress.start", count=total))
 
         for i, (start, end) in enumerate(ranges):
             out = output_path(
@@ -133,7 +132,10 @@ def split(
                 dst.insert_pdf(src, from_page=start - 1, to_page=end - 1)
                 dst.save(str(temporary), garbage=4, deflate=True)
             outputs.append(out)
-            progress((i + 1) / total, f"Generado {out.name}")
+            progress((i + 1) / total, t("tool.split.progress.created", name=out.name))
 
-    progress(1.0, f"Listo: {total} archivos")
-    return ToolResult(outputs=outputs, summary=f"{src_path.name} → {total} archivos")
+    progress(1.0, t("tool.split.progress.done", count=total))
+    return ToolResult(
+        outputs=outputs,
+        summary=t("tool.split.summary", name=src_path.name, count=total),
+    )

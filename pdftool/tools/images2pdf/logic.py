@@ -9,6 +9,7 @@ from pdftool.core.batch import noop_progress, run_batch
 from pdftool.core.errors import UserError
 from pdftool.core.naming import unique_path
 from pdftool.core.plugin import Progress, ToolResult
+from pdftool.i18n import t
 from pdftool.tools.images2pdf.params import ImagesToPdfParams
 
 ALLOWED_SUFFIXES = {".jpg", ".jpeg", ".png"}
@@ -72,10 +73,7 @@ def _check_pixels(path: Path) -> None:
         return  # formato no reconocido: lo decidirá MuPDF
     width, height = size
     if width * height > MAX_IMAGE_PIXELS:
-        raise UserError(
-            f"La imagen es demasiado grande ({width}×{height} px). "
-            "Redúcela antes de convertirla."
-        )
+        raise UserError(t("tool.images2pdf.error.too_big", width=width, height=height))
 
 
 def output_path_for_images(input_path: Path, out_dir: Path | None = None) -> Path:
@@ -90,17 +88,17 @@ def _convert_one(
 ) -> tuple[Path, str]:
     """Convierte una imagen. Devuelve (salida, etiqueta); un error lanza."""
     if input_path.suffix.lower() not in ALLOWED_SUFFIXES:
-        raise UserError("Formato no soportado (usa JPG o PNG).")
+        raise UserError(t("tool.images2pdf.error.format"))
     _check_pixels(input_path)
-    progress(0.0, "Convirtiendo imagen…")
+    progress(0.0, t("tool.images2pdf.progress.converting"))
     out = output_path_for_images(input_path, out_dir)
     # convert_to_pdf genera una página del tamaño exacto de la imagen.
     with pymupdf.open(str(input_path)) as img:
         pdf_bytes = img.convert_to_pdf()
     with atomic_output(out) as temporary, pymupdf.open("pdf", pdf_bytes) as pdf:
         pdf.save(str(temporary), garbage=4, deflate=True)
-    progress(1.0, "Listo")
-    return out, f"→ {out.name}"
+    progress(1.0, t("common.progress.done"))
+    return out, t("common.item.output", name=out.name)
 
 
 def images_to_pdf(
@@ -110,18 +108,19 @@ def images_to_pdf(
         inputs,
         lambda path, scoped: _convert_one(path, scoped, params.output_dir),
         progress,
-        all_failed="Ninguna imagen pudo convertirse.",
+        all_failed=t("tool.images2pdf.all_failed"),
     )
     outputs, total = batch.outputs, batch.total
 
     if total == 1:
         return ToolResult(
-            outputs=outputs, summary=f"Imagen convertida → {outputs[0].name}"
+            outputs=outputs,
+            summary=t("tool.images2pdf.summary.one", name=outputs[0].name),
         )
 
-    progress(1.0, "Listo")
+    progress(1.0, t("common.progress.done"))
     if len(outputs) == total:
-        summary = f"{total} imágenes convertidas"
+        summary = t("tool.images2pdf.summary.all", count=total)
     else:
-        summary = f"{len(outputs)} de {total} imágenes convertidas"
+        summary = t("tool.images2pdf.summary.partial", done=len(outputs), count=total)
     return ToolResult(outputs=outputs, summary=summary, items=batch.items)

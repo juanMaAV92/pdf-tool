@@ -43,6 +43,9 @@
   "cli.validation.literal_error": "debe ser uno de: {expected}",
   "cli.validation.missing": "es obligatorio",
   "cli.validation.string_too_short": "no puede estar vacío",
+  "common.item.output": "→ {name}",
+  "common.progress.done": "Listo",
+  "common.progress.done_file": "Listo: {name}",
   "core.error.file_not_found": "No se encontró el archivo. ¿Lo moviste o borraste? Vuelve a elegirlo.",
   "core.error.generic": "No se pudo procesar el archivo. Puede estar dañado o tener contraseña (puedes quitarla con «Proteger PDF»).",
   "core.error.permission": "No hay permiso para leer o guardar el archivo. Ciérralo si lo tienes abierto o elige otra carpeta en «Guardar en».",
@@ -55,11 +58,28 @@
   "tool.compress.param.mode.max": "el archivo más pequeño posible (algunas páginas pueden perder texto seleccionable)",
   "tool.compress.param.mode.preserve": "conserva texto, enlaces y anotaciones",
   "tool.compress.param.target_mb": "Tamaño objetivo en MB.",
+  "tool.images2pdf.all_failed": "Ninguna imagen pudo convertirse.",
   "tool.images2pdf.description": "Crea un PDF por cada imagen (JPG o PNG).",
+  "tool.images2pdf.error.format": "Formato no soportado (usa JPG o PNG).",
+  "tool.images2pdf.error.too_big": "La imagen es demasiado grande ({width}×{height} px). Redúcela antes de convertirla.",
   "tool.images2pdf.name": "Imágenes a PDF",
+  "tool.images2pdf.progress.converting": "Convirtiendo imagen…",
+  "tool.images2pdf.summary.all": {
+    "one": "{count} imagen convertida",
+    "other": "{count} imágenes convertidas"
+  },
+  "tool.images2pdf.summary.one": "Imagen convertida → {name}",
+  "tool.images2pdf.summary.partial": {
+    "one": "{done} de {count} imagen convertida",
+    "other": "{done} de {count} imágenes convertidas"
+  },
   "tool.merge.description": "Combina varios PDFs en uno solo, en el orden que elijas.",
   "tool.merge.name": "Unir PDFs",
   "tool.merge.param.output_name": "Nombre del PDF unido, sin extensión (por defecto, automático).",
+  "tool.merge.progress.added": "Añadido {name}",
+  "tool.merge.progress.start": "Uniendo {count} PDFs…",
+  "tool.merge.suffix": "unido",
+  "tool.merge.summary": "{count} PDFs unidos → {name}",
   "tool.protect.description": "Añade o quita la contraseña de uno o varios PDFs.",
   "tool.protect.name": "Proteger PDF",
   "tool.protect.param.mode": "Acción.",
@@ -67,6 +87,15 @@
   "tool.protect.param.mode.remove": "la quita",
   "tool.protect.param.password": "Contraseña del PDF.",
   "tool.split.description": "Separa un PDF en varios, por rangos o por páginas.",
+  "tool.split.error.bad_page": "«{text}» no es un número de página válido. Usa por ejemplo 1-3, 5",
+  "tool.split.error.bad_range": "«{token}» no es un rango válido. Usa por ejemplo 1-3, 5",
+  "tool.split.error.first_page": "Las páginas empiezan en 1",
+  "tool.split.error.no_ranges": "Indica al menos un rango (ej: 1-3, 5, 8-)",
+  "tool.split.error.out_of_bounds": {
+    "one": "El rango {start}-{end} excede el total de {count} página",
+    "other": "El rango {start}-{end} excede el total de {count} páginas"
+  },
+  "tool.split.error.reversed": "El rango «{token}» está al revés: escribe primero la página menor.",
   "tool.split.name": "Dividir PDF",
   "tool.split.param.every_n": "Páginas por archivo para mode=every.",
   "tool.split.param.mode": "Cómo dividir.",
@@ -74,10 +103,27 @@
   "tool.split.param.mode.ranges": "un PDF por rango",
   "tool.split.param.mode.single": "una página por archivo",
   "tool.split.param.ranges": "Rangos de páginas para mode=ranges, ej. \"1-3, 5, 8-\".",
+  "tool.split.progress.created": "Generado {name}",
+  "tool.split.progress.done": {
+    "one": "Listo: {count} archivo",
+    "other": "Listo: {count} archivos"
+  },
+  "tool.split.progress.start": {
+    "one": "Dividiendo en {count} archivo…",
+    "other": "Dividiendo en {count} archivos…"
+  },
+  "tool.split.summary": {
+    "one": "{name} → {count} archivo",
+    "other": "{name} → {count} archivos"
+  },
   "tool.watermark.description": "Repite un texto en diagonal sobre todas las páginas.",
   "tool.watermark.name": "Marca de agua",
   "tool.watermark.param.color": "Color RGB, cada valor de 0 a 1.",
   "tool.watermark.param.font_size": "Tamaño de letra.",
   "tool.watermark.param.opacity": "Opacidad, de 0 (excluido) a 1.",
-  "tool.watermark.param.text": "Texto de la marca de agua."
+  "tool.watermark.param.text": "Texto de la marca de agua.",
+  "tool.watermark.progress.page": "Página {page}/{total}",
+  "tool.watermark.progress.start": "Aplicando marca de agua…",
+  "tool.watermark.suffix": "marca",
+  "tool.watermark.summary": "Marca '{text}' aplicada → {name}"
 }
