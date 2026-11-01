@@ -4,6 +4,18 @@ from pathlib import Path
 import pymupdf
 import pytest
 
+from pdftool import i18n
+
+
+@pytest.fixture(autouse=True)
+def _spanish():
+    """Los tests comparan textos en español salvo que pidan otro idioma."""
+    i18n.use_locales_dir(None)
+    i18n.set_language("es")
+    yield
+    i18n.use_locales_dir(None)
+    i18n.set_language("es")
+
 
 def _make_pdf(path: Path, *, pages: int = 1, image_px: int = 0) -> Path:
     with pymupdf.open() as doc:
