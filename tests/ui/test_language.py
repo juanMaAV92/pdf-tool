@@ -171,3 +171,12 @@ def test_starting_a_task_disables_the_language_entry_and_redraws(mounted):
     assert updates
     tool._set_running(False)
     assert not _language_item(mounted.page).disabled
+
+
+def test_language_dialog_is_compact():
+    from pdftool.core.config import Settings
+
+    page = SimpleNamespace(close=lambda c: None)
+    dialog = app._language_dialog(page, Settings(), lambda code: None)
+    # Sin `tight`, la columna se estira y el diálogo ocupa todo el alto.
+    assert dialog.content.content.tight is True

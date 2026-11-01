@@ -369,7 +369,11 @@ def _language_dialog(page, settings, on_choose) -> ft.AlertDialog:
     options = [("system", t("ui.language.system")), *available_languages()]
     group = ft.RadioGroup(
         value=settings.language,
-        content=ft.Column([ft.Radio(value=code, label=name) for code, name in options]),
+        # `tight`: el diálogo toma el alto de sus opciones, no el de la ventana.
+        content=ft.Column(
+            [ft.Radio(value=code, label=name) for code, name in options],
+            tight=True,
+        ),
     )
     dialog = ft.AlertDialog(title=ft.Text(t("ui.language.title")), content=group)
 
