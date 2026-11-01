@@ -27,6 +27,7 @@ pipx install pre-commit && pre-commit install   # opcional: lo anterior en cada 
 ```
 pdftool/
 ├── main.py                 # entrypoint -> ft.app(target=build_app)
+├── i18n/                   # SIN Flet: t(), idioma activo; locales/<código>.json (un diccionario por idioma)
 ├── cli/                    # `pdf-tool`, SIN Flet: subcomandos desde el registro de specs
 │   ├── __init__.py         # main(): list, <herramienta>, --json, códigos de salida 0/1/2/3
 │   ├── args.py             # params Pydantic -> flags argparse (secretos por stdin/env)
@@ -73,8 +74,9 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 1. `params.py` — hereda de `BaseParams` (`pdftool/core/plugin.py`), no de
    `BaseModel` a secas: `BaseParams` aporta `output_dir`, y una herramienta que
    no lo herede ignorará en silencio la carpeta de salida que elija el usuario.
-   Cada campo lleva `Field(description=...)`: es la ayuda de `pdf-tool <id>
-   --help` (un test lo exige). Un secreto (contraseña) lleva
+   La ayuda de cada campo no va en `Field(description=...)` sino en los
+   diccionarios: `tool.<id>.param.<campo>` y, para cada valor de un `Literal`,
+   `tool.<id>.param.<campo>.<valor>` (un test lo exige). Un secreto (contraseña) lleva
    `json_schema_extra={"secret": True}` y la CLI solo lo acepta por stdin o
    variable de entorno. La validación va en el modelo (`field_validator`), no
    en el panel, para que la app y la CLI la compartan.
@@ -86,8 +88,8 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    se compone a mano**: se pide a `pdftool/core/naming.py`, que resuelve destino
    y colisiones en un solo sitio.
    ```python
-   # nombre automático «<stem>_<sufijo>.pdf»
-   out = output_path(input_path, "marca", out_dir=params.output_dir)
+   # nombre automático «<stem>_<sufijo>.pdf» (el sufijo sigue el idioma)
+   out = output_path(input_path, t("tool.<id>.suffix"), out_dir=params.output_dir)
    # nombre libre (Unir, Imágenes a PDF)
    out = unique_path((params.output_dir or input_path.parent) / f"{base}.pdf")
    ```
@@ -104,26 +106,28 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
    ej. «se rasterizaron páginas»; tamaños y % ahorrado). La UI muestra los
    avisos bajo el resumen y en la fila del archivo, sin diálogos.
 
-   **Errores para el usuario:** lanza `UserError("mensaje en español")`
+   **Errores para el usuario:** lanza `UserError(t("tool.<id>.error.…"))`
    (`pdftool/core/errors.py`) cuando el mensaje deba verse tal cual. Cualquier
    otra excepción se muestra como un mensaje genérico con el detalle plegado.
 3. `spec.py` — **sin Flet**. Declara y registra la herramienta para la app y
    la CLI:
    ```python
-   SPEC = register(ToolSpec(meta=ToolMeta(id=..., name=..., description=...,
-                                          category=..., order=...),
+   SPEC = register(ToolSpec(meta=ToolMeta(id=..., category=..., order=...),
                             params=<Params>, run=<función de logic.py>,
                             min_inputs=1, max_inputs=None, extensions=("pdf",)))
    ```
    (`register` de `pdftool/core/registry.py`; `order` fija su posición en la
-   navegación). Las reglas de entrada valen para la app (el panel las hereda)
+   navegación). El nombre y la descripción salen de `tool.<id>.name` y
+   `tool.<id>.description`; `category` es un id (`organize`, `optimize`,
+   `convert`, `edit`, `security`) con su texto en `category.<id>`. Las reglas de entrada valen para la app (el panel las hereda)
    y para la CLI. La CLI no se toca: la herramienta aparece sola en
    `pdf-tool list`.
 4. `panel.py` — clase decorada con `@register` (`pdftool/ui/registry.py`) que
    hereda la plantilla de la UI: `MultiFileToolPanel` (`pdftool/ui/file_list.py`)
    para lotes o `SingleFileToolPanel` (`pdftool/ui/panel_base.py`) para un
    archivo. Declara `spec = SPEC` (de ahí salen `meta` y la lógica),
-   `icon = ft.Icons.*`, `run_label`/`run_icon`/`pick_label` e implementa los
+   `icon = ft.Icons.*`, `run_label_key`/`run_icon`/`pick_label_key` (claves del
+   diccionario) e implementa los
    hooks `extra_controls()` y `make_params()`.
    `make_params()` lanza `InvalidParams("mensaje", field=campo)` para marcar el
    error también en el campo. En lotes, `reorderable = True` solo si el orden
@@ -140,6 +144,16 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 **App y CLI a la par:** toda spec necesita su panel y viceversa; lo exige
 `tests/ui/test_registry.py::test_every_spec_has_a_panel_and_vice_versa`. Y
 `tests/core/test_no_flet.py` comprueba que las specs se descubren sin Flet.
+
+**Idiomas:** ningún texto visible se escribe en el código: todo sale de
+`pdftool/i18n/locales/<código>.json` con `t("clave", **datos)` (plurales con
+`{"one": …, "other": …}` y `count`). `en.json` es la referencia y el respaldo;
+`en.json` y `es.json` deben tener siempre las mismas claves. Una herramienta
+nueva añade sus claves en los dos. `tests/i18n/test_no_hardcoded_text.py` falla
+si queda una frase en un literal; el log y el detalle técnico no se traducen.
+**Añadir un idioma:** copia `en.json` como `<código>.json`, cambia
+`_meta.name` (su nombre en ese idioma) y `_meta.decimal_separator`, y traduce;
+aparece solo en el menú de la app y en `--lang`. Lo que falte sale en inglés.
 
 **Skill para agentes:** `skills/pdf-tool/SKILL.md` (en inglés, formato abierto
 Agent Skills, sin nada propio de un agente) enseña a usar la CLI. Se instala como

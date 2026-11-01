@@ -31,9 +31,10 @@ as you normally would; this skill does not restrict them.
 
 ## Language
 
-Talk to the user in the language of their conversation (Spanish or English). The
-CLI's messages (`summary`, `message`, errors) are in Spanish: explain them in the
-user's language.
+Talk to the user in the language of their conversation. The CLI's messages
+(`summary`, `message`, warnings, errors) and the suffixes of the files it creates
+follow the system language; add `--lang en` or `--lang es` (any position) to pick
+one. JSON keys never change. Explain the messages in the user's language.
 
 ## 1. Make sure it is installed
 

@@ -78,7 +78,8 @@ pdf-tool merge a.pdf b.pdf --output-name todo
 echo "$CLAVE" | pdf-tool protect a.pdf --password-stdin
 ```
 
-Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Códigos de salida:
+Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Los mensajes salen en
+el idioma del sistema; `--lang en` o `--lang es` lo cambian. Códigos de salida:
 `0` ok · `1` error al procesar · `2` uso inválido · `3` algún archivo del lote falló.
 `pipx install 'pdf-tool-cli[gui]'` instala además la app (comando `pdftool`).
 

@@ -254,7 +254,9 @@ def test_skill_preserve_mode_uses_the_cli_wording():
 def test_skill_tells_claude_to_answer_in_the_user_language():
     _, body = _skill()
     assert "language" in body.lower()
-    assert "Spanish" in body
+    # Los mensajes de la CLI siguen el idioma del sistema o `--lang`.
+    assert "--lang" in body
+    assert "messages" in body and "are in Spanish" not in body
 
 
 def test_skill_install_and_upgrade_commands():
