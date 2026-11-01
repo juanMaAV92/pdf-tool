@@ -59,7 +59,7 @@ el que **añadir un idioma sea añadir un diccionario**, sin tocar código.
 
 ### Idioma activo
 
-- **App:** por defecto el del sistema; se puede cambiar en Ajustes (se guarda en
+- **App:** por defecto el del sistema; se puede cambiar desde el menú «…» del pie, al momento (se guarda en
   `settings.json` como `language`: `"system"` o un código). Si el idioma del
   sistema no tiene diccionario, inglés.
 - **CLI:** `--lang <código>`, o la variable `PDFTOOL_LANG`, o el idioma del sistema.
@@ -73,7 +73,7 @@ el que **añadir un idioma sea añadir un diccionario**, sin tocar código.
   no textos), la ayuda de cada parámetro (las `description` de `params.py`) y los
   textos de los paneles.
 - Progreso, resúmenes, avisos y errores de la lógica y de `core/`.
-- Los sufijos de los archivos de salida (`_comprimido` / `_compressed`). Hoy están
+- Los sufijos de los archivos de salida (`_protegido` / `_protected`). Hoy están
   mezclados (`_merged` en inglés, el resto en español); pasan a seguir el idioma.
 - La skill deja de decir que los mensajes de la CLI salen en español.
 
