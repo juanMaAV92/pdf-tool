@@ -164,7 +164,7 @@ poetry run pytest             # tests
 3. La app la muestra en la barra lateral y la CLI la ofrece como
    `pdf-tool <id>`, las dos automáticamente.
 
-Detalles en [AGENTS.md](https://github.com/juanMaAV92/pdf-tool/blob/main/AGENTS.md).
+Detalles en [AGENTS.md](https://github.com/juanMaAV92/pdf-tool/blob/main/AGENTS.md) (en inglés).
 
 ### Publicar una versión (automatizado con GitHub Actions)
 ```bash

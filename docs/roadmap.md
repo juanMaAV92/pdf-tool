@@ -92,8 +92,8 @@ el que **añadir un idioma sea añadir un diccionario**, sin tocar código.
 
 - **README:** `README.md` pasa a inglés (es la portada de PyPI y de GitHub) y
   `README.es.md` en español, con enlaces de idioma arriba. Un idioma nuevo es otro
-  `README.<código>.md`. AGENTS.md y CLAUDE.md siguen en español (son para quien
-  desarrolla).
+  `README.<código>.md`. AGENTS.md y CLAUDE.md pasan a inglés (para quien
+  contribuya); este roadmap sigue en español.
 - **Página web** (repo `juanMaAV92.github.io`): el contenido de la página de
   pdf-tool sale de un diccionario por idioma; la ruta `/pdf-tool` (español) y
   `/en/pdf-tool` (inglés) se generan desde ellos, con selector de idioma y
