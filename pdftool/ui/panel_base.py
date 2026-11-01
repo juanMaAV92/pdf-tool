@@ -218,6 +218,9 @@ class BaseToolPanel(PdfTool):
         self._running = running
         self.cancel_btn.visible = running
         self._lock_inputs(running)
+        ctx = getattr(self, "_ctx", None)
+        if ctx is not None and ctx.on_busy_changed is not None:
+            ctx.on_busy_changed()
 
     def _lock_inputs(self, locked: bool) -> None:
         """Hook: (des)habilita los controles que cambian las entradas."""

@@ -158,3 +158,16 @@ def test_opening_the_menu_refreshes_the_language_entry(mounted):
     assert _language_item(mounted.page).disabled
     _language_item(mounted.page).on_click(None)
     assert not any(isinstance(c, ft.AlertDialog) for c in mounted.page.opened)
+
+
+def test_starting_a_task_disables_the_language_entry_and_redraws(mounted):
+    sidebar = mounted.page.controls[0].controls[1].controls[0]
+    sidebar.tool_buttons[0].on_click(None)  # construye el panel
+    updates = []
+    mounted.page.update = lambda: updates.append(1)
+    tool = app.current_tools(mounted.page)[0]
+    tool._set_running(True)
+    assert _language_item(mounted.page).disabled
+    assert updates
+    tool._set_running(False)
+    assert not _language_item(mounted.page).disabled

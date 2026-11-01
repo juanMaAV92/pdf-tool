@@ -97,3 +97,15 @@ def test_gui_missing_message_follows_language():
     i18n.set_language("en")
     assert "pipx install 'pdf-tool-cli[gui]'" in gui_missing()
     assert gui_missing() == i18n.t("app.gui_missing")
+
+
+def test_lang_flag_wins_over_an_invalid_env_var():
+    code, out, _ = _run(["--lang", "en", "list"], env={"PDFTOOL_LANG": "pt"})
+    assert code == 0
+    assert "Merge PDFs" in out
+
+
+def test_list_json_keeps_params_description():
+    _, out, _ = _run(["--lang", "en", "list", "--json"])
+    merge = next(t for t in json.loads(out) if t["id"] == "merge")
+    assert merge["params"]["description"] == i18n.t("tool.merge.description")

@@ -104,8 +104,9 @@ def _spec_to_dict(spec: ToolSpec) -> dict[str, Any]:
 def _params_schema(spec: ToolSpec) -> dict[str, Any]:
     """Esquema JSON de los params con las descripciones del idioma activo."""
     schema = spec.params.model_json_schema()
-    # El docstring de la clase es documentación para desarrolladores.
-    schema.pop("description", None)
+    # La clave se conserva (contrato del JSON), con la descripción de la
+    # herramienta en el idioma activo en vez del docstring de la clase.
+    schema["description"] = spec.meta.description
     common = set(BaseParams.model_fields)
     for name, prop in schema.get("properties", {}).items():
         prop["description"] = param_help(None if name in common else spec.meta.id, name)
@@ -200,10 +201,11 @@ def resolve_cli_language(
             flag = arg.split("=", 1)[1]
         else:
             rest.append(arg)
+    # Solo cuenta la fuente de mayor prioridad: un `PDFTOOL_LANG` inválido no
+    # debe bloquear un `--lang` válido.
+    code = flag if flag is not None else env.get("PDFTOOL_LANG")
     set_language(system_language())
-    for code in (env.get("PDFTOOL_LANG"), flag):
-        if code is None:
-            continue
+    if code is not None:
         if not _known_language(code):
             languages = ", ".join(c for c, _ in available_languages())
             raise UserError(

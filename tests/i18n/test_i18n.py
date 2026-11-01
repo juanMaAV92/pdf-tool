@@ -113,3 +113,11 @@ def test_fmt_number(locales):
     assert i18n.fmt_number(2.5, 2) == "2,50"
     i18n.set_language("en")
     assert i18n.fmt_number(2.5, 2) == "2.50"
+
+
+def test_attribute_or_index_placeholders_never_raise(locales):
+    _write(
+        locales, "xx", {"_meta": {"name": "Xx"}, "greet": "Xx {name.nope} {name[0]}"}
+    )
+    i18n.set_language("xx")
+    assert i18n.t("greet", name=5) == "Hello 5"

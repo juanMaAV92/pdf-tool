@@ -157,7 +157,7 @@ def t(key: str, **params: object) -> str:
             continue
         try:
             return candidate.format(**params)
-        except (KeyError, IndexError, ValueError):
+        except Exception:  # plantilla mal escrita en un diccionario aportado
             continue
     return template
 

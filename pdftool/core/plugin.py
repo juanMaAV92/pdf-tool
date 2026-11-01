@@ -99,6 +99,9 @@ class ToolContext:
     page: object  # ft.Page (evitamos importar flet en el core)
     run_job: Callable  # (work, on_progress, on_done, on_error) -> None
     settings: Settings | None = None
+    # El host quiere saber cuándo empieza o termina una tarea (p. ej. para
+    # bloquear el cambio de idioma mientras hay una en curso).
+    on_busy_changed: Callable[[], None] | None = None
 
 
 class PdfTool(ABC):

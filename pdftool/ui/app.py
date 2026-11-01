@@ -454,7 +454,13 @@ def _mount(page, settings) -> None:
     registry.discover()
     tools = registry.get_tools()
 
-    ctx = ToolContext(page=page, run_job=run_job, settings=settings)
+    def busy_changed() -> None:
+        refresh_language_item(page)
+        page.update()
+
+    ctx = ToolContext(
+        page=page, run_job=run_job, settings=settings, on_busy_changed=busy_changed
+    )
     content = ft.Container(expand=True, padding=24)
 
     current: list = [None]  # herramienta abierta (None = Inicio)
