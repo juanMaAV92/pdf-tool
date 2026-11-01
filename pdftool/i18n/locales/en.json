@@ -96,10 +96,10 @@
     "other": "{done} of {count} files · {original} MB → {final} MB (unchanged)"
   },
   "tool.compress.ui.error.target": "Enter a size greater than 0, for example 5 or 2.5.",
-  "tool.compress.ui.help": "Reduce as much as possible: looks for the smallest possible file. Some pages may lose selectable text.\n\nKeep text and links: keeps search, copy/paste, links and annotations when possible, although the file may be larger.",
+  "tool.compress.ui.help": "Smallest file: reduces the file as much as possible. Some pages may lose selectable text.\n\nKeep text and links: keeps search, copy/paste, links and annotations when possible, although the file may be larger.",
   "tool.compress.ui.help_title": "Help about compression",
   "tool.compress.ui.mode": "Compression mode",
-  "tool.compress.ui.mode.max": "Reduce as much as possible (recommended)",
+  "tool.compress.ui.mode.max": "Smallest file (recommended)",
   "tool.compress.ui.mode.preserve": "Keep text and links",
   "tool.compress.ui.run": "Compress",
   "tool.compress.ui.target": "Target size (MB)",
