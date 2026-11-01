@@ -81,7 +81,11 @@ teaches your agent to use `pdf-tool` instead of writing throwaway scripts: it
 asks before installing the CLI, runs the tools with `--json` and explains the
 result in your language. It follows the open
 [Agent Skills](https://agentskills.io) format, so it works with Claude Code,
-Codex, Cursor, Gemini CLI, GitHub Copilot and others. Pick **one** way:
+Codex, Cursor, Gemini CLI, GitHub Copilot and others.
+
+<img width="760" alt="Claude Code using the pdf-tool skill to compress a PDF to 2 MB" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/agent-en.gif" />
+
+Pick **one** way:
 
 **1. Claude Code (plugin, recommended):** updates itself from `main`.
 
@@ -112,7 +116,7 @@ it is missing, the skill asks for permission to install it.
 
 ## 🖥️ Desktop app
 
-<img width="980" alt="pdf-tool desktop app: home screen with the six tools" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot.png" />
+<img width="980" alt="pdf-tool desktop app: home screen with the six tools" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot-en.png" />
 
 The same six tools with a simple interface, in English or Spanish, for macOS and
 Windows. No Python needed.
