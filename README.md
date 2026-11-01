@@ -126,7 +126,7 @@ Windows. No Python needed.
   anyway**.
 
 Step-by-step guide, screenshots and FAQ:
-**[juanmaav92.github.io/pdf-tool](https://juanmaav92.github.io/pdf-tool)**.
+**[juanmaav92.github.io/en/pdf-tool](https://juanmaav92.github.io/en/pdf-tool)**.
 Every release publishes `SHA256SUMS.txt` so you can check the download.
 
 ---

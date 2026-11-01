@@ -251,6 +251,7 @@
   "ui.footer.credit": "Powered by {handle}",
   "ui.footer.credit_tooltip": "Visit the pdf-tool website",
   "ui.footer.options": "App options",
+  "ui.footer.site_url": "https://juanmaav92.github.io/en/pdf-tool",
   "ui.footer.version": "App version: {version}",
   "ui.home.subtitle": "Choose a tool to start.",
   "ui.home.title": "PDF tools",

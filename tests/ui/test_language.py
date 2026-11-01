@@ -188,3 +188,10 @@ def test_closing_the_page_forgets_its_state(mounted):
     assert id(mounted.page) in app._STATE
     asyncio.run(mounted.page.on_close(None))
     assert id(mounted.page) not in app._STATE
+
+
+def test_footer_link_follows_the_language(mounted):
+    app.choose_language(mounted.page, mounted.settings, "en")
+    credit = mounted.page.controls[0].controls[-1].controls[0]
+    credit.on_click(None)
+    assert mounted.page.launched == "https://juanmaav92.github.io/en/pdf-tool"
