@@ -6,8 +6,7 @@ from pathlib import Path
 import flet as ft
 
 from pdftool.core.logger import log_paths
-
-_EMPTY = "(registro vacío)\n"
+from pdftool.i18n import t
 
 
 def _log_content() -> str:
@@ -17,10 +16,11 @@ def _log_content() -> str:
             chunks.append(p.read_text(encoding="utf-8"))
         except OSError:  # rotación entre exists() y read_text(): archivo ilegible
             continue
-    return "".join(chunks) if chunks else _EMPTY
+    return "".join(chunks) if chunks else t("ui.log.empty") + "\n"
 
 
-LOG_LABEL = "Guardar informe de diagnóstico"
+def log_label() -> str:
+    return t("ui.log.label")
 
 
 def make_log_picker(
@@ -48,10 +48,10 @@ def make_log_picker(
 def download_log_button(picker: ft.FilePicker) -> ft.Control:
     """Botón del informe de diagnóstico: abre el diálogo de guardado."""
     return ft.TextButton(
-        LOG_LABEL,
+        log_label(),
         icon=ft.Icons.DOWNLOAD,
         on_click=lambda _e: picker.save_file(
-            dialog_title=LOG_LABEL,
+            dialog_title=log_label(),
             file_name="pdf-tool-log.txt",
             allowed_extensions=["txt"],
         ),

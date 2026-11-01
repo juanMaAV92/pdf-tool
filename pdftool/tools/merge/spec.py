@@ -7,9 +7,7 @@ SPEC = register(
     ToolSpec(
         meta=ToolMeta(
             id="merge",
-            name="Unir PDFs",
-            description="Combina varios PDFs en uno solo, en el orden que elijas.",
-            category="Organizar",
+            category="organize",
             order=10,
         ),
         params=MergeParams,

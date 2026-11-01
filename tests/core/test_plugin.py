@@ -10,7 +10,7 @@ from pdftool.tools.watermark.params import WatermarkParams
 
 
 def test_toolmeta_holds_metadata():
-    m = ToolMeta(id="x", name="X", description="d", category="c")
+    m = ToolMeta(id="x", category="c")
     assert m.id == "x" and m.category == "c"
     # El icono es cosa de la UI: el núcleo no conoce Flet.
     assert not hasattr(m, "icon")
@@ -56,13 +56,3 @@ def test_output_dir_accepts_a_path():
 def test_existing_fields_still_work():
     assert MergeParams(output_name="informe").output_name == "informe"
     assert CompressParams(target_mb=2.5).target_mb == 2.5
-
-
-def test_every_param_field_is_described():
-    # La ayuda de la CLI sale de aquí: un campo sin descripción no se explica.
-    from pdftool.core import registry
-
-    registry.discover()
-    for spec in registry.get_specs():
-        for name, field in spec.params.model_fields.items():
-            assert field.description, f"{spec.meta.id}.{name} sin description"

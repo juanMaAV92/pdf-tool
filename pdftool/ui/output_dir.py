@@ -6,9 +6,8 @@ from pathlib import Path
 import flet as ft
 
 from pdftool.core.config import Settings, save_settings
+from pdftool.i18n import t
 from pdftool.ui.accessibility import NamedIconButton
-
-_DEFAULT_LABEL = "Junto al original"
 
 
 def abbreviate_home(path: Path) -> str:
@@ -46,20 +45,28 @@ class OutputDirField(ft.Row):
         self._dir = self._restore()
 
         self.label = ft.Text(
-            _DEFAULT_LABEL, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, expand=True
+            t("ui.output.default"),
+            max_lines=1,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            expand=True,
         )
         self.change_btn = ft.TextButton(
-            "Cambiar…", icon=ft.Icons.FOLDER_OPEN, on_click=self._pick
+            t("ui.output.change"), icon=ft.Icons.FOLDER_OPEN, on_click=self._pick
         )
         self.reset_btn = NamedIconButton(
             ft.Icons.UNDO,
-            "Volver a «junto al original»",
+            t("ui.output.reset"),
             on_click=lambda _e: self.set_dir(None),
         )
         self._picker = ft.FilePicker(on_result=self._on_pick_result)
 
         super().__init__(
-            [ft.Text("Guardar en:"), self.label, self.change_btn, self.reset_btn]
+            [
+                ft.Text(t("ui.output.save_to")),
+                self.label,
+                self.change_btn,
+                self.reset_btn,
+            ]
         )
         self._render()
 
@@ -114,13 +121,13 @@ class OutputDirField(ft.Row):
 
     def _render(self) -> None:
         self.label.value = (
-            _DEFAULT_LABEL if self._dir is None else abbreviate_home(self._dir)
+            t("ui.output.default") if self._dir is None else abbreviate_home(self._dir)
         )
         self.label.tooltip = None if self._dir is None else str(self._dir)
         self.reset_btn.visible = self._dir is not None
 
     def _pick(self, _e) -> None:
-        self._picker.get_directory_path(dialog_title="Guardar las salidas en…")
+        self._picker.get_directory_path(dialog_title=t("ui.output.dialog"))
 
     def _on_pick_result(self, e) -> None:
         if e.path:

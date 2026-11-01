@@ -6,6 +6,7 @@ import flet as ft
 from pydantic import ValidationError
 
 from pdftool.core.errors import UserError
+from pdftool.i18n import t
 from pdftool.tools.split.logic import page_count, parse_ranges, resolve_ranges
 from pdftool.tools.split.params import SplitParams
 from pdftool.tools.split.spec import SPEC
@@ -13,35 +14,30 @@ from pdftool.ui.accessibility import HelpButton
 from pdftool.ui.panel_base import InvalidParams, SingleFileToolPanel
 from pdftool.ui.registry import register
 
-_RANGES_HELP = (
-    "Cómo escribir rangos:\n"
-    "  1-3    →  páginas 1 a la 3\n"
-    "  5      →  solo la página 5\n"
-    "  8-     →  de la página 8 hasta el final\n"
-    "  -4     →  del inicio hasta la página 4\n"
-    "Separa varios rangos con comas:\n"
-    "  1-3, 5, 8-"
-)
-
 
 @register
 class SplitTool(SingleFileToolPanel):
     spec = SPEC
     icon = ft.Icons.CONTENT_CUT
-    run_label = "Dividir"
+    run_label_key = "tool.split.ui.run"
     run_icon = ft.Icons.CONTENT_CUT
-    pick_label = "Elegir PDF"
+    pick_label_key = "ui.panel.pick_pdf"
 
     def extra_controls(self) -> list[ft.Control]:
         self._pages = 0
-        self._ranges_help = HelpButton("Ayuda sobre rangos de páginas", _RANGES_HELP)
+        self._ranges_help = HelpButton(
+            t("tool.split.ui.help_title"), t("tool.split.ui.help")
+        )
         self._ranges_field = ft.TextField(
-            label="Rangos", hint_text="ej: 1-3, 5, 8-", width=240, disabled=False
+            label=t("tool.split.ui.ranges"),
+            hint_text=t("tool.split.ui.ranges_hint"),
+            width=240,
+            disabled=False,
         )
         # Sin label propio: la fila ya se lee «Cada [10] páginas».
         self._every_field = ft.TextField(
             value="10",
-            tooltip="Páginas por archivo",
+            tooltip=t("tool.split.ui.pages_per_file"),
             width=160,
             disabled=True,
             keyboard_type=ft.KeyboardType.NUMBER,
@@ -52,18 +48,22 @@ class SplitTool(SingleFileToolPanel):
                 [
                     ft.Row(
                         [
-                            ft.Radio(value="ranges", label="Por rangos"),
+                            ft.Radio(
+                                value="ranges", label=t("tool.split.ui.mode.ranges")
+                            ),
                             self._ranges_field,
                             self._ranges_help,
                         ]
                     ),
                     self._ranges_help.detail,
-                    ft.Radio(value="single", label="Una página por archivo"),
+                    ft.Radio(value="single", label=t("tool.split.ui.mode.single")),
                     ft.Row(
                         [
-                            ft.Radio(value="every", label="Cada"),
+                            ft.Radio(
+                                value="every", label=t("tool.split.ui.mode.every")
+                            ),
                             self._every_field,
-                            ft.Text("páginas"),
+                            ft.Text(t("tool.split.ui.mode.every_unit")),
                         ]
                     ),
                 ],
@@ -71,7 +71,7 @@ class SplitTool(SingleFileToolPanel):
             ),
         )
         self._mode.on_change = self._on_mode_change
-        return [ft.Text("Cómo dividir:", weight=ft.FontWeight.W_500), self._mode]
+        return [ft.Text(t("tool.split.ui.how"), weight=ft.FontWeight.W_500), self._mode]
 
     def _on_mode_change(self, _e) -> None:
         self._ranges_field.disabled = self._mode.value != "ranges"
@@ -82,14 +82,16 @@ class SplitTool(SingleFileToolPanel):
         # Se reinicia antes de leer: si el PDF no abre, los rangos no deben
         # validarse contra las páginas del archivo anterior.
         self._pages = 0
-        self._file_label.value = f"{path.name} · leyendo páginas…"
+        self._file_label.value = t("tool.split.ui.reading", name=path.name)
 
         # Abrir un PDF grande o dañado puede tardar: se lee en segundo plano.
         def on_done(count: int) -> None:
             if self._file != path:  # el usuario ya eligió otro archivo
                 return
             self._pages = count
-            self._file_label.value = f"{path.name} · {count} páginas"
+            self._file_label.value = t(
+                "tool.split.ui.pages", name=path.name, count=count
+            )
             self._sync_ready_state()
             self._page.update()
 
@@ -118,7 +120,7 @@ class SplitTool(SingleFileToolPanel):
             )
         except (ValueError, ValidationError) as exc:
             raise InvalidParams(
-                "Escribe un número de páginas mayor que 0.", field=self._every_field
+                t("tool.split.ui.error.every"), field=self._every_field
             ) from exc
         if params.mode == "ranges":
             # Valida sintaxis y límites antes de lanzar el job.

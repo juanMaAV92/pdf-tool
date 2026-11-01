@@ -251,3 +251,14 @@ def test_invalid_range_message_shows_an_example():
     assert "'abc'" not in str(info.value)
     assert "«abc»" in str(info.value)
     assert "1-3, 5" in str(info.value)
+
+
+def test_single_range_summary_is_singular(tmp_path):
+    from pdftool import i18n
+
+    src = _pdf(tmp_path / "doc.pdf", 4)
+    result = split([src], SplitParams(mode="ranges", ranges="1-2"))
+    assert result.summary == "doc.pdf → 1 archivo"
+    i18n.set_language("en")
+    result = split([src], SplitParams(mode="ranges", ranges="3"))
+    assert result.summary == "doc.pdf → 1 file"

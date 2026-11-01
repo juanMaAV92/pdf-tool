@@ -15,6 +15,7 @@ from pdftool.core.batch import Outcome, noop_progress, run_batch
 from pdftool.core.jobs import JobCancelled
 from pdftool.core.naming import output_path
 from pdftool.core.plugin import Progress, ToolResult
+from pdftool.i18n import fmt_number, t
 from pdftool.tools.compress.params import CompressParams
 
 _ATTEMPTS = [
@@ -123,7 +124,10 @@ def _rerender(
                     doc = pymupdf.open(str(dst))
                 # Un punto de progreso (y de cancelación) por página: un intento
                 # sobre un PDF largo puede durar decenas de segundos.
-                progress(done / total, f"página {done} de {total}")
+                progress(
+                    done / total,
+                    t("tool.compress.progress.page", page=done, total=total),
+                )
             if not flushed:
                 doc.save(str(dst), garbage=4, deflate=True)
                 return
@@ -194,11 +198,9 @@ class _Candidates:
         return size
 
 
-RASTERIZED_WARNING = (
-    "Algunas páginas se convirtieron en imagen: puede haberse perdido texto "
-    "seleccionable, enlaces o anotaciones. Si los necesitas, usa «Conservar "
-    "texto y enlaces»."
-)
+def rasterized_warning() -> str:
+    """Aviso de páginas convertidas en imagen, en el idioma activo."""
+    return t("tool.compress.warning.rasterized")
 
 
 @dataclass(frozen=True)
@@ -218,7 +220,7 @@ class _Compressed:
         return Outcome(
             out,
             self.message,
-            warnings=(RASTERIZED_WARNING,) if self.rasterized else (),
+            warnings=(rasterized_warning(),) if self.rasterized else (),
             metrics={
                 "original_mb": self.original_mb,
                 "final_mb": self.final_mb,
@@ -227,9 +229,13 @@ class _Compressed:
         )
 
 
-def _saved_label(original: float, final: float) -> str:
+def _sizes(original: float, final: float) -> str:
+    """«X MB → Y MB», con el porcentaje ahorrado si es apreciable."""
     saved = (original - final) / original * 100 if original > 0 else 0.0
-    return f" · {saved:.0f} % menos" if saved >= 0.5 else ""
+    sizes = {"original": fmt_number(original, 2), "final": fmt_number(final, 2)}
+    if saved >= 0.5:
+        return t("tool.compress.item.sizes_saved", saved=fmt_number(saved, 0), **sizes)
+    return t("tool.compress.item.sizes", **sizes)
 
 
 def _reduce_images(
@@ -242,7 +248,10 @@ def _reduce_images(
     """Prueba a recomprimir solo las imágenes. True si alcanzó el objetivo."""
     n = len(_PRESERVE_ATTEMPTS)
     for i, attempt in enumerate(_PRESERVE_ATTEMPTS):
-        progress(0.1 + span * i / n, f"Reduciendo imágenes (paso {i + 1} de {n})…")
+        progress(
+            0.1 + span * i / n,
+            t("tool.compress.progress.images_step", step=i + 1, total=n),
+        )
         size = candidates.attempt(
             partial(
                 _preserve_compress,
@@ -265,16 +274,19 @@ def _compress_one(
     mode: str = "max",
 ) -> _Compressed:
     original = _size_mb(input_path)
-    progress(0.0, f"Tamaño original: {original:.2f} MB")
+    progress(0.0, t("tool.compress.progress.original", mb=fmt_number(original, 2)))
 
     if original <= target_mb:
         # Abrirlo antes de copiar: un archivo dañado o que no es PDF debe
         # fallar aquí, no reportarse como «sin cambios».
         pymupdf.open(str(input_path)).close()
         atomic_copy(input_path, out)
-        progress(1.0, "Ya está bajo el objetivo")
+        progress(1.0, t("tool.compress.progress.under_target"))
         return _Compressed(
-            f"{original:.2f} MB (sin cambios)", original, original, False
+            t("tool.compress.item.unchanged", original=fmt_number(original, 2)),
+            original,
+            original,
+            False,
         )
 
     # Los intentos van a una carpeta oculta junto al destino: usan el mismo
@@ -283,20 +295,20 @@ def _compress_one(
     with tempfile.TemporaryDirectory(prefix=".pdf-tool-", dir=out.parent) as workdir:
         candidates = _Candidates(Path(workdir))
 
-        def publish(note: str = "") -> _Compressed:
+        def publish(case: str = "plain") -> _Compressed:
+            # `case`: plain, preserved, missed_preserve o missed_max.
             assert candidates.best is not None
             os.replace(candidates.best, out)
             final = candidates.best_mb
-            progress(1.0, f"Listo: {final:.2f} MB")
+            progress(1.0, t("tool.compress.progress.done_mb", mb=fmt_number(final, 2)))
             return _Compressed(
-                f"{original:.2f} MB → {final:.2f} MB"
-                f"{_saved_label(original, final)}{note}",
+                t(f"tool.compress.item.{case}", result=_sizes(original, final)),
                 original,
                 final,
                 candidates.best_rasterized,
             )
 
-        progress(0.05, "Optimizando la estructura del PDF…")
+        progress(0.05, t("tool.compress.progress.structure"))
         if (
             candidates.attempt(lambda dst: _simple_compress(input_path, dst))
             <= target_mb
@@ -307,12 +319,9 @@ def _compress_one(
         # con fotos de mucha resolución, suele dar el archivo más pequeño.
         span = 0.9 if mode == "preserve" else 0.2
         if _reduce_images(candidates, input_path, target_mb, progress, span):
-            return publish(" (contenido preservado)")
+            return publish("preserved")
         if mode == "preserve":
-            return publish(
-                " (no se alcanzó el objetivo; se guardó la versión más pequeña "
-                "con el contenido preservado)"
-            )
+            return publish("missed_preserve")
 
         # `max`: si no bastó, convertir páginas en imagen. Gana el intento más
         # pequeño de todos, también si fue uno de los anteriores.
@@ -320,13 +329,22 @@ def _compress_one(
         n = len(_ATTEMPTS)
         for i, attempt in enumerate(_ATTEMPTS):
             base = start + (1 - start) * i / n
-            step = f"Reduciendo calidad (paso {i + 1} de {n})"
-            progress(base, f"{step}…")
+            progress(
+                base, t("tool.compress.progress.quality_step", step=i + 1, total=n)
+            )
 
             def step_progress(
-                pct: float, msg: str, _base: float = base, _step: str = step
+                pct: float, msg: str, _base: float = base, _step: int = i + 1
             ) -> None:
-                progress(_base + (1 - start) / n * pct, f"{_step}: {msg}")
+                progress(
+                    _base + (1 - start) / n * pct,
+                    t(
+                        "tool.compress.progress.quality_step_detail",
+                        step=_step,
+                        total=n,
+                        detail=msg,
+                    ),
+                )
 
             size = candidates.attempt(
                 partial(
@@ -340,9 +358,7 @@ def _compress_one(
             )
             if size <= target_mb:
                 return publish()
-        return publish(
-            " (no se alcanzó el objetivo; se guardó la versión más pequeña posible)"
-        )
+        return publish("missed_max")
 
 
 def compress(
@@ -366,7 +382,7 @@ def compress(
             raise
         return done.outcome(out)
 
-    batch = run_batch(inputs, one, progress, all_failed="Ningún PDF pudo comprimirse.")
+    batch = run_batch(inputs, one, progress, all_failed=t("tool.compress.all_failed"))
     outputs, total = batch.outputs, batch.total
     done_items = [item for item in batch.items if item.ok]
     total_original = sum(item.metrics["original_mb"] for item in done_items)
@@ -391,16 +407,20 @@ def compress(
             metrics=metrics,
         )
 
-    tail = f" ({saved_pct:.0f} % menos)" if saved_pct >= 0.5 else " (sin cambios)"
-    progress(1.0, f"{len(outputs)} archivos comprimidos")
-    head = (
-        f"{total} archivos"
-        if len(outputs) == total
-        else f"{len(outputs)} de {total} archivos"
+    progress(1.0, t("tool.compress.progress.batch_done", count=len(outputs)))
+    scope = "all" if len(outputs) == total else "partial"
+    change = "saved" if saved_pct >= 0.5 else "unchanged"
+    summary = t(
+        f"tool.compress.summary.{scope}_{change}",
+        done=len(outputs),
+        count=total,
+        original=fmt_number(total_original, 2),
+        final=fmt_number(total_final, 2),
+        saved=fmt_number(saved_pct, 0),
     )
     return ToolResult(
         outputs=outputs,
-        summary=f"{head} · {total_original:.2f} MB → {total_final:.2f} MB{tail}",
+        summary=summary,
         items=batch.items,
         warnings=warnings,
         metrics=metrics,

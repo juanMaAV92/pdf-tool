@@ -20,13 +20,13 @@ def test_output_next_to_first_input(tmp_path):
     a = _pdf(tmp_path / "a.pdf", 1, "A")
     out = output_path_for_merge([a])
     assert out.parent == tmp_path
-    assert out.name == "a_merged.pdf"
+    assert out.name == "a_unido.pdf"
 
 
 def test_output_never_equals_an_input(tmp_path):
-    a = _pdf(tmp_path / "a_merged.pdf", 1, "A")
+    a = _pdf(tmp_path / "a_unido.pdf", 1, "A")
     out = output_path_for_merge([a])
-    assert out == tmp_path / "a_merged_merged.pdf"
+    assert out == tmp_path / "a_unido_unido.pdf"
     assert out != a
 
 
@@ -140,3 +140,15 @@ def test_merge_writes_to_output_dir(tmp_path):
 
     assert res.outputs[0] == destino / "junto.pdf"
     assert res.outputs[0].exists()
+
+
+def test_default_name_follows_language(tmp_path):
+    from pdftool import i18n
+
+    a = _pdf(tmp_path / "a.pdf", 1, "A")
+    b = _pdf(tmp_path / "b.pdf", 1, "B")
+    assert output_path_for_merge([a, b]).name == "a_unido.pdf"
+    i18n.set_language("en")
+    assert output_path_for_merge([a, b]).name == "a_merged.pdf"
+    result = merge([a, b], MergeParams())
+    assert result.summary == "2 PDFs merged → a_merged.pdf"

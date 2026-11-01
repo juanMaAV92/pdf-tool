@@ -5,7 +5,7 @@ import flet as ft
 import pymupdf
 import pytest
 
-from pdftool.core.errors import GENERIC_MESSAGE, UserError
+from pdftool.core.errors import UserError, generic_message
 from pdftool.core.jobs import JobHandle
 from pdftool.core.plugin import (
     BaseParams,
@@ -63,7 +63,7 @@ class _FakeEvent:
 
 
 class _SingleStub(SingleFileToolPanel):
-    meta = ToolMeta(id="single-stub", name="S", description="d", category="c")
+    meta = ToolMeta(id="single-stub", category="c")
 
     def make_params(self):
         return None
@@ -73,7 +73,7 @@ class _SingleStub(SingleFileToolPanel):
 
 
 class _RunnableStub(SingleFileToolPanel):
-    meta = ToolMeta(id="runnable-stub", name="R", description="d", category="c")
+    meta = ToolMeta(id="runnable-stub", category="c")
 
     def make_params(self):
         return BaseParams()
@@ -83,7 +83,7 @@ class _RunnableStub(SingleFileToolPanel):
 
 
 class _MultiStub(MultiFileToolPanel):
-    meta = ToolMeta(id="multi-stub", name="M", description="d", category="c")
+    meta = ToolMeta(id="multi-stub", category="c")
     min_files = 2
 
     def make_params(self):
@@ -253,7 +253,7 @@ def test_multi_file_ignores_duplicates():
 def test_on_error_generic_shows_folded_detail():
     tool = _build(_SingleStub())
     tool._on_error(RuntimeError("boom"))
-    assert tool.status.value == GENERIC_MESSAGE
+    assert tool.status.value == generic_message()
     assert tool._error_toggle.visible is True
     assert tool._error_detail.value == "RuntimeError: boom"
     assert tool._error_detail.visible is False  # arranca plegado
@@ -540,7 +540,7 @@ def test_multi_row_paths_positional_when_no_failures():
 
 
 class _ThumbStub(MultiFileToolPanel):
-    meta = ToolMeta(id="thumb-stub", name="T", description="d", category="c")
+    meta = ToolMeta(id="thumb-stub", category="c")
     show_thumbnails = True
 
     def make_params(self):
@@ -625,7 +625,7 @@ def _done(tool, result):
 
 
 class _RunnableMulti(MultiFileToolPanel):
-    meta = ToolMeta(id="multi-run", name="M", description="d", category="c")
+    meta = ToolMeta(id="multi-run", category="c")
 
     def make_params(self):
         return BaseParams()
@@ -996,7 +996,7 @@ def test_run_logic_defaults_to_the_declared_logic():
         return ToolResult(outputs=[], summary="ok")
 
     class _Declared(SingleFileToolPanel):
-        meta = ToolMeta(id="declared", name="D", description="d", category="c")
+        meta = ToolMeta(id="declared", category="c")
         logic = staticmethod(fake_logic)
 
         def make_params(self):

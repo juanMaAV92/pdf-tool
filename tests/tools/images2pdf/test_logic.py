@@ -245,3 +245,16 @@ def test_malformed_jpeg_header_does_not_hang(tmp_path, data):
     worker.join(timeout=2)
     assert not worker.is_alive(), "image_size quedó en bucle"
     assert box["size"] is None
+
+
+def test_summary_and_errors_in_english(tmp_path):
+    from pdftool import i18n
+
+    i18n.set_language("en")
+    img = _img(tmp_path / "foto.png", 20, 10)
+    result = images_to_pdf([img], ImagesToPdfParams())
+    assert result.summary == "Image converted → foto.pdf"
+    bad = tmp_path / "x.gif"
+    bad.write_bytes(b"GIF89a")
+    with pytest.raises(Exception, match="Unsupported format"):
+        images_to_pdf([bad], ImagesToPdfParams())

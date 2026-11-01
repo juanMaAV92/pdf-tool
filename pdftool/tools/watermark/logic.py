@@ -7,8 +7,9 @@ import pymupdf
 
 from pdftool.core.atomic import atomic_output
 from pdftool.core.batch import noop_progress
-from pdftool.core.naming import output_path
+from pdftool.core.naming import localized_suffix, output_path
 from pdftool.core.plugin import Progress, ToolResult
+from pdftool.i18n import t
 from pdftool.tools.watermark.params import WatermarkParams
 
 _ANGLE = 45
@@ -20,7 +21,9 @@ _MAX_STAMPS_PER_PAGE = 20_000
 
 def output_path_for_watermark(input_path: Path, out_dir: Path | None = None) -> Path:
     """Política de nombre de Marca de agua; la colisión la resuelve el helper."""
-    return output_path(input_path, "marca", out_dir=out_dir)
+    return output_path(
+        input_path, localized_suffix("tool.watermark.suffix"), out_dir=out_dir
+    )
 
 
 def _stamp_count(rect: pymupdf.Rect, sx: float, sy: float, text_w: float) -> int:
@@ -96,15 +99,21 @@ def watermark(
     step_x = max(text_w + params.font_size * 2, params.font_size * 4)
     step_y = params.font_size * 4
 
-    progress(0.0, "Aplicando marca de agua…")
+    progress(0.0, t("tool.watermark.progress.start"))
     font = pymupdf.Font("helv")
     with atomic_output(out) as temporary, pymupdf.open(str(input_path)) as doc:
         total = doc.page_count
         for pno in range(total):
             page = doc[pno]
             _tile_page(page, text, params, font, step_x, step_y, text_w)
-            progress((pno + 1) / total, f"Página {pno + 1}/{total}")
+            progress(
+                (pno + 1) / total,
+                t("tool.watermark.progress.page", page=pno + 1, total=total),
+            )
         doc.save(str(temporary), garbage=4, deflate=True)
 
-    progress(1.0, f"Listo: {out.name}")
-    return ToolResult(outputs=[out], summary=f"Marca '{text}' aplicada → {out.name}")
+    progress(1.0, t("common.progress.done_file", name=out.name))
+    return ToolResult(
+        outputs=[out],
+        summary=t("tool.watermark.summary", text=text, name=out.name),
+    )

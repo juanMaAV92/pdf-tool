@@ -175,3 +175,13 @@ def test_large_page_with_small_text_is_fast(tmp_path):
     started = time.monotonic()
     watermark([src], WatermarkParams(text="X", font_size=8))
     assert time.monotonic() - started < 10
+
+
+def test_suffix_follows_language(tmp_path):
+    from pdftool import i18n
+
+    a = _pdf(tmp_path / "doc.pdf")
+    i18n.set_language("en")
+    assert output_path_for_watermark(a).name == "doc_watermark.pdf"
+    result = watermark([a], WatermarkParams(text="DRAFT"))
+    assert result.summary == "Watermark 'DRAFT' applied → doc_watermark.pdf"

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from pdftool.cli.report import error_to_dict, exit_code, render_text, result_to_dict
-from pdftool.core.errors import GENERIC_MESSAGE, UserError
+from pdftool.core.errors import UserError, generic_message
 from pdftool.core.plugin import FileResult, ToolResult
 
 
@@ -58,7 +58,7 @@ def test_error_to_dict_hides_detail_for_user_errors():
 
 def test_error_to_dict_keeps_detail_for_unexpected():
     data = error_to_dict("watermark", RuntimeError("boom"))
-    assert data["error"]["message"] == GENERIC_MESSAGE
+    assert data["error"]["message"] == generic_message()
     assert "RuntimeError" in data["error"]["detail"]
 
 

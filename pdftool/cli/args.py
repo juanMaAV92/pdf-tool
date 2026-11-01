@@ -19,10 +19,13 @@ from pydantic.fields import FieldInfo
 
 from pdftool.core.errors import UserError
 from pdftool.core.plugin import BaseParams
+from pdftool.i18n import choice_label, param_help, t
 
 _SCALARS = (int, float, str, Path)
 # Nombres que ya usa el comando (`pdf-tool <id> ARCHIVO... --json`) o argparse.
 RESERVED = frozenset({"json", "inputs", "command", "help", "version"})
+# Campos de `BaseParams`: su ayuda es común (`param.<campo>`).
+RESERVED_COMMON = frozenset(BaseParams.model_fields)
 
 
 def _flag(name: str) -> str:
@@ -66,17 +69,25 @@ def _type_kwargs(name: str, annotation: Any) -> dict[str, Any]:
     raise TypeError(f"Campo {name!r}: tipo {annotation!r} no soportado por la CLI")
 
 
-def _help(field: FieldInfo) -> str:
-    text = field.description or ""
+def _help(tool_id: str, name: str, field: FieldInfo) -> str:
+    text = param_help(None if name in RESERVED_COMMON else tool_id, name)
+    if get_origin(field.annotation) is Literal:
+        choices = "; ".join(
+            t("cli.help.choice", value=v, label=choice_label(tool_id, name, v))
+            for v in get_args(field.annotation)
+        )
+        text = t("cli.help.with_choices", help=text, choices=choices)
     if not field.is_required() and field.default not in (None, ""):
         default = field.default
         if isinstance(default, tuple):
             default = " ".join(str(v) for v in default)
-        text += f" (por defecto: {default})"
+        text = t("cli.help.with_default", help=text, value=default)
     return text
 
 
-def add_params(parser: argparse.ArgumentParser, params: type[BaseParams]) -> None:
+def add_params(
+    parser: argparse.ArgumentParser, params: type[BaseParams], tool_id: str = ""
+) -> None:
     for name, field in params.model_fields.items():
         if name in RESERVED:
             raise TypeError(f"Campo {name!r}: nombre reservado por la CLI")
@@ -85,8 +96,11 @@ def add_params(parser: argparse.ArgumentParser, params: type[BaseParams]) -> Non
                 f"{_flag(name)}-stdin",
                 dest=f"{name}_stdin",
                 action="store_true",
-                help=f"{field.description or name} Se lee de la primera línea de "
-                f"stdin (o de la variable {_env_var(name)}).",
+                help=t(
+                    "cli.help.secret",
+                    help=param_help(tool_id, name),
+                    env=_env_var(name),
+                ),
             )
             continue
         parser.add_argument(
@@ -94,7 +108,7 @@ def add_params(parser: argparse.ArgumentParser, params: type[BaseParams]) -> Non
             dest=name,
             default=None,
             required=field.is_required(),
-            help=_help(field),
+            help=_help(tool_id, name, field),
             **_type_kwargs(name, field.annotation),
         )
 
@@ -121,8 +135,12 @@ def build_params(
             value = _secret_value(name, ns, env, stdin)
             if value is None and field.is_required():
                 raise UserError(
-                    f"Falta {name}: pásalo con {_flag(name)}-stdin "
-                    f"o la variable {_env_var(name)}"
+                    t(
+                        "cli.error.missing_secret",
+                        name=name,
+                        flag=f"{_flag(name)}-stdin",
+                        env=_env_var(name),
+                    )
                 )
         else:
             value = getattr(ns, name, None)
@@ -135,4 +153,31 @@ def build_params(
     except ValidationError as exc:
         error = exc.errors()[0]
         field_name = str(error["loc"][0]) if error["loc"] else ""
-        raise UserError(f"{_flag(field_name)}: {error['msg']}") from exc
+        raise UserError(f"{_flag(field_name)}: {_validation_text(error)}") from exc
+
+
+# Tipos de error de pydantic con mensaje propio; el resto conserva el suyo.
+_VALIDATION_KEYS = frozenset(
+    {
+        "greater_than",
+        "greater_than_equal",
+        "less_than_equal",
+        "int_parsing",
+        "float_parsing",
+        "literal_error",
+        "missing",
+        "string_too_short",
+    }
+)
+
+
+def _validation_text(error: Any) -> str:
+    kind = error.get("type", "")
+    if kind not in _VALIDATION_KEYS:
+        return str(error["msg"])
+    # 0.0 → 0: los límites enteros se leen mejor sin decimales.
+    ctx = {
+        k: int(v) if isinstance(v, float) and v.is_integer() else v
+        for k, v in (error.get("ctx") or {}).items()
+    }
+    return t(f"cli.validation.{kind}", **ctx)

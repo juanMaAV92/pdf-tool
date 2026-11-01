@@ -34,6 +34,8 @@ SCHEMA_VERSION = 1
 class Settings(BaseModel):
     schema_version: int = SCHEMA_VERSION
     theme_mode: ThemeSetting = "system"
+    # "system" o un código de idioma con diccionario (`pdftool/i18n/locales`).
+    language: str = "system"
     # Carpeta de salida global; None → junto al original. Se guarda como texto
     # porque el JSON no tiene tipo ruta.
     output_dir: str | None = None

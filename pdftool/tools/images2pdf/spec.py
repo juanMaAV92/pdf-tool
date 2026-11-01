@@ -7,9 +7,7 @@ SPEC = register(
     ToolSpec(
         meta=ToolMeta(
             id="images2pdf",
-            name="Imágenes a PDF",
-            description="Crea un PDF por cada imagen (JPG o PNG).",
-            category="Convertir",
+            category="convert",
             order=40,
         ),
         params=ImagesToPdfParams,

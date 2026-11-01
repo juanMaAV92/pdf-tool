@@ -4,8 +4,23 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from pdftool.core.errors import UserError
+from pdftool.i18n import t, using_language
 
 _FORBIDDEN_NAME_CHARS = set('/\\:?|<>*"\x00')
+
+
+def localized_suffix(key: str) -> str:
+    """Sufijo de salida del diccionario, en el idioma activo.
+
+    Un diccionario aportado podría traer un sufijo vacío o con caracteres que
+    no valen en un nombre de archivo («/», «:»…): entonces se usa el inglés.
+    """
+    value = t(key).strip()
+    if value and not set(value) & _FORBIDDEN_NAME_CHARS:
+        return value
+    with using_language("en"):
+        return t(key)
+
 
 # Nombres que Windows no permite como archivo, con o sin extensión.
 _WINDOWS_RESERVED_NAMES = frozenset(
@@ -28,13 +43,9 @@ def parse_output_name(value: str | None) -> str | None:
     if not name:
         return None
     if any(c in _FORBIDDEN_NAME_CHARS for c in name):
-        raise UserError(
-            'Nombre de salida inválido: no puede contener / \\ : ? | < > * "'
-        )
+        raise UserError(t("core.naming.forbidden_chars"))
     if name.upper() in _WINDOWS_RESERVED_NAMES:
-        raise UserError(
-            f"Nombre de salida inválido: «{name}» está reservado por Windows."
-        )
+        raise UserError(t("core.naming.reserved", name=name))
     return name
 
 

@@ -114,3 +114,19 @@ def test_parse_output_name_lives_in_the_core():
         parse_output_name("CON")
     with pytest.raises(UserError, match="no puede contener"):
         parse_output_name("a/b")
+
+
+def test_localized_suffix_falls_back_to_english_when_invalid(tmp_path):
+    import json
+    import shutil
+
+    from pdftool import i18n
+    from pdftool.core.naming import localized_suffix
+
+    for path in i18n.LOCALES_DIR.glob("*.json"):
+        shutil.copy2(path, tmp_path / path.name)
+    data = {"_meta": {"name": "Xx"}, "tool.watermark.suffix": "mar/ca"}
+    (tmp_path / "xx.json").write_text(json.dumps(data), encoding="utf-8")
+    i18n.use_locales_dir(tmp_path)
+    i18n.set_language("xx")
+    assert localized_suffix("tool.watermark.suffix") == "watermark"

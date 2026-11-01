@@ -7,9 +7,7 @@ SPEC = register(
     ToolSpec(
         meta=ToolMeta(
             id="compress",
-            name="Comprimir PDF",
-            description="Reduce el tamaño de uno o varios PDFs a un objetivo en MB.",
-            category="Optimizar",
+            category="optimize",
             order=30,
         ),
         params=CompressParams,

@@ -8,6 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from pdftool.core.config import Settings
+from pdftool.i18n import t
 
 
 @dataclass(frozen=True)
@@ -26,12 +27,27 @@ class FileResult:
 
 @dataclass(frozen=True)
 class ToolMeta:
+    """Identidad de una herramienta. Los textos salen del diccionario
+    (`tool.<id>.name`, `tool.<id>.description`, `category.<category>`) y se
+    resuelven al leerse, en el idioma activo."""
+
     id: str
-    name: str
-    description: str
+    # Id estable de la categoría (organize, optimize, convert, edit, security).
     category: str
-    # Posición en la navegación (menor primero); a igualdad, por nombre.
+    # Posición en la navegación (menor primero); a igualdad, por id.
     order: int = 100
+
+    @property
+    def name(self) -> str:
+        return t(f"tool.{self.id}.name")
+
+    @property
+    def description(self) -> str:
+        return t(f"tool.{self.id}.description")
+
+    @property
+    def category_label(self) -> str:
+        return t(f"category.{self.category}")
 
 
 @dataclass
@@ -53,10 +69,8 @@ class BaseParams(BaseModel):
     siempre); una ruta → todas las salidas van a esa carpeta.
     """
 
-    output_dir: Path | None = Field(
-        default=None,
-        description="Carpeta de salida (por defecto, junto al original).",
-    )
+    # Ayuda: `param.output_dir` en el diccionario.
+    output_dir: Path | None = Field(default=None)
 
 
 @dataclass(frozen=True)
@@ -85,6 +99,9 @@ class ToolContext:
     page: object  # ft.Page (evitamos importar flet en el core)
     run_job: Callable  # (work, on_progress, on_done, on_error) -> None
     settings: Settings | None = None
+    # El host quiere saber cuándo empieza o termina una tarea (p. ej. para
+    # bloquear el cambio de idioma mientras hay una en curso).
+    on_busy_changed: Callable[[], None] | None = None
 
 
 class PdfTool(ABC):

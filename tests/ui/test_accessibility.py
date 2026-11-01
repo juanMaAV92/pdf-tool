@@ -25,7 +25,8 @@ def test_home_card_is_standard_button_and_opens_selected_tool():
         meta=SimpleNamespace(
             name="Comprimir PDF",
             description="Reduce el tamaño.",
-            category="Optimizar",
+            category="optimize",
+            category_label="Optimizar",
         ),
     )
     card = _tool_card(2, tool, opened.append)

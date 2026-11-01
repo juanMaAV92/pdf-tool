@@ -79,3 +79,6 @@ jobs:
           /tmp/cli/bin/python -c "import pymupdf; d = pymupdf.open(); d.new_page(); d.new_page(); d.save('a.pdf')"
           /tmp/cli/bin/pdf-tool split a.pdf --mode single --json > out.json
           /tmp/cli/bin/python -c "import json; assert json.load(open('out.json'))['ok']"
+          # Los diccionarios de idioma van dentro del wheel.
+          /tmp/cli/bin/pdf-tool --lang en list | grep -q "Merge PDFs"
+          /tmp/cli/bin/pdf-tool --lang es list | grep -q "Unir PDFs"

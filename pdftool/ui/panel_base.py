@@ -12,12 +12,11 @@ from pdftool.core.errors import UserError
 from pdftool.core.jobs import JobHandle
 from pdftool.core.naming import parse_output_name
 from pdftool.core.plugin import BaseParams, PdfTool, ToolContext, ToolResult, ToolSpec
+from pdftool.i18n import t
 from pdftool.ui.errors import humanize_error
 from pdftool.ui.logs import download_log_button, make_log_picker
 from pdftool.ui.output_dir import OutputDirField
 from pdftool.ui.platform import open_file, open_folder, shortcut_label
-
-WEB_MODE_MSG = "El modo navegador no da rutas locales; usa la app de escritorio."
 
 
 class InvalidParams(UserError):
@@ -55,7 +54,7 @@ class OutputNameField(ft.TextField):
     """
 
     def __init__(self, resolve: Callable[[str | None], Path | None]) -> None:
-        super().__init__(hint_text="Nombre de salida (opcional)", width=280, dense=True)
+        super().__init__(hint_text=t("ui.output_name.hint"), width=280, dense=True)
         self._resolve = resolve
         self.on_change = lambda _e: self.refresh(update=True)
 
@@ -77,16 +76,17 @@ class OutputNameField(ft.TextField):
         if out is None:
             return None, None
         if out.name == f"{base}.pdf":
-            return f"Se guardará como «{out.name}»", _HELPER_OK_COLOR
-        return f"Ya existe — se guardará como «{out.name}»", _HELPER_WARN_COLOR
+            return t("ui.output_name.will_save", name=out.name), _HELPER_OK_COLOR
+        return t("ui.output_name.exists", name=out.name), _HELPER_WARN_COLOR
 
 
 class BaseToolPanel(PdfTool):
     # Rellenados por cada herramienta:
     icon: str = ""
-    run_label: str = "Aplicar"
+    # Claves del diccionario (se traducen al construir el panel).
+    run_label_key: str = "ui.panel.run"
     run_icon = ft.Icons.PLAY_ARROW
-    pick_label: str = "Elegir PDF"
+    pick_label_key: str = "ui.panel.pick_pdf"
     pick_icon = ft.Icons.UPLOAD_FILE
     allowed_extensions: tuple[str, ...] = ("pdf",)
     min_files: int = 1
@@ -144,7 +144,7 @@ class BaseToolPanel(PdfTool):
         self._picker = ft.FilePicker()
         # Ídem, para el informe de diagnóstico; confirma dónde quedó guardado.
         self._log_picker = make_log_picker(
-            on_saved=lambda path: self._notify(f"Informe guardado en «{path.name}».")
+            on_saved=lambda path: self._notify(t("ui.log.saved", name=path.name))
         )
         self._invalid_field: ft.TextField | None = None
         self._job: JobHandle | None = None
@@ -209,16 +209,18 @@ class BaseToolPanel(PdfTool):
         if remaining == 0:
             return ""
         if required == 1:
-            return "Añade un archivo para continuar."
+            return t("ui.panel.need_one")
         if selected == 0:
-            return f"Añade al menos {required} archivos para continuar."
-        suffix = "archivo" if remaining == 1 else "archivos"
-        return f"Añade {remaining} {suffix} más para continuar."
+            return t("ui.panel.need_at_least", count=required)
+        return t("ui.panel.need_more", count=remaining)
 
     def _set_running(self, running: bool) -> None:
         self._running = running
         self.cancel_btn.visible = running
         self._lock_inputs(running)
+        ctx = getattr(self, "_ctx", None)
+        if ctx is not None and ctx.on_busy_changed is not None:
+            ctx.on_busy_changed()
 
     def _lock_inputs(self, locked: bool) -> None:
         """Hook: (des)habilita los controles que cambian las entradas."""
@@ -301,13 +303,13 @@ class BaseToolPanel(PdfTool):
             return
         self._logger().info("cancelado · %.1fs", self._elapsed())
         self._invalidate_active_job()
-        self._set_status("Cancelado. Los archivos ya terminados se conservan.", "info")
+        self._set_status(t("ui.panel.cancelled"), "info")
         self._page.update()
 
     # ---- errores (mensajes para el usuario) ----
     def _clear_error(self) -> None:
         self._error_toggle.visible = False
-        self._error_toggle.text = "Ver detalle técnico"
+        self._error_toggle.text = t("ui.panel.show_detail")
         self._error_detail.visible = False
         self._error_detail.value = ""
         self._log_btn.visible = False
@@ -316,7 +318,9 @@ class BaseToolPanel(PdfTool):
     def _toggle_error_detail(self, _e) -> None:
         self._error_detail.visible = not self._error_detail.visible
         self._error_toggle.text = (
-            "Ocultar detalle" if self._error_detail.visible else "Ver detalle técnico"
+            t("ui.panel.hide_detail")
+            if self._error_detail.visible
+            else t("ui.panel.show_detail")
         )
         self._page.update()
 
@@ -367,8 +371,7 @@ class BaseToolPanel(PdfTool):
         self._hide_result_actions()
         if self._out_dir.destination_missing():
             self._set_status(
-                "La carpeta de destino ya no está disponible. Elige otra "
-                "o vuelve a «junto al original».",
+                t("ui.panel.destination_missing"),
                 "error",
             )
             self._page.update()
@@ -387,7 +390,7 @@ class BaseToolPanel(PdfTool):
         self._set_running(True)
         self.progress.visible = True
         self.progress.value = 0
-        self._set_status("Procesando…")
+        self._set_status(t("ui.panel.processing"))
         self._page.update()
         inputs = self.collect_inputs()
         self._invalidate_active_job(reset_ui=False)
@@ -461,7 +464,9 @@ class BaseToolPanel(PdfTool):
         )
         self._counter = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
         self._error_toggle = ft.TextButton(
-            "Ver detalle técnico", visible=False, on_click=self._toggle_error_detail
+            t("ui.panel.show_detail"),
+            visible=False,
+            on_click=self._toggle_error_detail,
         )
         self._error_detail = ft.Text(
             "",
@@ -476,19 +481,24 @@ class BaseToolPanel(PdfTool):
             [self._error_toggle, self._log_btn], visible=False, wrap=True
         )
         self.open_btn = ft.FilledButton(
-            "Abrir carpeta", icon=ft.Icons.FOLDER_OPEN, visible=False
+            t("ui.panel.open_folder"), icon=ft.Icons.FOLDER_OPEN, visible=False
         )
         self.open_file_btn = ft.FilledButton(
-            "Abrir archivo", icon=ft.Icons.OPEN_IN_NEW, visible=False
+            t("ui.panel.open_file"), icon=ft.Icons.OPEN_IN_NEW, visible=False
         )
         self.run_btn = ft.FilledButton(
-            self.run_label,
+            t(self.run_label_key),
             icon=self.run_icon,
             disabled=True,
-            tooltip=f"Ejecutar ({shortcut_label('Enter')})",
+            tooltip=t(
+                "ui.shortcut", label=t("ui.panel.execute"), keys=shortcut_label("Enter")
+            ),
         )
         self.cancel_btn = ft.OutlinedButton(
-            "Cancelar", icon=ft.Icons.STOP, visible=False, on_click=self._cancel_run
+            t("ui.panel.cancel"),
+            icon=ft.Icons.STOP,
+            visible=False,
+            on_click=self._cancel_run,
         )
         self._result_actions = ft.Row(
             [self.open_file_btn, self.open_btn], visible=False, wrap=True, spacing=8
@@ -572,12 +582,14 @@ class SingleFileToolPanel(BaseToolPanel):
 
     def build_input(self, page) -> ft.Control:
         self._file: Path | None = None
-        self._file_label = ft.Text("Ningún archivo seleccionado", italic=True)
+        self._file_label = ft.Text(t("ui.panel.no_file"), italic=True)
         self._picker.on_result = self._on_pick
         self._pick_btn = ft.FilledTonalButton(
-            self.pick_label,
+            t(self.pick_label_key),
             icon=self.pick_icon,
-            tooltip=f"{self.pick_label} ({shortcut_label('O')})",
+            tooltip=t(
+                "ui.shortcut", label=t(self.pick_label_key), keys=shortcut_label("O")
+            ),
             on_click=lambda _e: self._picker.pick_files(
                 allow_multiple=False,
                 allowed_extensions=list(self.allowed_extensions),
@@ -606,7 +618,7 @@ class SingleFileToolPanel(BaseToolPanel):
             except Exception as exc:  # p. ej. un PDF dañado al leer sus páginas
                 self._reject_pick(exc)
         elif e.files:
-            self._set_status(WEB_MODE_MSG)
+            self._set_status(t("ui.web_mode"))
             self._clear_error()
         self._page.update()
 
@@ -619,7 +631,7 @@ class SingleFileToolPanel(BaseToolPanel):
     def _reject_pick(self, exc: Exception) -> None:
         self._logger().warning("no se pudo leer la entrada", exc_info=exc)
         self._file = None
-        self._file_label.value = "Ningún archivo seleccionado"
+        self._file_label.value = t("ui.panel.no_file")
         self._file_label.italic = True
         self._sync_ready_state()
         self._set_status(humanize_error(exc)[0], "error")
