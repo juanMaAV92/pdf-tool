@@ -234,29 +234,39 @@ jobs:
             dist/pdf-tool-*-windows-setup.exe
             dist/SHA256SUMS.txt
           body: |
-            ## Instalación
+            ## Install / Instalación
 
+            Download the installers **only from this page**. To check that a
+            file was not altered, compare its fingerprint with `SHA256SUMS.txt`.
             Descarga los instaladores **solo desde esta página**. Para comprobar
-            que un archivo no fue alterado, compara su huella con
-            `SHA256SUMS.txt`:
+            que un archivo no fue alterado, compara su huella con `SHA256SUMS.txt`.
             - macOS (Terminal): `shasum -a 256 pdf-tool-*-macos.dmg`
             - Windows (PowerShell): `Get-FileHash .\pdf-tool-*-windows-setup.exe`
 
-            Con GitHub CLI también puedes verificar que el archivo se construyó
-            en este repositorio: `gh attestation verify <archivo> --repo ${{ github.repository }}`
+            With GitHub CLI you can also verify the file was built in this
+            repository / Con GitHub CLI también puedes verificar que se construyó
+            en este repositorio: `gh attestation verify <file> --repo ${{ github.repository }}`
 
             ### macOS (`.dmg`)
-            1. Abre el `.dmg` y arrastra **pdf-tool** a la carpeta *Aplicaciones*.
-            2. La primera vez: **clic derecho** sobre la app → **Abrir** → **Abrir**.
-               (La app aún no está firmada por Apple; este paso solo se hace una vez.)
-               Si dice que está "dañada" y la huella coincide con `SHA256SUMS.txt`,
-               abre Terminal y ejecuta:
-               `xattr -dr com.apple.quarantine /Applications/pdf-tool.app`
+            - **EN:** Open the `.dmg` and drag **pdf-tool** to *Applications*. The
+              app is not signed by Apple, so the first time macOS blocks it: go to
+              **System Settings → Privacy & Security**, scroll to **Security** and
+              click **Open Anyway** (only once).
+            - **ES:** Abre el `.dmg` y arrastra **pdf-tool** a *Aplicaciones*. La app
+              no está firmada por Apple, así que la primera vez macOS la bloquea: ve
+              a **Ajustes del Sistema → Privacidad y Seguridad**, baja a
+              **Seguridad** y pulsa **Abrir igualmente** (solo una vez).
+            - If it says the app is "damaged" and the fingerprint matches /
+              Si dice que está "dañada" y la huella coincide:
+              `xattr -dr com.apple.quarantine /Applications/pdf-tool.app`
 
             ### Windows (`-setup.exe`)
-            1. Ejecuta el instalador. Si aparece **SmartScreen** y la huella
-               coincide con `SHA256SUMS.txt`: **Más información** → **Ejecutar
-               de todas formas**.
-            2. El instalador actualiza en sitio sobre versiones previas.
+            - **EN:** Run the installer. If **SmartScreen** appears and the
+              fingerprint matches: **More info → Run anyway**. It updates previous
+              versions in place.
+            - **ES:** Ejecuta el instalador. Si aparece **SmartScreen** y la huella
+              coincide: **Más información → Ejecutar de todas formas**. Actualiza en
+              sitio las versiones previas.
 
-            Tus ajustes (tema, etc.) se conservan al actualizar.
+            ### Command line / Línea de comandos
+            `pipx install pdf-tool-cli` · [PyPI](https://pypi.org/project/pdf-tool-cli/)

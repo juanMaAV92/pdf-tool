@@ -3,7 +3,7 @@
 # siendo `pdf-tool` y la app conserva su identidad con `flet build --project`.
 name = "pdf-tool-cli"
 version = "0.1.0"
-description = "Herramientas PDF (unir, dividir, comprimir, proteger…) como CLI para agentes y app de escritorio."
+description = "Local PDF tools (merge, split, compress, protect, watermark) as a CLI for scripts and AI agents, plus a desktop app."
 authors = ["Juan Manuel Armero <juanmanuel.armero@gmail.com>"]
 license = "MIT"
 readme = "README.md"
