@@ -24,8 +24,8 @@ from pdftool.ui.theme import build_theme, next_mode, resolve_mode
 from pdftool.ui.thumbnails import shutdown_thumbnail_executor
 
 AUTHOR_HANDLE = "@juanmaav92"
-# El pie lleva a la página del producto (ayuda, instalación, novedades).
-PRODUCT_SITE = "https://juanmaav92.github.io/pdf-tool"
+# El pie lleva a la página del producto (ayuda, instalación, novedades), en
+# el idioma activo: la URL sale del diccionario (`ui.footer.site_url`).
 
 
 def _build_footer(
@@ -524,7 +524,7 @@ def _mount(page, settings) -> None:
         _theme_label(settings.theme_mode),
         toggle_theme,
         download_log_button(log_picker).on_click,
-        lambda _e: page.launch_url(PRODUCT_SITE),
+        lambda _e: page.launch_url(t("ui.footer.site_url")),
         language_item,
         # Al abrir el menú: el ítem de idioma refleja si hay una tarea en curso.
         lambda _e: refresh_language_item(page),
