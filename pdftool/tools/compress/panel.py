@@ -30,7 +30,7 @@ class CompressTool(MultiFileToolPanel):
         )
         self._mode_dd = ft.Dropdown(
             label=t("tool.compress.ui.mode"),
-            width=330,  # cabe «Reducir al máximo (recomendado)» sin recortarse
+            width=330,  # caben unos 30 caracteres sin recortarse
             value="max",
             options=[
                 ft.dropdown.Option("max", t("tool.compress.ui.mode.max")),
