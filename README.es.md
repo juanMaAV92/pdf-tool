@@ -141,63 +141,18 @@ Cada versión publica `SHA256SUMS.txt` para que compruebes la descarga.
 Los *issues* y *pull requests* son bienvenidos. Añadir una herramienta es crear
 una carpeta: la app y la CLI la descubren solas. Las traducciones también son
 bienvenidas: copia `pdftool/i18n/locales/en.json` como `<código>.json` y
-tradúcelo. En el
-[roadmap](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/roadmap.md) está
-lo que viene.
+tradúcelo.
 
-<details>
-<summary><b>🛠️ Para desarrolladores (montar el proyecto en local)</b></summary>
-
-### Requisitos
-- Python 3.11+ y [Poetry](https://python-poetry.org/)
-
-### Arrancar
 ```bash
-poetry install --all-extras   # incluye Flet (extra [gui]) para la app
-poetry run pdftool            # abre la app
+poetry install --all-extras   # Python 3.11+ y Poetry
+poetry run pdftool            # la app
 poetry run pdf-tool --help    # la CLI
 poetry run pytest             # tests
 ```
 
-### Añadir una herramienta
-1. Crea `pdftool/tools/<id>/` con `params.py`, `logic.py` (función pura + tests),
-   `spec.py` (registra la herramienta, sin Flet), `panel.py` y un `__init__.py`
-   vacío.
-2. Añade sus textos en `pdftool/i18n/locales/en.json` y `es.json`, y un ejemplo
-   en la skill.
-3. La app la muestra en la barra lateral y la CLI la ofrece como
-   `pdf-tool <id>`, las dos automáticamente.
-
-Detalles en [AGENTS.md](https://github.com/juanMaAV92/pdf-tool/blob/main/AGENTS.md) (en inglés).
-
-### Publicar una versión (automatizado con GitHub Actions)
-```bash
-git tag vX.Y.Z
-git push origin vX.Y.Z
-```
-`release.yml` corre los tests, construye macOS (`.dmg`) y Windows (instalador
-Inno Setup) en paralelo, hornea la versión del tag en el build y crea un
-**GitHub Release en borrador** con ambos instaladores. Revísalo y pulsa
-**Publish release** para que las apps instaladas detecten la actualización.
-También publica el paquete en **PyPI** (`pdf-tool-cli`, por Trusted
-Publishing); ese paso espera tu aprobación en Actions (entorno `pypi`), porque
-una versión en PyPI no se puede reemplazar. El tag es la única fuente del número
-de versión.
-
-Los PRs que cambian la app, el empaquetado o sus dependencias ejecutan además
-**Package smoke**, que construye el DMG de macOS e instala en silencio el
-instalador de Windows. Antes de una release importante, sigue la
-[checklist manual](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/release-smoke.md).
-
-### Build local (para depurar el empaquetado)
-```bash
-poetry run flet build macos --project pdf-tool --product pdf-tool     # -> build/macos/pdf-tool.app
-poetry run flet build windows --project pdf-tool --product pdf-tool   # -> build/windows/
-```
-`--project pdf-tool` es obligatorio: sin él, `flet build` toma el nombre del
-paquete (`pdf-tool-cli`) y la app cambia de identidad.
-
-</details>
+Arquitectura, cómo añadir una herramienta y releases (en inglés):
+[AGENTS.md](https://github.com/juanMaAV92/pdf-tool/blob/main/AGENTS.md). Lo que viene:
+[roadmap](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/roadmap.md).
 
 ---
 
