@@ -11,7 +11,12 @@ difusión importa más que monetizar.
 lógica) y aparece a la vez en la app y en la CLI. Ninguna herramienta nueva
 puede existir solo en una de las dos.
 
-## Fase 1 — Núcleo de herramientas sin Flet
+## Estado
+
+Fases 1–4 hechas: la CLI está en PyPI (`pdf-tool-cli`, desde la v1.1.0) y el
+plugin de Claude Code se instala desde este repo. Queda la Fase 5.
+
+## Fase 1 — Núcleo de herramientas sin Flet ✅
 
 Hoy el registro vive en `panel.py`, que importa Flet, y `ToolMeta.icon` usa
 `ft.Icons`. Ningún consumidor sin UI puede descubrir las herramientas.
@@ -25,7 +30,7 @@ Hoy el registro vive en `panel.py`, que importa Flet, y `ToolMeta.icon` usa
 **Hecho cuando:** `import pdftool.core` y el descubrimiento de herramientas
 funcionan sin Flet instalado, la app se comporta igual y la suite sigue verde.
 
-## Fase 2 — CLI v1
+## Fase 2 — CLI v1 ✅
 
 - `pdf-tool list` y `pdf-tool <herramienta> --help`, generados desde el registro
   y los modelos Pydantic (flags, ayuda y validación salen de `params.py`).
@@ -37,7 +42,7 @@ funcionan sin Flet instalado, la app se comporta igual y la suite sigue verde.
 - Mismas garantías que la app: nunca pisar originales (`core/naming.py`),
   publicación atómica, errores por archivo.
 
-## Fase 3 — Publicación en PyPI
+## Fase 3 — Publicación en PyPI ✅
 
 - Nombre del paquete: `pdf-tool-cli` (PyPI rechaza `pdf-tool` por parecerse a `pdftool`); el comando sigue siendo `pdf-tool`.
 - `pip install pdf-tool-cli` instala solo la CLI; Flet pasa a un extra `[gui]`.
@@ -48,13 +53,13 @@ funcionan sin Flet instalado, la app se comporta igual y la suite sigue verde.
 **Hecho cuando:** `pipx install pdf-tool-cli` en una máquina limpia funciona y la
 release sigue generando DMG e instalador.
 
-## Fase 4 — Skill para agentes
+## Fase 4 — Skill para agentes ✅
 
 - `skills/pdf-tool/SKILL.md` en el repo: cuándo usar la CLI, cómo descubrir
   herramientas y cómo leer el `--json`.
 - Instalable como plugin de Claude Code directamente desde GitHub.
 
-## Fase 5 — Difusión
+## Fase 5 — Difusión (pendiente)
 
 - README con la vía para agentes y una demo (un agente comprimiendo/uniendo).
 - Listado gratuito en directorios de skills (p. ej. Agensi) tras revisar sus

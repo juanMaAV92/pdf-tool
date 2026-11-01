@@ -75,7 +75,7 @@ pdf-tool compress a.pdf b.pdf --target-mb 5 --output-dir out/ --json
 
 `compress --mode max` (default) may turn pages into images when that is the only way
 to reach the target; it says so in `warnings`. Use `--mode preserve` when the user
-needs selectable text, links or forms.
+needs selectable text, links or annotations.
 
 ### Passwords
 

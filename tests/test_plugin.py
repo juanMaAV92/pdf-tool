@@ -156,13 +156,58 @@ def test_skill_describes_the_cli_error_json():
         assert f'"{key}"' in body, key
 
 
+def _exit_code_table(body: str) -> dict[int, str]:
+    """Filas `| `N` | significado |` de la tabla de códigos de salida."""
+    import re
+
+    rows = re.findall(r"^\| `(\d+)` \| (.+?) \|$", body, flags=re.MULTILINE)
+    return {int(code): meaning.lower() for code, meaning in rows}
+
+
 def test_skill_exit_codes_match_the_cli():
+    """La tabla tiene exactamente los códigos de la CLI y cada uno su sentido."""
     from pdftool.cli import EXIT_ERROR, EXIT_USAGE
     from pdftool.cli.report import EXIT_PARTIAL
 
     _, body = _skill()
-    for code in (0, EXIT_ERROR, EXIT_USAGE, EXIT_PARTIAL):
-        assert f"`{code}`" in body, code
+    table = _exit_code_table(body)
+    assert set(table) == {0, EXIT_ERROR, EXIT_USAGE, EXIT_PARTIAL}
+    assert "succeeded" in table[0]
+    assert "failed" in table[EXIT_ERROR]
+    assert "usage" in table[EXIT_USAGE]
+    assert "items" in table[EXIT_PARTIAL]
+
+
+def test_exit_code_table_rejects_swapped_meanings():
+    # El test anterior debe detectar dos significados intercambiados.
+    swapped = "| `2` | Batch finished (see `items`) |\n| `3` | Invalid usage |\n"
+    table = _exit_code_table(swapped)
+    assert "items" not in table[3] and "usage" not in table[2]
+
+
+def _positionals(tool: str, args: list[str]) -> list[str]:
+    """Argumentos posicionales: ni flags ni el valor de un flag que lo lleva."""
+    from pdftool.cli import _build_parser
+    from pdftool.core import registry
+
+    registry.discover()
+    parser = _build_parser(registry.get_specs())
+    subparsers = next(a for a in parser._actions if a.choices and tool in a.choices)
+    takes_value = {
+        opt
+        for a in subparsers.choices[tool]._actions
+        if a.nargs != 0
+        for opt in a.option_strings
+    }
+    found, skip = [], False
+    for token in args:
+        if skip:
+            skip = False
+        elif token.startswith("--"):
+            skip = token in takes_value
+        else:
+            found.append(token)
+    return found
 
 
 def test_skill_passes_passwords_only_through_stdin():
@@ -171,10 +216,40 @@ def test_skill_passes_passwords_only_through_stdin():
     assert protect
     for cmd in protect:
         assert "--password-stdin" in cmd
+        # Ni siquiera como argumento suelto: todo posicional es un PDF.
+        for token in _positionals("protect", cmd[2:]):
+            assert token.endswith(".pdf"), token
+    # Lo que llega por stdin es un marcador, nunca una contraseña de ejemplo.
+    piped = [
+        line.strip()
+        for line in body.splitlines()
+        if "| pdf-tool protect" in line and not line.lstrip().startswith("|")
+    ]
+    assert piped
+    for line in piped:
+        assert line.split("|")[0].strip() == "printf '%s' '<password>'", line
     assert "--password " not in body
     assert "PDFTOOL_PASSWORD=" not in body
     # Una comilla simple en la contraseña rompería `printf '%s' '...'`.
     assert "'\\''" in body
+
+
+def test_positionals_catch_a_bare_password():
+    args = ["doc.pdf", "secreta", "--mode", "remove", "--password-stdin", "--json"]
+    assert _positionals("protect", args) == ["doc.pdf", "secreta"]
+
+
+def test_skill_preserve_mode_uses_the_cli_wording():
+    # La CLI dice que `preserve` conserva «texto, enlaces y anotaciones».
+    from pdftool.tools.compress.params import CompressParams
+
+    help_text = CompressParams.model_fields["mode"].description or ""
+    assert "anotaciones" in help_text
+    _, body = _skill()
+    assert "--mode preserve` when the user" in body
+    paragraph = body.split("--mode preserve` when the user", 1)[1].split("\n\n")[0]
+    assert "annotations" in paragraph
+    assert "forms" not in paragraph
 
 
 def test_skill_tells_claude_to_answer_in_the_user_language():
