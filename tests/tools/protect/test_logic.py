@@ -245,3 +245,28 @@ def test_protect_keeps_only_the_new_encryption(tmp_path):
     with pymupdf.open(str(res.outputs[0])) as d:
         assert d.needs_pass and d.authenticate("nueva")
         assert "Hola" in d[0].get_text()
+
+
+def test_protect_suffixes_follow_language(tmp_path):
+    from pdftool import i18n
+
+    i18n.set_language("en")
+    src = _pdf(tmp_path / "doc.pdf")
+    result = protect([src], ProtectParams(password="x"))
+    assert result.outputs[0].name == "doc_protected.pdf"
+    assert result.summary == "PDF protected → doc_protected.pdf"
+    removed = protect(result.outputs, ProtectParams(mode="remove", password="x"))
+    assert removed.outputs[0].name == "doc_protected_unlocked.pdf"
+    assert removed.summary == "Password removed → doc_protected_unlocked.pdf"
+
+
+def test_protect_batch_summaries_in_english(tmp_path):
+    from pdftool import i18n
+
+    i18n.set_language("en")
+    a, b = _pdf(tmp_path / "a.pdf"), _pdf(tmp_path / "b.pdf")
+    result = protect([a, b], ProtectParams(password="x"))
+    assert result.summary == "2 PDFs protected"
+    locked = _protected_pdf(tmp_path / "c.pdf")
+    result = protect([a, locked], ProtectParams(password="x"))
+    assert result.summary == "1 of 2 PDFs processed"

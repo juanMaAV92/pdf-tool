@@ -52,12 +52,49 @@
   "core.naming.forbidden_chars": "Nombre de salida inválido: no puede contener / \\ : ? | < > * \"",
   "core.naming.reserved": "Nombre de salida inválido: «{name}» está reservado por Windows.",
   "param.output_dir": "Carpeta de salida (por defecto, junto al original).",
+  "tool.compress.all_failed": "Ningún PDF pudo comprimirse.",
   "tool.compress.description": "Reduce el tamaño de uno o varios PDFs a un objetivo en MB.",
+  "tool.compress.item.missed_max": "{result} (no se alcanzó el objetivo; se guardó la versión más pequeña posible)",
+  "tool.compress.item.missed_preserve": "{result} (no se alcanzó el objetivo; se guardó la versión más pequeña con el contenido preservado)",
+  "tool.compress.item.plain": "{result}",
+  "tool.compress.item.preserved": "{result} (contenido preservado)",
+  "tool.compress.item.sizes": "{original} MB → {final} MB",
+  "tool.compress.item.sizes_saved": "{original} MB → {final} MB · {saved} % menos",
+  "tool.compress.item.unchanged": "{original} MB (sin cambios)",
   "tool.compress.name": "Comprimir PDF",
   "tool.compress.param.mode": "Modo de compresión.",
   "tool.compress.param.mode.max": "el archivo más pequeño posible (algunas páginas pueden perder texto seleccionable)",
   "tool.compress.param.mode.preserve": "conserva texto, enlaces y anotaciones",
   "tool.compress.param.target_mb": "Tamaño objetivo en MB.",
+  "tool.compress.progress.batch_done": {
+    "one": "{count} archivo comprimido",
+    "other": "{count} archivos comprimidos"
+  },
+  "tool.compress.progress.done_mb": "Listo: {mb} MB",
+  "tool.compress.progress.images_step": "Reduciendo imágenes (paso {step} de {total})…",
+  "tool.compress.progress.original": "Tamaño original: {mb} MB",
+  "tool.compress.progress.page": "página {page} de {total}",
+  "tool.compress.progress.quality_step": "Reduciendo calidad (paso {step} de {total})…",
+  "tool.compress.progress.quality_step_detail": "Reduciendo calidad (paso {step} de {total}): {detail}",
+  "tool.compress.progress.structure": "Optimizando la estructura del PDF…",
+  "tool.compress.progress.under_target": "Ya está bajo el objetivo",
+  "tool.compress.summary.all_saved": {
+    "one": "{count} archivo · {original} MB → {final} MB ({saved} % menos)",
+    "other": "{count} archivos · {original} MB → {final} MB ({saved} % menos)"
+  },
+  "tool.compress.summary.all_unchanged": {
+    "one": "{count} archivo · {original} MB → {final} MB (sin cambios)",
+    "other": "{count} archivos · {original} MB → {final} MB (sin cambios)"
+  },
+  "tool.compress.summary.partial_saved": {
+    "one": "{done} de {count} archivo · {original} MB → {final} MB ({saved} % menos)",
+    "other": "{done} de {count} archivos · {original} MB → {final} MB ({saved} % menos)"
+  },
+  "tool.compress.summary.partial_unchanged": {
+    "one": "{done} de {count} archivo · {original} MB → {final} MB (sin cambios)",
+    "other": "{done} de {count} archivos · {original} MB → {final} MB (sin cambios)"
+  },
+  "tool.compress.warning.rasterized": "Algunas páginas se convirtieron en imagen: puede haberse perdido texto seleccionable, enlaces o anotaciones. Si los necesitas, usa «Conservar texto y enlaces».",
   "tool.images2pdf.all_failed": "Ninguna imagen pudo convertirse.",
   "tool.images2pdf.description": "Crea un PDF por cada imagen (JPG o PNG).",
   "tool.images2pdf.error.format": "Formato no soportado (usa JPG o PNG).",
@@ -80,12 +117,33 @@
   "tool.merge.progress.start": "Uniendo {count} PDFs…",
   "tool.merge.suffix": "unido",
   "tool.merge.summary": "{count} PDFs unidos → {name}",
+  "tool.protect.all_failed": "Ningún PDF pudo procesarse.",
   "tool.protect.description": "Añade o quita la contraseña de uno o varios PDFs.",
+  "tool.protect.error.already": "El PDF ya está protegido; quítale la contraseña primero.",
+  "tool.protect.error.wrong_password": "Contraseña incorrecta.",
   "tool.protect.name": "Proteger PDF",
   "tool.protect.param.mode": "Acción.",
   "tool.protect.param.mode.protect": "añade la contraseña",
   "tool.protect.param.mode.remove": "la quita",
   "tool.protect.param.password": "Contraseña del PDF.",
+  "tool.protect.progress.protecting": "Protegiendo PDF…",
+  "tool.protect.progress.removing": "Quitando contraseña…",
+  "tool.protect.suffix.protect": "protegido",
+  "tool.protect.suffix.remove": "sin_clave",
+  "tool.protect.summary.partial": {
+    "one": "{done} de {count} PDF procesado",
+    "other": "{done} de {count} PDFs procesados"
+  },
+  "tool.protect.summary.protected_all": {
+    "one": "{count} PDF protegido",
+    "other": "{count} PDFs protegidos"
+  },
+  "tool.protect.summary.protected_one": "PDF protegido → {name}",
+  "tool.protect.summary.removed_all": {
+    "one": "{count} contraseña removida",
+    "other": "{count} contraseñas removidas"
+  },
+  "tool.protect.summary.removed_one": "Contraseña removida → {name}",
   "tool.split.description": "Separa un PDF en varios, por rangos o por páginas.",
   "tool.split.error.bad_page": "«{text}» no es un número de página válido. Usa por ejemplo 1-3, 5",
   "tool.split.error.bad_range": "«{token}» no es un rango válido. Usa por ejemplo 1-3, 5",

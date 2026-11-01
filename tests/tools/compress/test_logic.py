@@ -4,9 +4,9 @@ import pymupdf
 import pytest
 
 from pdftool.tools.compress.logic import (
-    RASTERIZED_WARNING,
     compress,
     output_path_for,
+    rasterized_warning,
 )
 from pdftool.tools.compress.params import CompressParams
 
@@ -102,7 +102,7 @@ def test_max_mode_reduces_images_before_rasterizing(tmp_path):
     result = compress([src], CompressParams(target_mb=1.0))
 
     assert result.outputs[0].stat().st_size <= 1024 * 1024
-    assert RASTERIZED_WARNING not in result.warnings
+    assert rasterized_warning() not in result.warnings
     with pymupdf.open(result.outputs[0]) as doc:
         assert "Catálogo pdf-tool" in doc[0].get_text()
 
@@ -519,3 +519,45 @@ def test_chunked_output_is_compacted(tmp_path, monkeypatch):
     logic._rerender(src, chunked, max_dimension=400, jpg_quality=40)
 
     assert chunked.stat().st_size <= whole.stat().st_size * 1.05
+
+
+def test_one_file_batch_progress_is_singular(tmp_path, small_pdf):
+    import shutil
+
+    good = tmp_path / "good.pdf"
+    shutil.copy2(small_pdf, good)
+    bad = tmp_path / "bad.pdf"
+    bad.write_bytes(b"not a pdf")
+    seen = []
+    compress(
+        [good, bad],
+        CompressParams(target_mb=50.0),
+        progress=lambda _p, msg: seen.append(msg),
+    )
+    assert "1 archivo comprimido" in seen
+
+
+def test_messages_use_language_decimal_separator(small_pdf):
+    from pdftool import i18n
+
+    result = compress([small_pdf], CompressParams(target_mb=50.0))
+    mb = result.metrics["original_mb"]
+    assert result.summary == f"{mb:.2f} MB (sin cambios)".replace(".", ",")
+    i18n.set_language("en")
+    result = compress([small_pdf], CompressParams(target_mb=50.0))
+    assert result.summary == f"{mb:.2f} MB (unchanged)"
+    assert isinstance(result.metrics["original_mb"], float)
+
+
+def test_rasterized_warning_follows_language_and_is_deduplicated(tmp_path, big_pdf):
+    import shutil
+
+    from pdftool import i18n
+
+    i18n.set_language("en")
+    a, b = tmp_path / "a.pdf", tmp_path / "b.pdf"
+    shutil.copy2(big_pdf, a)
+    shutil.copy2(big_pdf, b)
+    result = compress([a, b], CompressParams(target_mb=0.0001))
+    assert result.warnings == [i18n.t("tool.compress.warning.rasterized")]
+    assert "Some pages" in result.warnings[0]
