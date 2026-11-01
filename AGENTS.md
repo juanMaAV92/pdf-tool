@@ -141,8 +141,10 @@ No se toca el host. Crea `pdftool/tools/<id>/` con:
 `tests/ui/test_registry.py::test_every_spec_has_a_panel_and_vice_versa`. Y
 `tests/core/test_no_flet.py` comprueba que las specs se descubren sin Flet.
 
-**Skill para agentes:** `skills/pdf-tool/SKILL.md` (en inglés) enseña a Claude Code
-a usar la CLI; el repo es un plugin instalable (`.claude-plugin/`). Al añadir una
+**Skill para agentes:** `skills/pdf-tool/SKILL.md` (en inglés, formato abierto
+Agent Skills, sin nada propio de un agente) enseña a usar la CLI. Se instala como
+plugin de Claude Code (`.claude-plugin/`), con `npx skills add juanMaAV92/pdf-tool`
+o copiando la carpeta. Al añadir una
 herramienta, menciónala en la skill con un ejemplo: `tests/test_plugin.py` falla si
 falta, o si la skill cita flags o códigos de salida que la CLI no tiene.
 
