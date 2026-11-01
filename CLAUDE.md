@@ -1,14 +1,15 @@
 # CLAUDE.md
 
-Esta es la guía del proyecto para Claude Code.
+Project guide for Claude Code.
 
-**La fuente de verdad es [AGENTS.md](./AGENTS.md)** — léela primero: cubre la arquitectura, los comandos, cómo agregar una herramienta, las convenciones y el empaquetado.
+**The source of truth is [AGENTS.md](./AGENTS.md)** — read it first: it covers the architecture, the commands, how to add a tool, the conventions and the packaging.
 
-## Recordatorios clave (resumen)
+## Key reminders (summary)
 
-- **Comandos:** `poetry install --all-extras` · `poetry run pdftool` · `poetry run pytest`. Nunca actives venvs a mano; usa `poetry run`.
-- **Arquitectura:** `core/` sin Flet; cada herramienta separa `logic.py` (puro, testeable) de `panel.py` (UI). `inputs` siempre `list[Path]`; la ruta de salida la decide `core/naming.py` (destino elegido o junto al original, sin pisar nada) — nunca se compone a mano.
-- **TDD:** test que falla → implementación, sobre la lógica pura.
-- **Flet 0.28.x:** `ft.Icons.*` / `ft.Colors.*` (enums, con mayúscula).
-- **Commits:** mensajes planos, Conventional Commits. **Nunca** añadir `Co-Authored-By: Claude` ni "Generated with Claude Code" ni ninguna atribución de IA.
-- **Agregar herramienta:** `params.py` + `logic.py` + `spec.py` (sin Flet, registra la `ToolSpec`) + `panel.py` con `@register` y `spec = SPEC`; `__init__.py` vacío. El host no se toca; toda spec necesita panel (app y CLI a la par), su ejemplo en `skills/pdf-tool/SKILL.md` y sus textos en `pdftool/i18n/locales/en.json` y `es.json` (ningún texto visible en el código).
+- **Commands:** `poetry install --all-extras` · `poetry run pdftool` · `poetry run pytest`. Never activate venvs by hand; use `poetry run`.
+- **Architecture:** `core/` without Flet; each tool separates `logic.py` (pure, testable) from `panel.py` (UI). `inputs` is always `list[Path]`; the output path is decided by `core/naming.py` (chosen destination or next to the original, never overwriting) — never composed by hand.
+- **TDD:** failing test → implementation, on the pure logic.
+- **Flet 0.28.x:** `ft.Icons.*` / `ft.Colors.*` (capitalized enums).
+- **Commits:** plain messages, Conventional Commits. **Never** add `Co-Authored-By: Claude`, "Generated with Claude Code" or any AI attribution.
+- **Adding a tool:** `params.py` + `logic.py` + `spec.py` (no Flet, registers the `ToolSpec`) + `panel.py` with `@register` and `spec = SPEC`; empty `__init__.py`. The host is not touched; every spec needs a panel (app and CLI in step), its example in `skills/pdf-tool/SKILL.md` and its texts in `pdftool/i18n/locales/en.json` and `es.json` (no visible text in the code).
+- **Language:** talk to the user in the language they use; contributor docs are in English, `docs/roadmap.md` in Spanish.
