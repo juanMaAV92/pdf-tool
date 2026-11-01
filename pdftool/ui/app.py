@@ -77,7 +77,7 @@ def _tool_card(index, tool, on_open):
                     [
                         ft.Icon(tool.icon, size=30),
                         ft.Text(
-                            tool.meta.category,
+                            tool.meta.category_label,
                             size=12,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
@@ -114,7 +114,7 @@ def _tool_card(index, tool, on_open):
 
 
 def _group_by_category(tools):
-    """[(categoría, [(índice, herramienta), …]), …] respetando el orden de
+    """[(id de categoría, [(índice, herramienta), …]), …] respetando el orden de
     `tools` (ya ordenadas por `meta.order`); cada categoría aparece donde lo
     hace su primera herramienta."""
     groups: dict[str, list] = {}
@@ -185,11 +185,11 @@ class _Sidebar(ft.Container):
             for index, tool in enumerate(tools)
         ]
         controls: list[ft.Control] = [self.home_button]
-        for category, items in _group_by_category(tools):
+        for _category, items in _group_by_category(tools):
             controls.append(
                 ft.Container(
                     ft.Text(
-                        category,
+                        items[0][1].meta.category_label,
                         size=12,
                         weight=ft.FontWeight.W_600,
                         color=ft.Colors.ON_SURFACE_VARIANT,

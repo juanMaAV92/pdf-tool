@@ -7,9 +7,7 @@ SPEC = register(
     ToolSpec(
         meta=ToolMeta(
             id="split",
-            name="Dividir PDF",
-            description="Separa un PDF en varios, por rangos o por páginas.",
-            category="Organizar",
+            category="organize",
             order=20,
         ),
         params=SplitParams,

@@ -22,7 +22,8 @@ from pdftool.cli.args import add_params, build_params
 from pdftool.cli.report import error_to_dict, exit_code, render_text, result_to_dict
 from pdftool.core import registry
 from pdftool.core.errors import UserError, user_message
-from pdftool.core.plugin import ToolSpec
+from pdftool.core.plugin import BaseParams, ToolSpec
+from pdftool.i18n import param_help
 
 EXIT_ERROR = 1
 EXIT_USAGE = 2
@@ -62,7 +63,7 @@ def _build_parser(specs: Sequence[ToolSpec]) -> argparse.ArgumentParser:
             metavar="ARCHIVO",
             help="Archivos de entrada (" + ", ".join(spec.extensions) + ").",
         )
-        add_params(tool, spec.params)
+        add_params(tool, spec.params, spec.meta.id)
         tool.add_argument("--json", action="store_true", help="Salida en JSON.")
     return parser
 
@@ -72,14 +73,25 @@ def _spec_to_dict(spec: ToolSpec) -> dict[str, Any]:
         "id": spec.meta.id,
         "name": spec.meta.name,
         "description": spec.meta.description,
-        "category": spec.meta.category,
+        "category": spec.meta.category_label,
         "inputs": {
             "min": spec.min_inputs,
             "max": spec.max_inputs,
             "extensions": list(spec.extensions),
         },
-        "params": spec.params.model_json_schema(),
+        "params": _params_schema(spec),
     }
+
+
+def _params_schema(spec: ToolSpec) -> dict[str, Any]:
+    """Esquema JSON de los params con las descripciones del idioma activo."""
+    schema = spec.params.model_json_schema()
+    # El docstring de la clase es documentación para desarrolladores.
+    schema.pop("description", None)
+    common = set(BaseParams.model_fields)
+    for name, prop in schema.get("properties", {}).items():
+        prop["description"] = param_help(None if name in common else spec.meta.id, name)
+    return schema
 
 
 def _print_json(data: Any) -> None:

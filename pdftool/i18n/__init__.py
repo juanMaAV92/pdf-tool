@@ -167,3 +167,17 @@ def fmt_number(value: float, decimals: int) -> str:
     data = _load(_active) or {}
     sep = data.get("_meta", {}).get("decimal_separator", ".")
     return f"{value:.{decimals}f}".replace(".", sep)
+
+
+def param_help(tool_id: str | None, field: str) -> str:
+    """Ayuda de un parámetro en el idioma activo."""
+    from pdftool.i18n.keys import param_key
+
+    return t(param_key(tool_id, field))
+
+
+def choice_label(tool_id: str, field: str, value: str) -> str:
+    """Texto de un valor de un parámetro `Literal` en el idioma activo."""
+    from pdftool.i18n.keys import choice_key
+
+    return t(choice_key(tool_id, field, value))

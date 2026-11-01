@@ -19,10 +19,13 @@ from pydantic.fields import FieldInfo
 
 from pdftool.core.errors import UserError
 from pdftool.core.plugin import BaseParams
+from pdftool.i18n import choice_label, param_help, t
 
 _SCALARS = (int, float, str, Path)
 # Nombres que ya usa el comando (`pdf-tool <id> ARCHIVO... --json`) o argparse.
 RESERVED = frozenset({"json", "inputs", "command", "help", "version"})
+# Campos de `BaseParams`: su ayuda es común (`param.<campo>`).
+RESERVED_COMMON = frozenset(BaseParams.model_fields)
 
 
 def _flag(name: str) -> str:
@@ -66,17 +69,25 @@ def _type_kwargs(name: str, annotation: Any) -> dict[str, Any]:
     raise TypeError(f"Campo {name!r}: tipo {annotation!r} no soportado por la CLI")
 
 
-def _help(field: FieldInfo) -> str:
-    text = field.description or ""
+def _help(tool_id: str, name: str, field: FieldInfo) -> str:
+    text = param_help(None if name in RESERVED_COMMON else tool_id, name)
+    if get_origin(field.annotation) is Literal:
+        choices = "; ".join(
+            t("cli.help.choice", value=v, label=choice_label(tool_id, name, v))
+            for v in get_args(field.annotation)
+        )
+        text = f"{text} {choices}."
     if not field.is_required() and field.default not in (None, ""):
         default = field.default
         if isinstance(default, tuple):
             default = " ".join(str(v) for v in default)
-        text += f" (por defecto: {default})"
+        text = f"{text} {t('cli.help.default', value=default)}"
     return text
 
 
-def add_params(parser: argparse.ArgumentParser, params: type[BaseParams]) -> None:
+def add_params(
+    parser: argparse.ArgumentParser, params: type[BaseParams], tool_id: str = ""
+) -> None:
     for name, field in params.model_fields.items():
         if name in RESERVED:
             raise TypeError(f"Campo {name!r}: nombre reservado por la CLI")
@@ -85,7 +96,7 @@ def add_params(parser: argparse.ArgumentParser, params: type[BaseParams]) -> Non
                 f"{_flag(name)}-stdin",
                 dest=f"{name}_stdin",
                 action="store_true",
-                help=f"{field.description or name} Se lee de la primera línea de "
+                help=f"{param_help(tool_id, name)} Se lee de la primera línea de "
                 f"stdin (o de la variable {_env_var(name)}).",
             )
             continue
@@ -94,7 +105,7 @@ def add_params(parser: argparse.ArgumentParser, params: type[BaseParams]) -> Non
             dest=name,
             default=None,
             required=field.is_required(),
-            help=_help(field),
+            help=_help(tool_id, name, field),
             **_type_kwargs(name, field.annotation),
         )
 

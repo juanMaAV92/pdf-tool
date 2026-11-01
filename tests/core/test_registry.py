@@ -6,7 +6,7 @@ from pdftool.core.plugin import BaseParams, ToolMeta, ToolResult, ToolSpec
 
 def _spec(id_, name="T", order=100):
     return ToolSpec(
-        meta=ToolMeta(id=id_, name=name, description="d", category="c", order=order),
+        meta=ToolMeta(id=id_, category="c", order=order),
         params=BaseParams,
         run=lambda inputs, params, progress=None: ToolResult(outputs=[], summary=""),
     )
@@ -53,7 +53,7 @@ def test_a_spec_that_fails_to_import_does_not_break_discovery(tmp_path, monkeypa
         "from pdftool.core import registry\n"
         "from pdftool.core.plugin import BaseParams, ToolMeta, ToolSpec\n"
         "SPEC = registry.register(ToolSpec(\n"
-        "    meta=ToolMeta(id='good', name='G', description='d', category='c'),\n"
+        "    meta=ToolMeta(id='good', category='c'),\n"
         "    params=BaseParams,\n"
         "    run=lambda inputs, params, progress=None: None,\n"
         "))\n"

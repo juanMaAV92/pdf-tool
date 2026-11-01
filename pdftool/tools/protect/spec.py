@@ -7,9 +7,7 @@ SPEC = register(
     ToolSpec(
         meta=ToolMeta(
             id="protect",
-            name="Proteger PDF",
-            description="Añade o quita la contraseña de uno o varios PDFs.",
-            category="Seguridad",
+            category="security",
             order=60,
         ),
         params=ProtectParams,

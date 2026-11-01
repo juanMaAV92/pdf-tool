@@ -10,7 +10,6 @@ class MergeParams(BaseParams):
 
     output_name: str | None = Field(
         default=None,
-        description="Nombre del PDF unido, sin extensión (por defecto, automático).",
     )
 
     @field_validator("output_name")

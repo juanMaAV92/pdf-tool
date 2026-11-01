@@ -35,7 +35,7 @@ def clear() -> None:
 
 def get_specs() -> list[ToolSpec]:
     """Specs ordenadas por `meta.order` y, a igualdad, por nombre."""
-    return sorted(_REGISTRY.values(), key=lambda s: (s.meta.order, s.meta.name))
+    return sorted(_REGISTRY.values(), key=lambda s: (s.meta.order, s.meta.id))
 
 
 def discover(package: str = "pdftool.tools") -> list[str]:

@@ -5,25 +5,26 @@ from pdftool.ui.app import _build_home, _group_by_category, _Sidebar
 
 
 class _Tool:
-    def __init__(self, id_, name, category):
-        self.meta = ToolMeta(id=id_, name=name, description="d", category=category)
+    # Ids reales: el nombre y la categoría salen del diccionario (español).
+    def __init__(self, id_, category):
+        self.meta = ToolMeta(id=id_, category=category)
         self.icon = ft.Icons.MERGE
 
 
 TOOLS = [
-    _Tool("merge", "Unir", "Organizar"),
-    _Tool("split", "Dividir", "Organizar"),
-    _Tool("compress", "Comprimir", "Optimizar"),
-    _Tool("protect", "Proteger", "Seguridad"),
+    _Tool("merge", "organize"),
+    _Tool("split", "organize"),
+    _Tool("compress", "optimize"),
+    _Tool("protect", "security"),
 ]
 
 
 def test_groups_keep_tool_order_and_first_appearance_of_category():
     groups = _group_by_category(TOOLS)
     assert [(cat, [i for i, _ in items]) for cat, items in groups] == [
-        ("Organizar", [0, 1]),
-        ("Optimizar", [2]),
-        ("Seguridad", [3]),
+        ("organize", [0, 1]),
+        ("optimize", [2]),
+        ("security", [3]),
     ]
 
 
@@ -56,7 +57,7 @@ def test_home_is_one_compact_grid_with_the_category_on_each_card():
     for card, tool in zip(cards, TOOLS, strict=True):
         texts = _texts(card)
         assert tool.meta.name in texts
-        assert tool.meta.category in texts
+        assert tool.meta.category_label in texts
 
 
 def test_sidebar_scrolls_and_groups_tools():
@@ -64,7 +65,7 @@ def test_sidebar_scrolls_and_groups_tools():
     assert isinstance(sidebar.list, ft.ListView)
     texts = _texts(sidebar)
     assert texts[:2] == ["Inicio", "Organizar"]
-    assert texts.index("Seguridad") < texts.index("Proteger")
+    assert texts.index("Seguridad") < texts.index("Proteger PDF")
 
 
 def test_sidebar_items_open_tools_and_mark_the_selection():
@@ -87,5 +88,5 @@ def test_sidebar_items_open_tools_and_mark_the_selection():
 
 def test_sidebar_buttons_have_accessible_names():
     sidebar = _Sidebar(TOOLS, on_home=lambda: None, on_tool=lambda i: None)
-    assert sidebar.tool_buttons[0].tooltip == "Unir"
+    assert sidebar.tool_buttons[0].tooltip == "Unir PDFs"
     assert sidebar.home_button.tooltip == "Inicio"

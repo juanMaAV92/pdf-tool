@@ -7,9 +7,7 @@ SPEC = register(
     ToolSpec(
         meta=ToolMeta(
             id="watermark",
-            name="Marca de agua",
-            description="Repite un texto en diagonal sobre todas las páginas.",
-            category="Editar",
+            category="edit",
             order=50,
         ),
         params=WatermarkParams,

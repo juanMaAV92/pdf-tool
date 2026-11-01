@@ -241,10 +241,9 @@ def test_positionals_catch_a_bare_password():
 
 def test_skill_preserve_mode_uses_the_cli_wording():
     # La CLI dice que `preserve` conserva «texto, enlaces y anotaciones».
-    from pdftool.tools.compress.params import CompressParams
+    from pdftool.i18n import choice_label
 
-    help_text = CompressParams.model_fields["mode"].description or ""
-    assert "anotaciones" in help_text
+    assert "anotaciones" in choice_label("compress", "mode", "preserve")
     _, body = _skill()
     assert "--mode preserve` when the user" in body
     paragraph = body.split("--mode preserve` when the user", 1)[1].split("\n\n")[0]

@@ -35,7 +35,7 @@ def clear() -> None:
 
 def get_tools() -> list[PdfTool]:
     """Instancias ordenadas por `meta.order` y, a igualdad, por nombre."""
-    classes = sorted(_REGISTRY.values(), key=lambda c: (c.meta.order, c.meta.name))
+    classes = sorted(_REGISTRY.values(), key=lambda c: (c.meta.order, c.meta.id))
     return [cls() for cls in classes]
 
 
