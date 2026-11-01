@@ -1,197 +1,210 @@
 <div align="center">
 
-# 📄 PDF Tool
+# 📄 pdf-tool
 
-**Herramientas para tus PDFs — sin subir nada a internet. Como app de escritorio
-o como comando para agentes de IA y scripts.**
+**Local PDF tools for the command line, AI agents and the desktop.
+Nothing leaves your computer.**
 
-<img width="980" alt="pdf-tool: pantalla de inicio con las seis herramientas" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot.png" />
+**English** · [Español](https://github.com/juanMaAV92/pdf-tool/blob/main/README.es.md)
 
-Comprime, une, divide, protege y marca tus documentos —y conviértelos desde imágenes—
-desde tu propio ordenador. Gratis, de código abierto y sin anuncios.
-
-[![Descargar](https://img.shields.io/badge/⬇️_Descargar-última_versión-2ea44f?style=for-the-badge)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
-
-[![CI](https://github.com/juanMaAV92/pdf-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/juanMaAV92/pdf-tool/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/juanMaAV92/pdf-tool?label=versión)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
 [![PyPI](https://img.shields.io/pypi/v/pdf-tool-cli?label=PyPI)](https://pypi.org/project/pdf-tool-cli/)
-[![License: MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](https://github.com/juanMaAV92/pdf-tool/blob/main/LICENSE)
-![Platform](https://img.shields.io/badge/macOS_·_Windows-lightgrey)
+[![CI](https://github.com/juanMaAV92/pdf-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/juanMaAV92/pdf-tool/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/juanMaAV92/pdf-tool?label=release)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT_·_AGPL_builds-blue.svg)](#-license)
+![Platform](https://img.shields.io/badge/macOS_·_Windows_·_Linux_(CLI)-lightgrey)
 
 </div>
 
----
-
-## ✨ Qué puedes hacer
-
-| | Herramienta | Para qué sirve |
-|---|---|---|
-| 🗜️ | **Comprimir PDF** | Reduce el peso de uno o varios PDFs hasta el tamaño en MB que elijas. |
-| 🔗 | **Unir PDFs** | Combina varios documentos en uno solo, en el orden que quieras y con el nombre que elijas. |
-| ✂️ | **Dividir PDF** | Separa un PDF en varios: por rangos de páginas, una página por archivo o cada N páginas. |
-| 🖼️ | **Imágenes a PDF** | Convierte cada imagen (JPG/PNG) en su propio PDF — y si quieres uno solo, únelos después. |
-| 🔒 | **Proteger PDF** | Añade o quita la contraseña de uno o varios PDFs a la vez. |
-| 💧 | **Marca de agua** | Repite un texto en diagonal sobre todas las páginas. |
-
-> 🔐 **Todo ocurre en tu equipo.** Tus archivos nunca salen de tu ordenador.
-
-En **Comprimir PDF**, el modo predeterminado busca la reducción máxima: primero
-reduce las imágenes y, solo si no basta, convierte páginas en imagen (lo avisa,
-porque se pierde el texto seleccionable). Con **Conservar texto y enlaces** nunca
-lo hace; el icono de ayuda explica la diferencia.
-
----
-
-## ⬇️ Descargar e instalar
-
-Ve a la **[página de descargas](https://github.com/juanMaAV92/pdf-tool/releases/latest)** y elige el archivo de tu sistema:
-
-### 🍎 macOS
-1. Descarga el archivo **`.dmg`** y ábrelo.
-2. Arrastra **PDF Tool** a la carpeta *Aplicaciones*.
-3. Ábrela desde *Aplicaciones*. macOS mostrará un aviso y **no** dejará abrirla aún
-   (es normal: la app no está firmada, pero es segura).
-4. Ve a  **Menú Apple () → Ajustes del Sistema → Privacidad y Seguridad**.
-5. Baja hasta la sección **Seguridad**: verás un mensaje que dice que se bloqueó *“PDF Tool”*.
-   Pulsa **Abrir de todas formas** y confirma con tu contraseña o Touch ID.
-   <br><sub>Solo hay que hacerlo la primera vez. A partir de ahí se abre con doble clic como cualquier app.</sub>
-
-### 🪟 Windows
-1. Descarga el **instalador** (`.exe`) y ejecútalo.
-2. Si aparece SmartScreen: **Más información** → **Ejecutar de todas formas**.
-   <br><sub>(El aviso sale porque el instalador no está firmado; es seguro.)</sub>
-
-> ✅ Tus ajustes se guardan fuera de la app, así que se conservan al actualizar. Cuando publique una nueva versión, la app te avisa con un banner.
-
----
-
-## 🤖 Para agentes de IA y la línea de comandos
-
-Las mismas herramientas están disponibles como comando, pensado para agentes
-(Claude Code, Cursor, Copilot…) y scripts. Todo sigue ocurriendo en tu equipo.
+Merge, split, compress, protect and watermark PDFs, or turn images into PDFs,
+with a CLI built for scripts and AI agents, an agent skill, and a desktop app
+for everyone else. Free, open source, no ads, and **100% offline**: your files
+are never uploaded anywhere.
 
 ```bash
-pipx install pdf-tool-cli                    # solo la CLI (sin la app de escritorio)
-pdf-tool list --json                         # qué herramientas hay y qué aceptan
-pdf-tool compress informe.pdf --json         # comprimir y obtener el resultado en JSON
-pdf-tool merge a.pdf b.pdf --output-name todo
-echo "$CLAVE" | pdf-tool protect a.pdf --password-stdin
+pipx install pdf-tool-cli
+pdf-tool compress report.pdf --target-mb 2
 ```
 
-Cada herramienta tiene su ayuda (`pdf-tool compress --help`). Los mensajes salen en
-el idioma del sistema; `--lang en` o `--lang es` lo cambian. Códigos de salida:
-`0` ok · `1` error al procesar · `2` uso inválido · `3` algún archivo del lote falló.
-`pipx install 'pdf-tool-cli[gui]'` instala además la app (comando `pdftool`).
+---
 
-### Instalar la skill en tu agente
+## 🧰 Tools
 
-Una [skill](https://github.com/juanMaAV92/pdf-tool/blob/main/skills/pdf-tool/SKILL.md)
-le enseña a tu agente a usar `pdf-tool` para crear o modificar PDFs en lugar de
-escribir scripts: pide permiso antes de instalar la CLI, ejecuta las herramientas
-con `--json` y te explica el resultado. Sigue el formato abierto
-[Agent Skills](https://agentskills.io), así que sirve para Claude Code, Codex,
-Cursor, Gemini CLI, GitHub Copilot y otros. Elige **una** de estas vías:
+| Command | What it does |
+|---|---|
+| `pdf-tool compress` | Shrinks one or more PDFs to a target size in MB. |
+| `pdf-tool merge` | Combines several PDFs into one, in the order you give. |
+| `pdf-tool split` | Splits a PDF by page ranges, one page per file, or every N pages. |
+| `pdf-tool images2pdf` | Turns each JPG/PNG image into its own PDF. |
+| `pdf-tool protect` | Adds or removes the password of one or more PDFs. |
+| `pdf-tool watermark` | Repeats a text diagonally across every page. |
 
-**1. Claude Code (plugin, recomendado):** se actualiza solo desde `main`.
+It never overwrites your files: outputs go next to the original (or to
+`--output-dir`) with a new name.
+
+---
+
+## ⌨️ Command line
+
+```bash
+pipx install pdf-tool-cli                      # or: uv tool install pdf-tool-cli
+pdf-tool list --json                           # tools, accepted inputs and parameters
+pdf-tool compress big.pdf --target-mb 2 --json # result as JSON
+pdf-tool compress big.pdf --target-mb 2 --mode preserve   # keep text and links
+pdf-tool merge a.pdf b.pdf c.pdf --output-name report
+pdf-tool split doc.pdf --ranges "1-3, 5, 8-"
+printf '%s' "$PASSWORD" | pdf-tool protect doc.pdf --password-stdin
+```
+
+- **Help:** `pdf-tool <tool> --help` lists every flag.
+- **JSON for agents:** `--json` prints a stable structure (`ok`, `summary`,
+  `outputs`, per-file `items`, `warnings`, `metrics` such as sizes before and
+  after compressing).
+- **Exit codes:** `0` success · `1` processing failed · `2` invalid usage ·
+  `3` batch finished but some files failed.
+- **Passwords** are read from stdin (`--password-stdin`) or the
+  `PDFTOOL_PASSWORD` variable, never from arguments.
+- **Language:** messages and output file names follow your system language;
+  `--lang en` or `--lang es` overrides it (or set `PDFTOOL_LANG`).
+- **Compression modes:** `max` (default) tries to reduce images first and only
+  turns pages into images if that is the only way to reach the target (it warns
+  you). `preserve` never does, so text, links and annotations are kept.
+
+Requires Python 3.11+. `pipx install 'pdf-tool-cli[gui]'` also installs the
+desktop app (command `pdftool`).
+
+---
+
+## 🤖 Use it with AI agents
+
+A [skill](https://github.com/juanMaAV92/pdf-tool/blob/main/skills/pdf-tool/SKILL.md)
+teaches your agent to use `pdf-tool` instead of writing throwaway scripts: it
+asks before installing the CLI, runs the tools with `--json` and explains the
+result in your language. It follows the open
+[Agent Skills](https://agentskills.io) format, so it works with Claude Code,
+Codex, Cursor, Gemini CLI, GitHub Copilot and others. Pick **one** way:
+
+**1. Claude Code (plugin, recommended):** updates itself from `main`.
 
 ```text
 /plugin marketplace add juanMaAV92/pdf-tool
 /plugin install pdf-tool@pdf-tool
 ```
 
-**2. Cualquier agente, con [`skills`](https://github.com/vercel-labs/skills)**
-(requiere Node.js): detecta tus agentes y copia la skill a la carpeta de cada uno.
-Añade `-g` para tenerla en todos tus proyectos; para actualizarla,
+**2. Any agent, with [`skills`](https://github.com/vercel-labs/skills)**
+(needs Node.js): detects your agents and copies the skill into each one's
+folder. Add `-g` to have it in every project; update it with
 `npx skills update`.
 
 ```bash
 npx skills add juanMaAV92/pdf-tool
 ```
 
-**3. A mano:** copia la carpeta
+**3. By hand:** copy the
 [`skills/pdf-tool`](https://github.com/juanMaAV92/pdf-tool/tree/main/skills/pdf-tool)
-en la carpeta de skills de tu agente
-([rutas por agente](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)).
-Para actualizarla, vuelve a copiarla.
+folder into your agent's skills folder
+([paths per agent](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)).
+Copy it again to update.
 
-En las tres vías la CLI se instala aparte (`pipx install pdf-tool-cli`); si falta,
-la skill pide permiso para instalarla.
+In all three, the CLI is installed separately (`pipx install pdf-tool-cli`); if
+it is missing, the skill asks for permission to install it.
 
 ---
 
-## 🤝 Contribuir
+## 🖥️ Desktop app
 
-¡Las contribuciones son bienvenidas! Puedes abrir un *issue* con ideas o errores,
-o mandar un *pull request*. La arquitectura es modular: añadir una herramienta nueva
-es crear una carpeta y la app y la CLI la descubren solas. En el [roadmap](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/roadmap.md)
-está lo que viene: una skill para que los agentes de IA usen la CLI.
+<img width="980" alt="pdf-tool desktop app: home screen with the six tools" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot.png" />
+
+The same six tools with a simple interface, in English or Spanish, for macOS and
+Windows. No Python needed.
+
+[![Download](https://img.shields.io/badge/⬇️_Download-latest_version-2ea44f?style=for-the-badge)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
+
+- **macOS:** open the `.dmg` and drag **pdf-tool** to *Applications*. The app is
+  not signed, so the first time go to **System Settings → Privacy & Security**
+  and click **Open Anyway**.
+- **Windows:** run the installer. If SmartScreen appears: **More info → Run
+  anyway**.
+
+Step-by-step guide, screenshots and FAQ:
+**[juanmaav92.github.io/pdf-tool](https://juanmaav92.github.io/pdf-tool)**.
+Every release publishes `SHA256SUMS.txt` so you can check the download.
+
+---
+
+## 🤝 Contributing
+
+Issues and pull requests are welcome. Adding a tool means creating one folder:
+the app and the CLI discover it on their own. Translations are welcome too:
+copy `pdftool/i18n/locales/en.json` to `<code>.json` and translate it. The
+[roadmap](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/roadmap.md)
+lists what comes next.
 
 <details>
-<summary><b>🛠️ Para desarrolladores (montar el proyecto en local)</b></summary>
+<summary><b>🛠️ Developer setup</b></summary>
 
-### Requisitos
-- Python 3.11+ y [Poetry](https://python-poetry.org/)
+### Requirements
+- Python 3.11+ and [Poetry](https://python-poetry.org/)
 
-### Arrancar
+### Run
 ```bash
-poetry install --all-extras   # incluye Flet (extra [gui]) para la app
-poetry run pdftool        # abre la app
-poetry run pytest         # corre los tests
+poetry install --all-extras   # includes Flet (the [gui] extra) for the app
+poetry run pdftool            # opens the app
+poetry run pdf-tool --help    # the CLI
+poetry run pytest             # tests
 ```
 
-### Añadir una herramienta nueva
-1. Crea `pdftool/tools/<id>/` con `params.py`, `logic.py` (función pura + tests),
-   `spec.py` (registra la herramienta, sin Flet), `panel.py` y un `__init__.py` vacío.
-2. La app la muestra en la barra lateral y la CLI la ofrece como `pdf-tool <id>`,
-   las dos automáticamente.
+### Add a tool
+1. Create `pdftool/tools/<id>/` with `params.py`, `logic.py` (pure function +
+   tests), `spec.py` (registers the tool, no Flet), `panel.py` and an empty
+   `__init__.py`.
+2. Add its texts to `pdftool/i18n/locales/en.json` and `es.json`, and an example
+   to the skill.
+3. The app shows it in the sidebar and the CLI offers it as `pdf-tool <id>`,
+   both automatically.
 
-La **lógica** (`logic.py`) no importa Flet y se prueba sin UI; la **UI** (`panel.py`)
-solo arma controles. Detalles en [AGENTS.md](https://github.com/juanMaAV92/pdf-tool/blob/main/AGENTS.md).
+Details in [AGENTS.md](https://github.com/juanMaAV92/pdf-tool/blob/main/AGENTS.md)
+(in Spanish).
 
-### Publicar una versión (automatizado con GitHub Actions)
+### Release (automated with GitHub Actions)
 ```bash
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
-Eso dispara `release.yml`, que corre los tests, construye macOS (`.dmg`) y Windows
-(instalador Inno Setup) en paralelo, hornea la versión del tag en el build y crea
-un **GitHub Release en borrador** con ambos instaladores. Revísalo y pulsa
-**Publish release** para que las apps instaladas detecten la actualización.
-Si los instaladores se construyen bien, publica también el paquete en **PyPI**
-(`pdf-tool-cli`, por Trusted Publishing y sin tokens). Ese paso espera a que lo
-apruebes en Actions (entorno `pypi`), porque una versión en PyPI no se puede
-reemplazar.
+`release.yml` runs the tests, builds macOS (`.dmg`) and Windows (Inno Setup
+installer) in parallel, bakes the tag version into the build and creates a
+**draft GitHub Release** with both installers. Review it and click **Publish
+release** so installed apps detect the update. It also publishes the package to
+**PyPI** (`pdf-tool-cli`, via Trusted Publishing); that step waits for your
+approval in Actions (`pypi` environment), because a PyPI version cannot be
+replaced. The tag is the only source of the version number.
 
-Los PRs que cambian la app, el empaquetado o sus dependencias ejecutan además
-**Package smoke**: construye e inspecciona el DMG de macOS y compila e instala de
-forma silenciosa el instalador de Windows. Antes de una release importante,
-seguir la [checklist manual](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/release-smoke.md) para validar la ventana y los
-diálogos nativos.
+PRs that change the app, the packaging or its dependencies also run **Package
+smoke**, which builds the macOS DMG and silently installs the Windows installer.
+Before a major release, follow the
+[manual checklist](https://github.com/juanMaAV92/pdf-tool/blob/main/docs/release-smoke.md).
 
-El número de versión es **el tag** — única fuente de verdad.
-
-### Build local (para depurar el empaquetado)
+### Local build (to debug packaging)
 ```bash
 poetry run flet build macos --project pdf-tool --product pdf-tool     # -> build/macos/pdf-tool.app
 poetry run flet build windows --project pdf-tool --product pdf-tool   # -> build/windows/
 ```
-`--project pdf-tool` es obligatorio: sin él, `flet build` toma el nombre del
-paquete (`pdf-tool-cli`) y la app cambia de identidad.
+`--project pdf-tool` is required: without it, `flet build` takes the package
+name (`pdf-tool-cli`) and the app changes identity.
 
 </details>
 
 ---
 
-## 📄 Licencia
+## 📄 License
 
-El código de pdf-tool es [MIT](https://github.com/juanMaAV92/pdf-tool/blob/main/LICENSE).
-Usa [PyMuPDF](https://pymupdf.readthedocs.io), con licencia AGPL, así que los
-instaladores y el paquete de PyPI, que la incluyen, se distribuyen bajo los
-términos de la AGPL. Para tus documentos no cambia nada: siguen siendo tuyos y no
-salen de tu equipo.
+The pdf-tool source code is [MIT](https://github.com/juanMaAV92/pdf-tool/blob/main/LICENSE).
+It uses [PyMuPDF](https://pymupdf.readthedocs.io), licensed under the AGPL, so
+the installers and the PyPI package, which include it, are distributed under the
+terms of the AGPL. Your documents are unaffected: they stay yours and never
+leave your computer.
 
 ---
 
 <div align="center">
-<sub>Hecho con 🐍 Python + <a href="https://flet.dev">Flet</a> · Licencia <a href="https://github.com/juanMaAV92/pdf-tool/blob/main/LICENSE">MIT</a></sub>
+<sub>Made with 🐍 Python + <a href="https://flet.dev">Flet</a> · Powered by <a href="https://juanmaav92.github.io">@juanmaav92</a></sub>
 </div>
