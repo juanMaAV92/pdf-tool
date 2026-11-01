@@ -3,12 +3,12 @@ import sys
 
 from pdftool import __version__
 from pdftool.core.logger import setup_logging
+from pdftool.i18n import set_language, system_language, t
 
-GUI_MISSING = (
-    "La app de escritorio necesita Flet, que no está instalado.\n"
-    "Instálala con:  pipx install 'pdf-tool-cli[gui]'\n"
-    "Para la línea de comandos usa:  pdf-tool --help"
-)
+
+def gui_missing() -> str:
+    """Aviso cuando falta Flet (extra [gui]), en el idioma del sistema."""
+    return t("app.gui_missing")
 
 
 def main() -> None:
@@ -18,7 +18,8 @@ def main() -> None:
 
         from pdftool.ui.app import build_app
     except ImportError:
-        print(GUI_MISSING, file=sys.stderr)
+        set_language(system_language())
+        print(gui_missing(), file=sys.stderr)
         sys.exit(1)
 
     setup_logging()

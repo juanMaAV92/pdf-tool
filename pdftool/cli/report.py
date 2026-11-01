@@ -7,6 +7,7 @@ from typing import Any
 
 from pdftool.core.errors import user_message
 from pdftool.core.plugin import FileResult, ToolResult
+from pdftool.i18n import t
 
 # Algún archivo del lote falló, pero otros salieron (ver `exit_code`).
 EXIT_PARTIAL = 3
@@ -62,8 +63,8 @@ def render_text(result: ToolResult) -> str:
         for item in result.items:
             mark = "✓" if item.ok else "✗"
             lines.append(f"{mark} {item.input_path.name}: {item.message}")
-            lines += [f"  aviso: {w}" for w in item.warnings]
-    lines += [f"aviso: {w}" for w in result.warnings]
+            lines += ["  " + t("cli.report.warning", text=w) for w in item.warnings]
+    lines += [t("cli.report.warning", text=w) for w in result.warnings]
     return "\n".join(lines)
 
 

@@ -58,8 +58,7 @@ def _run(argv):
 
 
 def test_cli_list_json_follows_language():
-    i18n.set_language("en")
-    _, out = _run(["list", "--json"])
+    _, out = _run(["--lang", "en", "list", "--json"])
     merge = next(t for t in json.loads(out) if t["id"] == "merge")
     assert merge["name"] == "Merge PDFs"
     assert merge["category"] == "Organize"
@@ -69,16 +68,14 @@ def test_cli_list_json_follows_language():
     assert target == i18n.t("tool.compress.param.target_mb")
     assert "Tamaño" not in out
 
-    i18n.set_language("es")
-    _, out = _run(["list", "--json"])
+    _, out = _run(["--lang", "es", "list", "--json"])
     merge = next(t for t in json.loads(out) if t["id"] == "merge")
     assert merge["name"] == "Unir PDFs"
     assert merge["category"] == "Organizar"
 
 
 def test_cli_help_follows_language():
-    i18n.set_language("en")
-    code, out = _run(["compress", "--help"])
+    code, out = _run(["--lang", "en", "compress", "--help"])
     assert code == 0
     assert i18n.t("tool.compress.param.target_mb") in " ".join(out.split())
     assert i18n.t("tool.compress.param.mode.preserve") in " ".join(out.split())

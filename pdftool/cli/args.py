@@ -96,8 +96,11 @@ def add_params(
                 f"{_flag(name)}-stdin",
                 dest=f"{name}_stdin",
                 action="store_true",
-                help=f"{param_help(tool_id, name)} Se lee de la primera línea de "
-                f"stdin (o de la variable {_env_var(name)}).",
+                help=t(
+                    "cli.help.secret",
+                    help=param_help(tool_id, name),
+                    env=_env_var(name),
+                ),
             )
             continue
         parser.add_argument(
@@ -132,8 +135,12 @@ def build_params(
             value = _secret_value(name, ns, env, stdin)
             if value is None and field.is_required():
                 raise UserError(
-                    f"Falta {name}: pásalo con {_flag(name)}-stdin "
-                    f"o la variable {_env_var(name)}"
+                    t(
+                        "cli.error.missing_secret",
+                        name=name,
+                        flag=f"{_flag(name)}-stdin",
+                        env=_env_var(name),
+                    )
                 )
         else:
             value = getattr(ns, name, None)
@@ -146,4 +153,31 @@ def build_params(
     except ValidationError as exc:
         error = exc.errors()[0]
         field_name = str(error["loc"][0]) if error["loc"] else ""
-        raise UserError(f"{_flag(field_name)}: {error['msg']}") from exc
+        raise UserError(f"{_flag(field_name)}: {_validation_text(error)}") from exc
+
+
+# Tipos de error de pydantic con mensaje propio; el resto conserva el suyo.
+_VALIDATION_KEYS = frozenset(
+    {
+        "greater_than",
+        "greater_than_equal",
+        "less_than_equal",
+        "int_parsing",
+        "float_parsing",
+        "literal_error",
+        "missing",
+        "string_too_short",
+    }
+)
+
+
+def _validation_text(error: Any) -> str:
+    kind = error.get("type", "")
+    if kind not in _VALIDATION_KEYS:
+        return str(error["msg"])
+    # 0.0 → 0: los límites enteros se leen mejor sin decimales.
+    ctx = {
+        k: int(v) if isinstance(v, float) and v.is_integer() else v
+        for k, v in (error.get("ctx") or {}).items()
+    }
+    return t(f"cli.validation.{kind}", **ctx)

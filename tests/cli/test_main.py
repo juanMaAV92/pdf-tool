@@ -6,7 +6,7 @@ import pymupdf
 
 from pdftool import __version__
 from pdftool.cli import main
-from pdftool.core.errors import GENERIC_MESSAGE
+from pdftool.core.errors import generic_message
 from tests.conftest import _make_pdf
 
 
@@ -102,7 +102,7 @@ def test_runtime_failure_exits_1_with_json_error(tmp_path, capsys):
     broken.write_bytes(b"esto no es un pdf")
     assert main(["watermark", str(broken), "--text", "x", "--json"]) == 1
     data = _json(capsys)
-    assert data["error"]["message"] == GENERIC_MESSAGE
+    assert data["error"]["message"] == generic_message()
     assert data["error"]["detail"]
 
 

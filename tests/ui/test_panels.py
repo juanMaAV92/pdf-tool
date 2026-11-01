@@ -5,7 +5,7 @@ import flet as ft
 import pymupdf
 import pytest
 
-from pdftool.core.errors import GENERIC_MESSAGE, UserError
+from pdftool.core.errors import UserError, generic_message
 from pdftool.core.jobs import JobHandle
 from pdftool.core.plugin import (
     BaseParams,
@@ -253,7 +253,7 @@ def test_multi_file_ignores_duplicates():
 def test_on_error_generic_shows_folded_detail():
     tool = _build(_SingleStub())
     tool._on_error(RuntimeError("boom"))
-    assert tool.status.value == GENERIC_MESSAGE
+    assert tool.status.value == generic_message()
     assert tool._error_toggle.visible is True
     assert tool._error_detail.value == "RuntimeError: boom"
     assert tool._error_detail.visible is False  # arranca plegado

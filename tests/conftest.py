@@ -8,8 +8,12 @@ from pdftool import i18n
 
 
 @pytest.fixture(autouse=True)
-def _spanish():
-    """Los tests comparan textos en español salvo que pidan otro idioma."""
+def _spanish(monkeypatch):
+    """Los tests comparan textos en español salvo que pidan otro idioma.
+
+    También el idioma «del sistema», para que la CLI no dependa del equipo
+    donde corren los tests (en el CI sería inglés)."""
+    monkeypatch.setattr(i18n, "_ui_language", lambda: "es-ES")
     i18n.use_locales_dir(None)
     i18n.set_language("es")
     yield

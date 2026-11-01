@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from pdftool.core.errors import UserError
+from pdftool.i18n import t
 
 _FORBIDDEN_NAME_CHARS = set('/\\:?|<>*"\x00')
 
@@ -28,13 +29,9 @@ def parse_output_name(value: str | None) -> str | None:
     if not name:
         return None
     if any(c in _FORBIDDEN_NAME_CHARS for c in name):
-        raise UserError(
-            'Nombre de salida inválido: no puede contener / \\ : ? | < > * "'
-        )
+        raise UserError(t("core.naming.forbidden_chars"))
     if name.upper() in _WINDOWS_RESERVED_NAMES:
-        raise UserError(
-            f"Nombre de salida inválido: «{name}» está reservado por Windows."
-        )
+        raise UserError(t("core.naming.reserved", name=name))
     return name
 
 
