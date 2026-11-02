@@ -9,7 +9,11 @@ from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from pathlib import Path
 from typing import TypeVar
 
-from pdftool.core.thumbnails import THUMBNAIL_HEIGHT_PX, render_thumbnail
+from pdftool.core.thumbnails import (
+    THUMBNAIL_HEIGHT_PX,
+    ThumbnailFormat,
+    render_thumbnail,
+)
 
 MISSING = object()  # nunca se intentó (distinto de None = no renderizable)
 _CACHE_MAX = 512  # tope duro: ~2-5 MB de RAM; al superarlo expulsa el LRU
@@ -17,9 +21,9 @@ _MAX_WORKERS = 2  # renderizar miniaturas es CPU/memoria intensivo
 
 _FLUSH_INTERVAL = 0.1  # s entre repintados de la UI mientras llegan miniaturas
 
-# Clave: ruta, página, alto, mtime y tamaño. Si el archivo cambia en disco, la
+# Clave: ruta, página, alto, formato, mtime y tamaño. Si el archivo cambia en disco, la
 # clave cambia y la miniatura antigua deja de servirse.
-_Key = tuple[str, int, int, int, int]
+_Key = tuple[str, int, int, str, int, int]
 _cache: OrderedDict[_Key, bytes | None] = OrderedDict()
 _lock = threading.Lock()
 _executor_lock = threading.Lock()
@@ -67,18 +71,29 @@ def shutdown_thumbnail_executor() -> None:
         executor.shutdown(wait=False, cancel_futures=True)
 
 
-def _key(path: Path, page_index: int = 0) -> _Key:
+def _key(
+    path: Path,
+    page_index: int = 0,
+    height_px: int = THUMBNAIL_HEIGHT_PX,
+    fmt: ThumbnailFormat = "png",
+) -> _Key:
     try:
         st = os.stat(path)
         stamp, size = st.st_mtime_ns, st.st_size
     except OSError:
         stamp, size = -1, -1
-    return (str(path), page_index, THUMBNAIL_HEIGHT_PX, stamp, size)
+    return (str(path), page_index, height_px, fmt, stamp, size)
 
 
-def get_cached(path: Path, page_index: int = 0):
+def get_cached(
+    path: Path,
+    page_index: int = 0,
+    *,
+    height_px: int = THUMBNAIL_HEIGHT_PX,
+    fmt: ThumbnailFormat = "png",
+):
     """bytes | None (cacheado como no-renderizable) | MISSING (nunca intentado)."""
-    key = _key(path, page_index)
+    key = _key(path, page_index, height_px, fmt)
     with _lock:
         if key not in _cache:
             return MISSING
@@ -109,6 +124,8 @@ def load_async(
     is_current: Callable[[], bool],
     *,
     on_flush: Callable[[], None] | None = None,
+    height_px: int = THUMBNAIL_HEIGHT_PX,
+    fmt: ThumbnailFormat = "png",
 ) -> ThumbnailTask:
     """Renderiza `items` (rutas o pares (ruta, página)) y notifica cada uno.
 
@@ -129,10 +146,10 @@ def load_async(
             if not is_current():
                 return
             path, page_index = _split(item)
-            value = get_cached(path, page_index)
+            value = get_cached(path, page_index, height_px=height_px, fmt=fmt)
             if value is MISSING:
-                value = render_thumbnail(path, page_index)
-                _store(_key(path, page_index), value)
+                value = render_thumbnail(path, page_index, height_px, fmt)
+                _store(_key(path, page_index, height_px, fmt), value)
             if not is_current():
                 return
             on_ready(item, value)

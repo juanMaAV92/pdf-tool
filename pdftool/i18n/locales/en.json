@@ -52,7 +52,17 @@
   "core.error.permission": "No permission to read or save the file. Close it if it is open, or choose another folder in «Save to».",
   "core.naming.forbidden_chars": "Invalid output name: it cannot contain / \\ : ? | < > * \"",
   "core.naming.reserved": "Invalid output name: «{name}» is reserved by Windows.",
+  "core.pages.error.bad_page": "«{text}» is not a valid page number.",
+  "core.pages.error.bad_range": "«{token}» is not a valid range.",
+  "core.pages.error.bad_rotation": "Rotation must be @90, @180 or @270 («{token}»).",
+  "core.pages.error.empty": "Enter at least one page (e.g. 1-3, 5)",
+  "core.pages.error.first_page": "Pages start at 1",
+  "core.pages.error.out_of_bounds": {
+    "one": "Page {page} doesn't exist: this PDF has {count} page.",
+    "other": "Page {page} doesn't exist: this PDF has {count} pages."
+  },
   "core.pages.error.password": "This PDF has a password. Remove it first with «{tool}».",
+  "core.pages.error.reversed": "The range «{token}» is backwards: write the lower page first.",
   "param.output_dir": "Output folder (default: next to the original).",
   "tool.compress.all_failed": "No PDF could be compressed.",
   "tool.compress.description": "Reduce the size of one or more PDFs to a target in MB.",

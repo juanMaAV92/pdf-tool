@@ -13,7 +13,7 @@ def _clean_cache():
 
 
 def _fake_render(counter):
-    def fake(path, page_index=0, height_px=56):
+    def fake(path, page_index=0, height_px=56, fmt="png"):
         counter.append(path)
         return b"png-falso"
 
@@ -43,7 +43,7 @@ def test_cache_avoids_second_render(monkeypatch):
 def test_none_result_is_cached_and_not_retried(monkeypatch):
     rendered = []
 
-    def fake_none(path, page_index=0, height_px=56):
+    def fake_none(path, page_index=0, height_px=56, fmt="png"):
         rendered.append(path)
         return None
 
@@ -103,7 +103,7 @@ def test_cache_is_invalidated_when_the_file_changes(tmp_path, monkeypatch):
 def test_any_page_can_be_requested(monkeypatch):
     calls = []
 
-    def fake(path, page_index=0, height_px=56):
+    def fake(path, page_index=0, height_px=56, fmt="png"):
         calls.append(page_index)
         return b"p%d" % page_index
 
@@ -125,7 +125,7 @@ def test_rendering_uses_every_worker(monkeypatch):
 
     threads = set()
 
-    def slow(path, page_index=0, height_px=56):
+    def slow(path, page_index=0, height_px=56, fmt="png"):
         threads.add(threading.current_thread().name)
         time.sleep(0.05)
         return b"x"
@@ -152,3 +152,27 @@ def test_ui_flushes_are_batched(monkeypatch):
     assert events.count("ready") == 40
     assert 1 <= events.count("flush") < 40
     assert events[-1] == "flush"
+
+
+def test_each_size_and_format_is_rendered_and_cached_apart(monkeypatch):
+    requests = []
+
+    def fake(path, page_index=0, height_px=56, fmt="png"):
+        requests.append((height_px, fmt))
+        return f"{height_px}{fmt}".encode()
+
+    monkeypatch.setattr(thumbs, "render_thumbnail", fake)
+    doc = Path("/tmp/doc.pdf")
+
+    thumbs.load_async([doc], lambda _p, _b: None, lambda: True).join(5)
+    thumbs.load_async(
+        [doc], lambda _p, _b: None, lambda: True, height_px=180, fmt="jpg"
+    ).join(5)
+    thumbs.load_async(
+        [doc], lambda _p, _b: None, lambda: True, height_px=180, fmt="jpg"
+    ).join(5)
+
+    assert requests == [(56, "png"), (180, "jpg")]
+    assert thumbs.get_cached(doc) == b"56png"
+    assert thumbs.get_cached(doc, height_px=180, fmt="jpg") == b"180jpg"
+    assert thumbs.get_cached(doc, height_px=180) is thumbs.MISSING
