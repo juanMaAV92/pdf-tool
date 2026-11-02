@@ -84,3 +84,17 @@ def test_degenerate_page_does_not_produce_a_huge_pixmap(tmp_path):
     pix = pymupdf.Pixmap(png)
     assert pix.width <= 4 * THUMBNAIL_HEIGHT_PX
     assert pix.height <= THUMBNAIL_HEIGHT_PX
+
+
+def test_thumbnail_is_a_png_of_the_default_height_by_default(tmp_path: Path) -> None:
+    png = render_thumbnail(_pdf(tmp_path / "a.pdf"))
+
+    assert png is not None and png.startswith(b"\x89PNG")
+    assert pymupdf.Pixmap(png).height == THUMBNAIL_HEIGHT_PX
+
+
+def test_thumbnail_can_be_a_jpeg_of_a_given_height(tmp_path: Path) -> None:
+    jpeg = render_thumbnail(_pdf(tmp_path / "a.pdf"), height_px=180, fmt="jpg")
+
+    assert jpeg is not None and jpeg.startswith(b"\xff\xd8")
+    assert pymupdf.Pixmap(jpeg).height == 180
