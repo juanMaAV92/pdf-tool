@@ -15,8 +15,8 @@ escritorio. Nada sale de tu equipo.**
 
 </div>
 
-Une, divide, comprime, protege y marca PDFs, o convierte imágenes en PDF, con
-una CLI pensada para scripts y agentes de IA, una skill para agentes y una app de
+Une, divide, comprime, protege y marca PDFs, o convierte entre PDF e imágenes,
+con una CLI pensada para scripts y agentes de IA, una skill para agentes y una app de
 escritorio para todos los demás. Gratis, de código abierto, sin anuncios y
 **100% sin conexión**: tus archivos nunca se suben a ningún sitio.
 
@@ -35,6 +35,7 @@ pdf-tool compress informe.pdf --target-mb 2
 | `pdf-tool merge` | Combina varios PDFs en uno, en el orden que indiques. |
 | `pdf-tool split` | Divide un PDF por rangos de páginas, una página por archivo o cada N páginas. |
 | `pdf-tool images2pdf` | Convierte cada imagen JPG/PNG en su propio PDF. |
+| `pdf-tool pdf2images` | Exporta cada página de uno o varios PDFs como imagen JPG o PNG. |
 | `pdf-tool protect` | Añade o quita la contraseña de uno o varios PDFs. |
 | `pdf-tool watermark` | Repite un texto en diagonal sobre todas las páginas. |
 
@@ -119,7 +120,7 @@ falta, la skill pide permiso para instalarla.
 
 <img width="980" alt="App de escritorio de pdf-tool: pantalla de inicio con las seis herramientas" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot-es.png" />
 
-Las mismas seis herramientas con una interfaz sencilla, en español o inglés, para
+Las mismas siete herramientas con una interfaz sencilla, en español o inglés, para
 macOS y Windows. No necesita Python.
 
 [![Descargar](https://img.shields.io/badge/⬇️_Descargar-última_versión-2ea44f?style=for-the-badge)](https://github.com/juanMaAV92/pdf-tool/releases/latest)

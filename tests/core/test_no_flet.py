@@ -18,7 +18,7 @@ def test_tools_are_discovered_without_flet():
     out = subprocess.run(
         [sys.executable, "-c", CODE], capture_output=True, text=True, check=True
     ).stdout.splitlines()
-    assert out == ["merge,split,compress,images2pdf,watermark,protect", "[]"]
+    assert out == ["merge,split,compress,images2pdf,pdf2images,watermark,protect", "[]"]
 
 
 CLI_CODE = """
@@ -34,4 +34,4 @@ def test_cli_runs_without_flet():
         [sys.executable, "-c", CLI_CODE], capture_output=True, text=True
     )
     assert proc.returncode == 0, proc.stderr
-    assert len(json.loads(proc.stdout)) == 6
+    assert len(json.loads(proc.stdout)) == 7

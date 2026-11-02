@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "name": "Español",
-    "decimal_separator": ","
+    "decimal_separator": ",",
+    "name": "Español"
   },
   "app.gui_missing": "La app de escritorio necesita Flet, que no está instalado.\nInstálala con:  pipx install 'pdf-tool-cli[gui]'\nPara la línea de comandos usa:  pdf-tool --help",
   "category.convert": "Convertir",
@@ -52,6 +52,7 @@
   "core.error.permission": "No hay permiso para leer o guardar el archivo. Ciérralo si lo tienes abierto o elige otra carpeta en «Guardar en».",
   "core.naming.forbidden_chars": "Nombre de salida inválido: no puede contener / \\ : ? | < > * \"",
   "core.naming.reserved": "Nombre de salida inválido: «{name}» está reservado por Windows.",
+  "core.pages.error.password": "Este PDF tiene contraseña. Quítala antes con «{tool}».",
   "param.output_dir": "Carpeta de salida (por defecto, junto al original).",
   "tool.compress.all_failed": "Ningún PDF pudo comprimirse.",
   "tool.compress.description": "Reduce el tamaño de uno o varios PDFs a un objetivo en MB.",
@@ -130,6 +131,36 @@
   "tool.merge.suffix": "unido",
   "tool.merge.summary": "{count} PDFs unidos → {name}",
   "tool.merge.ui.run": "Unir",
+  "tool.pdf2images.description": "Convierte cada página en una imagen JPG o PNG.",
+  "tool.pdf2images.error.all_failed": "No se pudo crear ninguna imagen.",
+  "tool.pdf2images.error.too_large": "La página {page} es demasiado grande a {dpi} ppp. Usa {max_dpi} ppp o menos.",
+  "tool.pdf2images.error.too_large_any": "La página {page} es demasiado grande para exportarla como imagen.",
+  "tool.pdf2images.item": {
+    "one": "{count} imagen",
+    "other": "{count} imágenes"
+  },
+  "tool.pdf2images.name": "PDF a imágenes",
+  "tool.pdf2images.param.dpi": "Resolución en ppp, de 72 a 600.",
+  "tool.pdf2images.param.format": "Formato de imagen.",
+  "tool.pdf2images.param.format.jpg": "archivos más ligeros, para fotos y escaneos",
+  "tool.pdf2images.param.format.png": "texto nítido",
+  "tool.pdf2images.progress.page": "Página {page} de {count}",
+  "tool.pdf2images.suffix": "imágenes",
+  "tool.pdf2images.summary": {
+    "one": "{count} imagen en {folder}",
+    "other": "{count} imágenes en {folder}"
+  },
+  "tool.pdf2images.summary.partial": {
+    "one": "{count} imagen en {folder}. PDF con errores: {failed}.",
+    "other": "{count} imágenes en {folder}. PDF con errores: {failed}."
+  },
+  "tool.pdf2images.ui.dpi.150": "Pantalla · 150 ppp",
+  "tool.pdf2images.ui.dpi.300": "Impresión · 300 ppp",
+  "tool.pdf2images.ui.format": "Formato",
+  "tool.pdf2images.ui.pixels": "{name}, página 1: {width} × {height} px",
+  "tool.pdf2images.ui.resolution": "Resolución",
+  "tool.pdf2images.ui.run": "Exportar imágenes",
+  "tool.pdf2images.warning.restricted": "Este PDF tiene restricciones que las imágenes no conservan.",
   "tool.protect.all_failed": "Ningún PDF pudo procesarse.",
   "tool.protect.description": "Añade o quita la contraseña de uno o varios PDFs.",
   "tool.protect.error.already": "El PDF ya está protegido; quítale la contraseña primero.",

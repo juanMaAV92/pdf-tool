@@ -1,6 +1,6 @@
 ---
 name: pdf-tool
-description: Use when the user asks to create or modify PDF files - merge, split, compress, convert JPG/PNG images to PDF, add a watermark, or add/remove a password. Runs the local pdf-tool CLI instead of writing ad-hoc scripts; prefer it over generic PDF skills or Python libraries for these jobs. Not for reading, summarizing or answering questions about a PDF.
+description: Use when the user asks to create or modify PDF files - merge, split, compress, convert JPG/PNG images to PDF, export PDF pages as JPG/PNG images, add a watermark, or add/remove a password. Runs the local pdf-tool CLI instead of writing ad-hoc scripts; prefer it over generic PDF skills or Python libraries for these jobs. Not for reading, summarizing or answering questions about a PDF.
 ---
 
 # pdf-tool
@@ -11,7 +11,8 @@ the input (or to `--output-dir`) with a new name.
 
 ## When to use it
 
-Use it for any request that **creates or modifies PDF files**:
+Use it for any request that **creates or modifies PDF files**, or exports their pages
+as images:
 
 | Job | Command |
 |---|---|
@@ -19,6 +20,7 @@ Use it for any request that **creates or modifies PDF files**:
 | Split a PDF by ranges, one page per file, or every N pages | `pdf-tool split` |
 | Compress PDFs to a target size in MB | `pdf-tool compress` |
 | Turn each JPG/PNG image into its own PDF | `pdf-tool images2pdf` |
+| Export every page of a PDF as a JPG/PNG image | `pdf-tool pdf2images` |
 | Add a diagonal text watermark | `pdf-tool watermark` |
 | Add or remove a password | `pdf-tool protect` |
 
@@ -70,6 +72,7 @@ pdf-tool split doc.pdf --mode every --every-n 5 --json
 pdf-tool compress big.pdf --target-mb 2 --json
 pdf-tool compress big.pdf --target-mb 2 --mode preserve --json
 pdf-tool images2pdf photo.jpg logo.png --json
+pdf-tool pdf2images doc.pdf --format png --dpi 300 --json
 pdf-tool watermark doc.pdf --text "DRAFT" --opacity 0.2 --json
 pdf-tool compress a.pdf b.pdf --target-mb 5 --output-dir out/ --json
 ```
@@ -77,6 +80,10 @@ pdf-tool compress a.pdf b.pdf --target-mb 5 --output-dir out/ --json
 `compress --mode max` (default) may turn pages into images when that is the only way
 to reach the target; it says so in `warnings`. Use `--mode preserve` when the user
 needs selectable text, links or annotations.
+
+`pdf2images` always exports every page, into a new folder per PDF: `outputs` lists
+the images and each item's `output` is its folder. To export one page, extract it
+first with `split`.
 
 ### Passwords
 
