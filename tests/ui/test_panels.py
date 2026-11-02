@@ -1234,3 +1234,15 @@ def test_compress_options_are_top_aligned():
         if isinstance(c, ft.Row) and any(x is tool._mode_dd for x in c.controls)
     )
     assert row.vertical_alignment == ft.CrossAxisAlignment.START
+
+
+def test_open_folder_uses_the_result_folder_hook():
+    tool = _build(_SingleStub())
+    result = ToolResult(outputs=[Path("/tmp/x/a.jpg")], summary="ok")
+
+    tool._show_result_actions(result)
+    assert tool.open_btn.data == Path("/tmp/x")
+
+    tool.result_folder = lambda _result: Path("/tmp/otra")
+    tool._show_result_actions(result)
+    assert tool.open_btn.data == Path("/tmp/otra")

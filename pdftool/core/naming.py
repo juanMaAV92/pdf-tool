@@ -100,3 +100,30 @@ def output_path(
     carpeta = Path(out_dir) if out_dir is not None else p.parent
     stem_final = stem if stem is not None else p.stem
     return unique_path(carpeta / f"{stem_final}_{suffix}.pdf", taken=(p,))
+
+
+def output_dir_path(
+    input_path: Path, suffix: str, *, out_dir: Path | None = None
+) -> Path:
+    """Carpeta libre `<stem>_<suffix>` en `out_dir` o junto al original.
+
+    En colisión añade « (n)» al final del nombre completo. No usa `unique_path`
+    porque trata lo que hay tras el último punto como extensión: de «v1.2_img»
+    saldría «v1 (1).2_img».
+    """
+    p = Path(input_path)
+    parent = Path(out_dir) if out_dir is not None else p.parent
+    name = f"{p.stem}_{suffix}"
+    candidate = parent / name
+    n = 0
+    while candidate.exists():
+        n += 1
+        candidate = parent / f"{name} ({n})"
+    return candidate
+
+
+def series_path(
+    folder: Path, stem: str, page_number: int, width: int, extension: str
+) -> Path:
+    """`<folder>/<stem>_p001.<extension>`: un archivo numerado de una serie."""
+    return Path(folder) / f"{stem}_p{page_number:0{width}d}.{extension}"

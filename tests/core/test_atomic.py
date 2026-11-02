@@ -2,7 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from pdftool.core.atomic import atomic_copy, atomic_output, atomic_write_text
+from pdftool.core.atomic import (
+    atomic_copy,
+    atomic_output,
+    atomic_output_dir,
+    atomic_write_text,
+)
+from pdftool.core.jobs import JobCancelled
 
 
 def _temporary_files(path: Path) -> list[Path]:
@@ -50,3 +56,46 @@ def test_atomic_write_text_publishes_complete_text(tmp_path):
 
     assert target.read_text(encoding="utf-8") == '{"theme_mode":"dark"}'
     assert _temporary_files(target) == []
+
+
+def test_atomic_output_dir_publishes_only_after_success(tmp_path):
+    target = tmp_path / "doc_imágenes"
+
+    with atomic_output_dir(target) as temporary:
+        (temporary / "a.jpg").write_bytes(b"x")
+        assert not target.exists()
+
+    assert (target / "a.jpg").read_bytes() == b"x"
+    assert _temporary_files(target) == []
+
+
+def test_atomic_output_dir_removes_partial_folder_on_failure(tmp_path):
+    target = tmp_path / "doc_imágenes"
+
+    with pytest.raises(RuntimeError), atomic_output_dir(target) as temporary:
+        (temporary / "a.jpg").write_bytes(b"x")
+        raise RuntimeError("falla")
+
+    assert not target.exists()
+    assert _temporary_files(target) == []
+
+
+def test_atomic_output_dir_removes_partial_folder_on_cancel(tmp_path):
+    target = tmp_path / "doc_imágenes"
+
+    with pytest.raises(JobCancelled), atomic_output_dir(target):
+        raise JobCancelled()
+
+    assert not target.exists()
+    assert _temporary_files(target) == []
+
+
+def test_atomic_output_dir_does_not_restrict_permissions(tmp_path):
+    reference = tmp_path / "referencia"
+    reference.mkdir()
+    target = tmp_path / "doc_imágenes"
+
+    with atomic_output_dir(target):
+        pass
+
+    assert target.stat().st_mode == reference.stat().st_mode

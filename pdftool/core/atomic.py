@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -29,6 +30,26 @@ def atomic_output(target: Path) -> Iterator[Path]:
         # Si el bloque falla, elimina el temporal; `missing_ok` también cubre
         # el caso exitoso, donde os.replace ya lo movió al destino final.
         temporary.unlink(missing_ok=True)
+
+
+@contextmanager
+def atomic_output_dir(target: Path) -> Iterator[Path]:
+    """Llena una carpeta temporal junto al destino y publícala al terminar.
+
+    Ante cualquier salida anómala, incluida la cancelación, no queda nada: ni
+    el destino ni el temporal. No usa `mkdtemp` porque crea la carpeta con
+    permisos 0700, que pasarían a la carpeta del usuario.
+    """
+    target = Path(target)
+    temporary = target.parent / f".pdf-tool-{uuid.uuid4().hex}"
+    temporary.mkdir()
+    try:
+        yield temporary
+        os.rename(temporary, target)
+    finally:
+        # `exists` es falso en el caso exitoso: os.rename ya la movió.
+        if temporary.exists():
+            shutil.rmtree(temporary, ignore_errors=True)
 
 
 def atomic_copy(source: Path, target: Path) -> None:

@@ -283,9 +283,14 @@ class BaseToolPanel(PdfTool):
             if len(result.outputs) == 1
             else None
         )
-        self.open_btn.data = result.outputs[0].parent
+        self.open_btn.data = self.result_folder(result)
         self.open_file_btn.visible = len(result.outputs) == 1
         self.open_file_btn.data = result.outputs[0]
+
+    def result_folder(self, result: ToolResult) -> Path:
+        """Carpeta que abre «Abrir carpeta». Sobrescríbelo si las salidas no
+        cuelgan todas de la carpeta de la primera."""
+        return result.outputs[0].parent
 
     def _hide_result_actions(self) -> None:
         self._warnings.visible = False
