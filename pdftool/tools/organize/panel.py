@@ -87,6 +87,7 @@ class _PageCell:
                     ),
                 ],
                 spacing=2,
+                alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             padding=4,
