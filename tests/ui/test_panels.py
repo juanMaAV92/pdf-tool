@@ -115,14 +115,14 @@ def test_single_file_pick_enables_run():
     assert tool.run_btn.disabled is True
     assert tool._empty_hint.visible is True
     assert tool._empty_hint.value == "Añade un archivo para continuar."
-    assert tool._body.expand is False
+    assert tool._scroll_area.expand_loose is True
 
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
 
     assert tool.can_run() is True
     assert tool.run_btn.disabled is False
     assert tool._empty_hint.visible is False
-    assert tool._body.expand is False
+    assert tool._scroll_area.expand_loose is True
     assert tool.collect_inputs() == [Path("/tmp/a.pdf")]
 
 
@@ -225,19 +225,19 @@ def test_multi_file_requires_min_files():
     tool = _build(_MultiStub())
     assert tool.can_run() is False
     assert tool._empty_hint.value == "Añade al menos 2 archivos para continuar."
-    assert tool._body.expand is False
+    assert tool._scroll_area.expand_loose is True
 
     tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
     assert tool.can_run() is False  # 1 < min_files(2)
     assert tool.run_btn.disabled is True
     assert tool._empty_hint.value == "Añade 1 archivo más para continuar."
-    assert tool._body.expand is False
+    assert tool._scroll_area.expand_loose is True
 
     tool._on_pick(_FakeEvent(["/tmp/b.pdf"]))
     assert tool.can_run() is True  # 2 >= min_files
     assert tool.run_btn.disabled is False
     assert tool._empty_hint.visible is False
-    assert tool._body.expand is True
+    assert tool._scroll_area.expand_loose is False
     assert tool.collect_inputs() == [Path("/tmp/a.pdf"), Path("/tmp/b.pdf")]
 
 
@@ -273,6 +273,22 @@ def test_toggle_error_detail_reveals_then_hides():
     assert tool._error_detail.visible is True
     tool._toggle_error_detail(None)
     assert tool._error_detail.visible is False
+
+
+def test_a_long_error_detail_scrolls_instead_of_hiding_the_actions():
+    tool = _build(_SingleStub())
+    tool._on_error(RuntimeError("boom"))
+    assert not tool._feedback.expand
+
+    tool._toggle_error_detail(None)
+    assert tool._feedback.expand is True
+
+    tool._toggle_error_detail(None)
+    assert not tool._feedback.expand
+
+    tool._toggle_error_detail(None)
+    tool._clear_error()
+    assert not tool._feedback.expand
 
 
 def test_pick_after_error_clears_stale_detail():
@@ -1129,11 +1145,22 @@ def test_rows_with_warnings_show_an_explained_icon():
     assert warning_icons(second) == []
 
 
-def test_file_list_is_a_lazy_list_view():
+def test_options_and_file_list_share_one_scroll_above_the_pinned_actions():
     tool = _build(_MultiStub())
-    assert isinstance(tool._file_list, ft.ListView)
-    tool._on_pick(_FakeEvent(["/tmp/a.pdf", "/tmp/b.pdf"]))
-    assert tool._file_list.expand is True
+    area = tool._scroll_area
+    assert area.scroll is not None and area.expand is True
+    assert tool._file_list in area.controls[0].content.controls
+    assert tool._file_list.scroll is None  # una lista con scroll propio no cabría
+    assert tool.run_btn.parent not in area.controls
+    assert tool._feedback not in area.controls
+    assert tool._out_dir not in area.controls
+
+
+def test_every_tool_scrolls_its_options_so_no_control_is_lost():
+    for tool in _tools():
+        tool.build_panel(ToolContext(page=_FakePage(), run_job=lambda **kwargs: None))
+        assert tool._scroll_area.scroll is not None
+        assert tool._scroll_area.expand is True
 
 
 def test_adding_many_files_deduplicates_quickly():
@@ -1248,10 +1275,6 @@ def test_open_folder_uses_the_result_folder_hook():
     assert tool.open_btn.data == Path("/tmp/otra")
 
 
-class _CompactStub(_MultiStub):
-    compact_when_ready = True
-
-
 def _pick_two(tool, tmp_path):
     a, b = tmp_path / "a.pdf", tmp_path / "b.pdf"
     a.touch()
@@ -1260,19 +1283,18 @@ def _pick_two(tool, tmp_path):
 
 
 def test_compact_panel_gives_its_header_height_to_the_list_when_ready(tmp_path):
-    tool = _CompactStub()
+    tool = _MultiStub()
     _build(tool)
     input_bar = tool._input_slot.content
 
     assert tool._description.visible and tool._top_divider.visible
-    assert tool._bottom_divider.visible and tool._input_slot.visible
+    assert tool._input_slot.visible
     assert not tool._title_input_slot.visible
 
     _pick_two(tool, tmp_path)
 
     assert not tool._description.visible
     assert not tool._top_divider.visible
-    assert not tool._bottom_divider.visible
     assert not tool._input_slot.visible
     assert tool._input_slot.content is None
     assert tool._title_input_slot.visible
@@ -1280,7 +1302,7 @@ def test_compact_panel_gives_its_header_height_to_the_list_when_ready(tmp_path):
 
 
 def test_compact_panel_restores_its_header_when_the_list_is_emptied(tmp_path):
-    tool = _CompactStub()
+    tool = _MultiStub()
     _build(tool)
     input_bar = tool._input_slot.content
     _pick_two(tool, tmp_path)
@@ -1288,18 +1310,28 @@ def test_compact_panel_restores_its_header_when_the_list_is_emptied(tmp_path):
     tool._clear_all(None)
 
     assert tool._description.visible and tool._top_divider.visible
-    assert tool._bottom_divider.visible
     assert tool._input_slot.content is input_bar and tool._input_slot.visible
     assert tool._title_input_slot.content is None
     assert not tool._title_input_slot.visible
 
 
-def test_panels_stay_expanded_by_default_when_ready(tmp_path):
-    tool = _MultiStub()
-    _build(tool)
-
-    _pick_two(tool, tmp_path)
-
+def test_single_file_panel_compacts_but_keeps_its_file_row_when_ready():
+    tool = _build(_SingleStub())
     assert tool._description.visible and tool._top_divider.visible
-    assert tool._bottom_divider.visible and tool._input_slot.visible
+
+    tool._on_pick(_FakeEvent(["/tmp/a.pdf"]))
+
+    assert not tool._description.visible and not tool._top_divider.visible
+    assert tool._input_slot.visible
     assert not tool._title_input_slot.visible
+
+
+def test_the_status_row_takes_no_space_until_there_is_a_message():
+    tool = _build(_SingleStub())
+    assert tool._status_row.visible is False
+
+    tool._set_status("Listo", "success")
+    assert tool._status_row.visible is True
+
+    tool._set_status("")
+    assert tool._status_row.visible is False

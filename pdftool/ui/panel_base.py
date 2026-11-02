@@ -90,14 +90,17 @@ class BaseToolPanel(PdfTool):
     pick_icon = ft.Icons.UPLOAD_FILE
     allowed_extensions: tuple[str, ...] = ("pdf",)
     min_files: int = 1
-    # Las listas de lotes necesitan ocupar el espacio disponible cuando hay
-    # archivos. Los paneles de un solo archivo no: un cuerpo vacío solo aleja la
-    # acción principal de los controles que la preparan.
+    # Las listas de lotes ocupan el espacio disponible cuando hay archivos. Los
+    # paneles de un solo archivo no: un hueco vacío solo aleja la acción principal
+    # de los controles que la preparan.
     expand_body_when_ready = True
-    # En la ventana mínima la cabecera no deja sitio a la lista: al estar listo,
-    # los botones de elegir suben a la fila del título y desaparecen descripción
-    # y divisores. El estado vacío no cambia.
-    compact_when_ready = False
+    # En la ventana mínima la cabecera no deja sitio a las opciones: al estar
+    # listo desaparecen la descripción y el divisor superior. El estado vacío no
+    # cambia.
+    compact_when_ready = True
+    # Además, los botones de elegir suben a la fila del título. Solo donde son
+    # botones: el nombre del archivo elegido necesita su propia fila.
+    input_in_title_when_compact = False
     # Función pura de la herramienta: run(inputs, params, progress) -> ToolResult.
     logic: Callable[..., ToolResult] | None = None
     # Definición sin Flet de la herramienta (`tools/<id>/spec.py`). Al
@@ -139,11 +142,10 @@ class BaseToolPanel(PdfTool):
     cancel_btn: ft.OutlinedButton
     _result_actions: ft.Row
     _feedback: ft.Column
-    _body: ft.Control
+    _scroll_area: ft.Column
     _empty_hint: ft.Text
     _description: ft.Text
     _top_divider: ft.Divider
-    _bottom_divider: ft.Divider
     _input_slot: ft.Container
     _title_input_slot: ft.Container
 
@@ -201,7 +203,7 @@ class BaseToolPanel(PdfTool):
         raise NotImplementedError
 
     def build_body(self) -> ft.Control:
-        """Zona flexible del medio; el único control con expand=True."""
+        """Zona del medio; va dentro del área con scroll, sin scroll ni expand."""
         raise NotImplementedError
 
     def collect_inputs(self) -> list[Path]:
@@ -240,18 +242,18 @@ class BaseToolPanel(PdfTool):
         self.run_btn.disabled = not ready or self._running
         self._empty_hint.value = "" if ready else self._empty_action_hint()
         self._empty_hint.visible = not ready
-        self._body.expand = ready and self.expand_body_when_ready
+        self._scroll_area.expand_loose = not (ready and self.expand_body_when_ready)
         self._apply_density(compact=ready and self.compact_when_ready)
 
     def _apply_density(self, *, compact: bool) -> None:
         input_bar = self._input_slot.content or self._title_input_slot.content
-        self._input_slot.content = None if compact else input_bar
-        self._input_slot.visible = not compact
-        self._title_input_slot.content = input_bar if compact else None
-        self._title_input_slot.visible = compact
+        in_title = compact and self.input_in_title_when_compact
+        self._input_slot.content = None if in_title else input_bar
+        self._input_slot.visible = not in_title
+        self._title_input_slot.content = input_bar if in_title else None
+        self._title_input_slot.visible = in_title
         self._description.visible = not compact
         self._top_divider.visible = not compact
-        self._bottom_divider.visible = not compact
 
     # ---- registro (log de diagnóstico; sin datos del usuario) ----
     def _logger(self) -> logging.Logger:
@@ -280,6 +282,7 @@ class BaseToolPanel(PdfTool):
         icon, icon_color, text_color = _STATUS_STYLES[kind]
         self.status.value = text
         self.status.color = text_color
+        self._status_row.visible = bool(text)
         self._status_icon.name = icon
         self._status_icon.color = icon_color
         self._status_icon.visible = bool(text) and icon is not None
@@ -337,11 +340,14 @@ class BaseToolPanel(PdfTool):
         self._error_toggle.text = t("ui.panel.show_detail")
         self._error_detail.visible = False
         self._error_detail.value = ""
+        self._feedback.expand = False
         self._log_btn.visible = False
         self._error_actions.visible = False
 
     def _toggle_error_detail(self, _e) -> None:
         self._error_detail.visible = not self._error_detail.visible
+        # Un detalle largo hace scroll sin sacar de la ventana las acciones.
+        self._feedback.expand = self._error_detail.visible
         self._error_toggle.text = (
             t("ui.panel.hide_detail")
             if self._error_detail.visible
@@ -362,6 +368,7 @@ class BaseToolPanel(PdfTool):
         if detail:
             self._error_detail.value = detail
             self._error_detail.visible = False  # arranca plegado
+            self._feedback.expand = False
             self._error_toggle.visible = True
             self._log_btn.visible = True
             self._error_actions.visible = True
@@ -481,6 +488,7 @@ class BaseToolPanel(PdfTool):
             [self._status_icon, self.status],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.START,
+            visible=False,
         )
         # Avisos del resultado (p. ej. páginas rasterizadas): bajo el resumen,
         # sin diálogo ni clic extra.
@@ -539,6 +547,8 @@ class BaseToolPanel(PdfTool):
             ],
             spacing=8,
             tight=True,
+            scroll=ft.ScrollMode.AUTO,
+            expand_loose=True,
         )
 
         # Una única instancia por panel: cada OutputDirField trae su propio
@@ -553,7 +563,6 @@ class BaseToolPanel(PdfTool):
 
         input_bar = self.build_input(page)  # subclase; fija self._picker.on_result
         body = self.build_body()
-        self._body = body
         self._empty_hint = ft.Text(
             "",
             size=14,
@@ -562,9 +571,16 @@ class BaseToolPanel(PdfTool):
         )
         self._description = ft.Text(self.meta.description)
         self._top_divider = ft.Divider()
-        self._bottom_divider = ft.Divider()
         self._input_slot = ft.Container(content=input_bar)
         self._title_input_slot = ft.Container(visible=False)
+        self._scroll_area = ft.Column(
+            spacing=16,
+            # Barra siempre a la vista si hay más abajo: sin ella, una opción
+            # oculta bajo el borde parece no existir.
+            scroll=ft.ScrollMode.ALWAYS,
+            expand=True,
+            expand_loose=True,
+        )
         self._sync_ready_state()
 
         if self._picker not in page.overlay:
@@ -577,18 +593,31 @@ class BaseToolPanel(PdfTool):
         self.open_btn.on_click = lambda _e: open_folder(Path(self.open_btn.data))
         self.open_file_btn.on_click = lambda _e: open_file(self.open_file_btn.data)
 
-        # Tres zonas: superior fija · cuerpo flexible · footer anclado.
-        # `body` es el único hijo con expand=True: todo lo posterior queda
-        # pegado al fondo sin importar cuántos archivos haya en la lista.
+        # Dos zonas: opciones y archivos con scroll · acciones siempre visibles.
+        # Así ningún control queda fuera de la ventana mínima, con independencia
+        # de cuántas opciones tenga la herramienta o de si aparece el aviso de
+        # versión nueva.
+        self._scroll_area.controls = [
+            ft.Container(
+                ft.Column(
+                    [
+                        self._build_title(),
+                        self._description,
+                        self._top_divider,
+                        self._input_slot,
+                        *self.extra_controls(),
+                        body,
+                    ],
+                    spacing=16,
+                ),
+                # Hueco para que la barra de scroll no pise los controles.
+                padding=ft.padding.only(right=12),
+            )
+        ]
         self._root = ft.Column(
             [
-                self._build_title(),
-                self._description,
-                self._top_divider,
-                self._input_slot,
-                *self.extra_controls(),
-                body,
-                self._bottom_divider,
+                self._scroll_area,
+                ft.Divider(height=1),
                 self._out_dir,
                 self._empty_hint,
                 ft.Row(
@@ -608,7 +637,7 @@ class BaseToolPanel(PdfTool):
 
     def _build_title(self) -> ft.Control:
         title = ft.Text(self.meta.name, size=24, weight=ft.FontWeight.BOLD)
-        if not self.compact_when_ready:
+        if not self.input_in_title_when_compact:
             return title
         title.expand = True
         return ft.Row([title, self._title_input_slot], spacing=16)
@@ -638,7 +667,7 @@ class SingleFileToolPanel(BaseToolPanel):
         self._pick_btn.disabled = locked
 
     def build_body(self) -> ft.Control:
-        return ft.Container(expand=True)  # empuja el footer al fondo
+        return ft.Container(visible=False)  # sin lista: solo las opciones
 
     def _on_pick(self, e) -> None:
         if e.files and e.files[0].path:

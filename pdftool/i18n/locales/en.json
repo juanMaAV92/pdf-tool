@@ -104,7 +104,7 @@
   "tool.compress.ui.mode.preserve": "Keep text and links",
   "tool.compress.ui.run": "Compress",
   "tool.compress.ui.target": "Target size (MB)",
-  "tool.compress.ui.target_hint": "A target, not a guarantee.",
+  "tool.compress.ui.target_hint": "Not a guarantee.",
   "tool.compress.warning.rasterized": "Some pages were turned into images: selectable text, links or annotations may have been lost. If you need them, use «Keep text and links».",
   "tool.images2pdf.all_failed": "No image could be converted.",
   "tool.images2pdf.description": "Create one PDF per image (JPG or PNG).",

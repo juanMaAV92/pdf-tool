@@ -25,7 +25,6 @@ class Pdf2ImagesTool(MultiFileToolPanel):
     run_label_key = "tool.pdf2images.ui.run"
     run_icon = ft.Icons.BURST_MODE
     pick_label_key = "ui.panel.add_pdfs"
-    compact_when_ready = True
 
     def extra_controls(self) -> list[ft.Control]:
         self._first_page: tuple[Path, pymupdf.Rect] | None = None

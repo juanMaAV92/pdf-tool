@@ -24,13 +24,13 @@ class CompressTool(MultiFileToolPanel):
         self._target_field = ft.TextField(
             label=t("tool.compress.ui.target"),
             value="5",
-            width=200,
+            width=125,
             keyboard_type=ft.KeyboardType.NUMBER,
             helper_text=t("tool.compress.ui.target_hint"),
         )
         self._mode_dd = ft.Dropdown(
             label=t("tool.compress.ui.mode"),
-            width=330,  # caben unos 30 caracteres sin recortarse
+            width=325,  # cabe «Lo más pequeño (recomendado)» sin recortarse
             value="max",
             options=[
                 ft.dropdown.Option("max", t("tool.compress.ui.mode.max")),
@@ -47,7 +47,7 @@ class CompressTool(MultiFileToolPanel):
                     self._mode_dd,
                     self._mode_help,
                 ],
-                spacing=12,
+                spacing=8,
                 wrap=True,  # en ventanas estrechas pasa a dos líneas
                 # Arriba, no centrados: la ayuda «Objetivo, no garantía.» alarga
                 # el campo del objetivo y lo descuadraba frente al desplegable.
