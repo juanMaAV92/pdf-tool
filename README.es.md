@@ -15,7 +15,7 @@ escritorio. Nada sale de tu equipo.**
 
 </div>
 
-Une, divide, comprime, protege y marca PDFs, o convierte entre PDF e imágenes,
+Une, divide, organiza, comprime, protege y marca PDFs, o convierte entre PDF e imágenes,
 con una CLI pensada para scripts y agentes de IA, una skill para agentes y una app de
 escritorio para todos los demás. Gratis, de código abierto, sin anuncios y
 **100% sin conexión**: tus archivos nunca se suben a ningún sitio.
@@ -35,6 +35,7 @@ pdf-tool compress informe.pdf --target-mb 2
 | `pdf-tool merge` | Combina varios PDFs en uno, en el orden que indiques. |
 | `pdf-tool split` | Divide un PDF por rangos de páginas, una página por archivo o cada N páginas. |
 | `pdf-tool images2pdf` | Convierte cada imagen JPG/PNG en su propio PDF. |
+| `pdf-tool organize` | Rota, reordena, elimina, extrae y duplica las páginas de un PDF. |
 | `pdf-tool pdf2images` | Exporta cada página de uno o varios PDFs como imagen JPG o PNG. |
 | `pdf-tool protect` | Añade o quita la contraseña de uno o varios PDFs. |
 | `pdf-tool watermark` | Repite un texto en diagonal sobre todas las páginas. |

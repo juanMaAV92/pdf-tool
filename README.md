@@ -15,7 +15,7 @@ Nothing leaves your computer.**
 
 </div>
 
-Merge, split, compress, protect and watermark PDFs, or convert between PDFs and
+Merge, split, organize, compress, protect and watermark PDFs, or convert between PDFs and
 images, with a CLI built for scripts and AI agents, an agent skill, and a desktop app
 for everyone else. Free, open source, no ads, and **100% offline**: your files
 are never uploaded anywhere.
@@ -35,6 +35,7 @@ pdf-tool compress report.pdf --target-mb 2
 | `pdf-tool merge` | Combines several PDFs into one, in the order you give. |
 | `pdf-tool split` | Splits a PDF by page ranges, one page per file, or every N pages. |
 | `pdf-tool images2pdf` | Turns each JPG/PNG image into its own PDF. |
+| `pdf-tool organize` | Rotates, reorders, deletes, extracts and duplicates the pages of a PDF. |
 | `pdf-tool pdf2images` | Exports every page of one or more PDFs as JPG or PNG images. |
 | `pdf-tool protect` | Adds or removes the password of one or more PDFs. |
 | `pdf-tool watermark` | Repeats a text diagonally across every page. |

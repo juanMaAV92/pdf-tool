@@ -1,6 +1,6 @@
 {
   "name": "pdf-tool",
-  "description": "Teaches Claude Code to create and modify PDFs (merge, split, compress, images to PDF, PDF to images, watermark, password) with the local pdf-tool CLI instead of ad-hoc scripts.",
+  "description": "Teaches Claude Code to create and modify PDFs (merge, split, organize pages, compress, images to PDF, PDF to images, watermark, password) with the local pdf-tool CLI instead of ad-hoc scripts.",
   "author": {
     "name": "Juan Manuel Armero"
   },

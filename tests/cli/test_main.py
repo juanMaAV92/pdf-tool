@@ -25,6 +25,7 @@ def test_list_json_has_all_tools_and_input_rules(capsys):
     assert set(tools) == {
         "merge",
         "split",
+        "organize",
         "compress",
         "images2pdf",
         "pdf2images",
@@ -38,7 +39,7 @@ def test_list_json_has_all_tools_and_input_rules(capsys):
 def test_list_text_shows_one_line_per_tool(capsys):
     assert main(["list"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert len(lines) == 7
+    assert len(lines) == 8
     assert lines[0].startswith("merge")
 
 
@@ -142,3 +143,29 @@ def test_cli_parser_builds_for_all_real_specs():
 
     registry.discover()
     _build_parser(registry.get_specs())
+
+
+def test_organize_requires_pages(small_pdf, capsys):
+    assert main(["organize", str(small_pdf), "--json"]) == 2
+    assert "--pages" in json.loads(capsys.readouterr().out)["error"]["message"]
+
+
+def test_organize_reports_json(tmp_path, capsys):
+    pdf = _make_pdf(tmp_path / "a.pdf", pages=3)
+    assert main(["organize", str(pdf), "--pages", "end-1", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["tool"] == "organize"
+    assert data["metrics"]["pages_out"] == 3
+    assert Path(data["outputs"][0]).name == "a_páginas.pdf"
+
+
+def test_organize_plan_starting_with_a_dash_uses_equals(tmp_path, capsys):
+    pdf = _make_pdf(tmp_path / "a.pdf", pages=3)
+    assert main(["organize", str(pdf), "--pages=-2,3", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["metrics"]["pages_out"] == 3
+
+
+def test_organize_bad_plan_is_an_error(tmp_path, capsys):
+    pdf = _make_pdf(tmp_path / "a.pdf", pages=3)
+    assert main(["organize", str(pdf), "--pages", "9", "--json"]) == 1
+    assert "no existe" in json.loads(capsys.readouterr().out)["error"]["message"]
