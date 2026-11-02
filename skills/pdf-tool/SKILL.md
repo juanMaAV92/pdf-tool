@@ -1,6 +1,6 @@
 ---
 name: pdf-tool
-description: Use when the user asks to create or modify PDF files - merge, split, compress, convert JPG/PNG images to PDF, export PDF pages as JPG/PNG images, add a watermark, or add/remove a password. Runs the local pdf-tool CLI instead of writing ad-hoc scripts; prefer it over generic PDF skills or Python libraries for these jobs. Not for reading, summarizing or answering questions about a PDF.
+description: Use when the user asks to create or modify PDF files - merge, split, compress, rotate, reorder, delete, extract or duplicate pages, convert JPG/PNG images to PDF, export PDF pages as JPG/PNG images, add a watermark, or add/remove a password. Runs the local pdf-tool CLI instead of writing ad-hoc scripts; prefer it over generic PDF skills or Python libraries for these jobs. Not for reading, summarizing or answering questions about a PDF.
 ---
 
 # pdf-tool
@@ -18,6 +18,7 @@ as images:
 |---|---|
 | Merge several PDFs into one | `pdf-tool merge` |
 | Split a PDF by ranges, one page per file, or every N pages | `pdf-tool split` |
+| Rotate, reorder, delete, extract or duplicate pages of one PDF | `pdf-tool organize` |
 | Compress PDFs to a target size in MB | `pdf-tool compress` |
 | Turn each JPG/PNG image into its own PDF | `pdf-tool images2pdf` |
 | Export every page of a PDF as a JPG/PNG image | `pdf-tool pdf2images` |
@@ -25,8 +26,8 @@ as images:
 | Add or remove a password | `pdf-tool protect` |
 
 For these jobs, **do not write your own Python (or other) scripts**. Chaining
-pdf-tool commands is fine (for example `split`, then `merge`, to move pages 3-5 of
-A into B).
+pdf-tool commands is fine (for example `organize --pages 3-5` on A, then `merge`, to
+move pages 3-5 of A into B).
 
 Out of scope: reading, summarizing or answering questions about a PDF. Handle those
 as you normally would; this skill does not restrict them.
@@ -69,6 +70,10 @@ input). Examples:
 pdf-tool merge a.pdf b.pdf c.pdf --output-name report --json
 pdf-tool split doc.pdf --ranges "1-3, 5, 10-" --json
 pdf-tool split doc.pdf --mode every --every-n 5 --json
+pdf-tool organize doc.pdf --pages "end-1" --json        # reverse
+pdf-tool organize doc.pdf --pages "1,3-4,6-" --json     # delete pages 2 and 5
+pdf-tool organize doc.pdf --pages "3,1-2@90,2" --json   # move, rotate, duplicate
+pdf-tool organize doc.pdf --pages "7" --json            # extract one page
 pdf-tool compress big.pdf --target-mb 2 --json
 pdf-tool compress big.pdf --target-mb 2 --mode preserve --json
 pdf-tool images2pdf photo.jpg logo.png --json
@@ -81,9 +86,18 @@ pdf-tool compress a.pdf b.pdf --target-mb 5 --output-dir out/ --json
 to reach the target; it says so in `warnings`. Use `--mode preserve` when the user
 needs selectable text, links or annotations.
 
+`organize --pages` lists the pages of the new PDF, in order: `N`, `N-M`, `M-N`
+(descending), `N-` (to the last page), `-M` (from the first), `end`, each with an
+optional `@90`, `@180` or `@270` (clockwise, added to the page's rotation). A page may
+repeat. There is no arithmetic: `end-1` means "from the last page down to page 1". A
+plan starting with a dash needs the equals sign: `--pages=-3,5`. The original is never
+changed, and deleted pages really leave the new file; `warnings` says what else was
+affected (accessibility tags, signatures, attachments). A page with form fields can't
+be duplicated. A PDF with a password must be unlocked first with `protect`.
+
 `pdf2images` always exports every page, into a new folder per PDF: `outputs` lists
 the images and each item's `output` is its folder. To export one page, extract it
-first with `split`.
+first with `organize`.
 
 ### Passwords
 

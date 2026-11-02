@@ -60,6 +60,7 @@ pdftool/
     ├── compress/
     ├── images2pdf/
     ├── merge/
+    ├── organize/
     ├── pdf2images/
     ├── protect/
     ├── split/

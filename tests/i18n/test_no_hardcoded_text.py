@@ -21,6 +21,7 @@ _LOG_METHODS = {"debug", "info", "warning", "error", "exception", "critical"}
 ALLOWED = {
     ("core/batch.py", "inputs está vacío"): "excepción interna (no la ve el usuario)",
     ("tools/merge/logic.py", "inputs está vacío"): "excepción interna",
+    ("tools/organize/logic.py", "inputs está vacío"): "excepción interna",
     ("tools/split/logic.py", "inputs está vacío"): "excepción interna",
     ("tools/watermark/logic.py", "inputs está vacío"): "excepción interna",
     ("core/config.py", "no es un objeto"): "excepción interna de settings.json",
