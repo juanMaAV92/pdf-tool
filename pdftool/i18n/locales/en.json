@@ -141,7 +141,7 @@
   "tool.merge.suffix": "merged",
   "tool.merge.summary": "{count} PDFs merged → {name}",
   "tool.merge.ui.run": "Merge",
-  "tool.organize.description": "Rotate, reorder, delete, extract and duplicate pages. Your original doesn't change or leave your computer.",
+  "tool.organize.description": "Rotate, reorder, delete, extract and duplicate pages.",
   "tool.organize.error.bad_position": "The position must be between 1 and {last}.",
   "tool.organize.error.changed": "The file changed after opening. Choose it again.",
   "tool.organize.error.duplicate_form": "Page {page} has form fields and can't be duplicated.",

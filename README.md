@@ -54,6 +54,10 @@ pdf-tool compress big.pdf --target-mb 2 --json # result as JSON
 pdf-tool compress big.pdf --target-mb 2 --mode preserve   # keep text and links
 pdf-tool merge a.pdf b.pdf c.pdf --output-name report
 pdf-tool split doc.pdf --ranges "1-3, 5, 8-"
+pdf-tool organize doc.pdf --pages "1,3-4,6-"   # delete pages 2 and 5
+pdf-tool organize doc.pdf --pages "end-1"      # reverse the order
+pdf-tool organize doc.pdf --pages "3,1-2@90,2" # move, rotate, duplicate
+pdf-tool pdf2images doc.pdf --format png --dpi 300
 printf '%s' "$PASSWORD" | pdf-tool protect doc.pdf --password-stdin
 ```
 
@@ -65,6 +69,8 @@ printf '%s' "$PASSWORD" | pdf-tool protect doc.pdf --password-stdin
   `3` batch finished but some files failed.
 - **Passwords** are read from stdin (`--password-stdin`) or the
   `PDFTOOL_PASSWORD` variable, never from arguments.
+- **Deleted pages really go:** `organize` removes their content, form values and
+  bookmarks from the new file, and never publishes a file that still holds them.
 - **Language:** messages and output file names follow your system language;
   `--lang en` or `--lang es` overrides it (or set `PDFTOOL_LANG`).
 - **Compression modes:** `max` (default) tries to reduce images first and only
@@ -118,10 +124,12 @@ it is missing, the skill asks for permission to install it.
 
 ## 🖥️ Desktop app
 
-<img width="980" alt="pdf-tool desktop app: home screen with the six tools" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot-en.png" />
+<img width="980" alt="pdf-tool desktop app: home screen with the eight tools" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot-en.png" />
 
-The same seven tools with a simple interface, in English or Spanish, for macOS and
-Windows. No Python needed.
+The same eight tools with a simple interface, in English or Spanish, for macOS and
+Windows. No Python needed. To organize pages, you work on thumbnails: select them,
+then rotate, move, delete or duplicate, or drag a page to its place. The app opens
+PDFs of up to 1000 pages; the CLI has no limit.
 
 [![Download](https://img.shields.io/badge/⬇️_Download-latest_version-2ea44f?style=for-the-badge)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
 
