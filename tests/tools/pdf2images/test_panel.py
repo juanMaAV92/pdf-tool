@@ -133,3 +133,12 @@ def test_open_folder_ignores_failed_files():
     )
 
     assert tool.result_folder(result) == folder
+
+
+def test_the_panel_compacts_once_a_file_is_ready(tmp_path: Path) -> None:
+    tool = _tool()
+    assert tool._description.visible
+
+    tool._on_pick(_FakeEvent([str(_pdf(tmp_path / "a.pdf"))]))
+
+    assert not tool._description.visible

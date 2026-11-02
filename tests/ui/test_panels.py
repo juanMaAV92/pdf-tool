@@ -1246,3 +1246,60 @@ def test_open_folder_uses_the_result_folder_hook():
     tool.result_folder = lambda _result: Path("/tmp/otra")
     tool._show_result_actions(result)
     assert tool.open_btn.data == Path("/tmp/otra")
+
+
+class _CompactStub(_MultiStub):
+    compact_when_ready = True
+
+
+def _pick_two(tool, tmp_path):
+    a, b = tmp_path / "a.pdf", tmp_path / "b.pdf"
+    a.touch()
+    b.touch()
+    tool._on_pick(_FakeEvent([str(a), str(b)]))
+
+
+def test_compact_panel_gives_its_header_height_to_the_list_when_ready(tmp_path):
+    tool = _CompactStub()
+    _build(tool)
+    input_bar = tool._input_slot.content
+
+    assert tool._description.visible and tool._top_divider.visible
+    assert tool._bottom_divider.visible and tool._input_slot.visible
+    assert not tool._title_input_slot.visible
+
+    _pick_two(tool, tmp_path)
+
+    assert not tool._description.visible
+    assert not tool._top_divider.visible
+    assert not tool._bottom_divider.visible
+    assert not tool._input_slot.visible
+    assert tool._input_slot.content is None
+    assert tool._title_input_slot.visible
+    assert tool._title_input_slot.content is input_bar
+
+
+def test_compact_panel_restores_its_header_when_the_list_is_emptied(tmp_path):
+    tool = _CompactStub()
+    _build(tool)
+    input_bar = tool._input_slot.content
+    _pick_two(tool, tmp_path)
+
+    tool._clear_all(None)
+
+    assert tool._description.visible and tool._top_divider.visible
+    assert tool._bottom_divider.visible
+    assert tool._input_slot.content is input_bar and tool._input_slot.visible
+    assert tool._title_input_slot.content is None
+    assert not tool._title_input_slot.visible
+
+
+def test_panels_stay_expanded_by_default_when_ready(tmp_path):
+    tool = _MultiStub()
+    _build(tool)
+
+    _pick_two(tool, tmp_path)
+
+    assert tool._description.visible and tool._top_divider.visible
+    assert tool._bottom_divider.visible and tool._input_slot.visible
+    assert not tool._title_input_slot.visible
