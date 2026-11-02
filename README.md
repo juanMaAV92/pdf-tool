@@ -15,8 +15,8 @@ Nothing leaves your computer.**
 
 </div>
 
-Merge, split, compress, protect and watermark PDFs, or turn images into PDFs,
-with a CLI built for scripts and AI agents, an agent skill, and a desktop app
+Merge, split, compress, protect and watermark PDFs, or convert between PDFs and
+images, with a CLI built for scripts and AI agents, an agent skill, and a desktop app
 for everyone else. Free, open source, no ads, and **100% offline**: your files
 are never uploaded anywhere.
 
@@ -35,6 +35,7 @@ pdf-tool compress report.pdf --target-mb 2
 | `pdf-tool merge` | Combines several PDFs into one, in the order you give. |
 | `pdf-tool split` | Splits a PDF by page ranges, one page per file, or every N pages. |
 | `pdf-tool images2pdf` | Turns each JPG/PNG image into its own PDF. |
+| `pdf-tool pdf2images` | Exports every page of one or more PDFs as JPG or PNG images. |
 | `pdf-tool protect` | Adds or removes the password of one or more PDFs. |
 | `pdf-tool watermark` | Repeats a text diagonally across every page. |
 
@@ -118,7 +119,7 @@ it is missing, the skill asks for permission to install it.
 
 <img width="980" alt="pdf-tool desktop app: home screen with the six tools" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot-en.png" />
 
-The same six tools with a simple interface, in English or Spanish, for macOS and
+The same seven tools with a simple interface, in English or Spanish, for macOS and
 Windows. No Python needed.
 
 [![Download](https://img.shields.io/badge/⬇️_Download-latest_version-2ea44f?style=for-the-badge)](https://github.com/juanMaAV92/pdf-tool/releases/latest)

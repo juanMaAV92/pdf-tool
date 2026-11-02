@@ -60,6 +60,7 @@ pdftool/
     ├── compress/
     ├── images2pdf/
     ├── merge/
+    ├── pdf2images/
     ├── protect/
     ├── split/
     └── watermark/          # each folder: params.py, logic.py, spec.py, panel.py and an empty __init__.py

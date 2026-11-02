@@ -94,6 +94,10 @@ class BaseToolPanel(PdfTool):
     # archivos. Los paneles de un solo archivo no: un cuerpo vacío solo aleja la
     # acción principal de los controles que la preparan.
     expand_body_when_ready = True
+    # En la ventana mínima la cabecera no deja sitio a la lista: al estar listo,
+    # los botones de elegir suben a la fila del título y desaparecen descripción
+    # y divisores. El estado vacío no cambia.
+    compact_when_ready = False
     # Función pura de la herramienta: run(inputs, params, progress) -> ToolResult.
     logic: Callable[..., ToolResult] | None = None
     # Definición sin Flet de la herramienta (`tools/<id>/spec.py`). Al
@@ -137,6 +141,11 @@ class BaseToolPanel(PdfTool):
     _feedback: ft.Column
     _body: ft.Control
     _empty_hint: ft.Text
+    _description: ft.Text
+    _top_divider: ft.Divider
+    _bottom_divider: ft.Divider
+    _input_slot: ft.Container
+    _title_input_slot: ft.Container
 
     def __init__(self) -> None:
         super().__init__()
@@ -232,6 +241,17 @@ class BaseToolPanel(PdfTool):
         self._empty_hint.value = "" if ready else self._empty_action_hint()
         self._empty_hint.visible = not ready
         self._body.expand = ready and self.expand_body_when_ready
+        self._apply_density(compact=ready and self.compact_when_ready)
+
+    def _apply_density(self, *, compact: bool) -> None:
+        input_bar = self._input_slot.content or self._title_input_slot.content
+        self._input_slot.content = None if compact else input_bar
+        self._input_slot.visible = not compact
+        self._title_input_slot.content = input_bar if compact else None
+        self._title_input_slot.visible = compact
+        self._description.visible = not compact
+        self._top_divider.visible = not compact
+        self._bottom_divider.visible = not compact
 
     # ---- registro (log de diagnóstico; sin datos del usuario) ----
     def _logger(self) -> logging.Logger:
@@ -540,6 +560,11 @@ class BaseToolPanel(PdfTool):
             color=ft.Colors.ON_SURFACE_VARIANT,
             visible=False,
         )
+        self._description = ft.Text(self.meta.description)
+        self._top_divider = ft.Divider()
+        self._bottom_divider = ft.Divider()
+        self._input_slot = ft.Container(content=input_bar)
+        self._title_input_slot = ft.Container(visible=False)
         self._sync_ready_state()
 
         if self._picker not in page.overlay:
@@ -557,13 +582,13 @@ class BaseToolPanel(PdfTool):
         # pegado al fondo sin importar cuántos archivos haya en la lista.
         self._root = ft.Column(
             [
-                ft.Text(self.meta.name, size=24, weight=ft.FontWeight.BOLD),
-                ft.Text(self.meta.description),
-                ft.Divider(),
-                input_bar,
+                self._build_title(),
+                self._description,
+                self._top_divider,
+                self._input_slot,
                 *self.extra_controls(),
                 body,
-                ft.Divider(),
+                self._bottom_divider,
                 self._out_dir,
                 self._empty_hint,
                 ft.Row(
@@ -580,6 +605,13 @@ class BaseToolPanel(PdfTool):
             expand=True,
         )
         return self._root
+
+    def _build_title(self) -> ft.Control:
+        title = ft.Text(self.meta.name, size=24, weight=ft.FontWeight.BOLD)
+        if not self.compact_when_ready:
+            return title
+        title.expand = True
+        return ft.Row([title, self._title_input_slot], spacing=16)
 
 
 class SingleFileToolPanel(BaseToolPanel):

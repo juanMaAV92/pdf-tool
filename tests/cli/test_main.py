@@ -27,6 +27,7 @@ def test_list_json_has_all_tools_and_input_rules(capsys):
         "split",
         "compress",
         "images2pdf",
+        "pdf2images",
         "watermark",
         "protect",
     }
@@ -37,7 +38,7 @@ def test_list_json_has_all_tools_and_input_rules(capsys):
 def test_list_text_shows_one_line_per_tool(capsys):
     assert main(["list"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert len(lines) == 6
+    assert len(lines) == 7
     assert lines[0].startswith("merge")
 
 

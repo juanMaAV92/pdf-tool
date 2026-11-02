@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "name": "English",
-    "decimal_separator": "."
+    "decimal_separator": ".",
+    "name": "English"
   },
   "app.gui_missing": "The desktop app needs Flet, which is not installed.\nInstall it with:  pipx install 'pdf-tool-cli[gui]'\nFor the command line use:  pdf-tool --help",
   "category.convert": "Convert",
@@ -52,6 +52,7 @@
   "core.error.permission": "No permission to read or save the file. Close it if it is open, or choose another folder in «Save to».",
   "core.naming.forbidden_chars": "Invalid output name: it cannot contain / \\ : ? | < > * \"",
   "core.naming.reserved": "Invalid output name: «{name}» is reserved by Windows.",
+  "core.pages.error.password": "This PDF has a password. Remove it first with «{tool}».",
   "param.output_dir": "Output folder (default: next to the original).",
   "tool.compress.all_failed": "No PDF could be compressed.",
   "tool.compress.description": "Reduce the size of one or more PDFs to a target in MB.",
@@ -130,6 +131,36 @@
   "tool.merge.suffix": "merged",
   "tool.merge.summary": "{count} PDFs merged → {name}",
   "tool.merge.ui.run": "Merge",
+  "tool.pdf2images.description": "Turn each page into a JPG or PNG image.",
+  "tool.pdf2images.error.all_failed": "No images could be created.",
+  "tool.pdf2images.error.too_large": "Page {page} is too large at {dpi} DPI. Use {max_dpi} DPI or less.",
+  "tool.pdf2images.error.too_large_any": "Page {page} is too large to export as an image.",
+  "tool.pdf2images.item": {
+    "one": "{count} image",
+    "other": "{count} images"
+  },
+  "tool.pdf2images.name": "PDF to images",
+  "tool.pdf2images.param.dpi": "Resolution in DPI, from 72 to 600.",
+  "tool.pdf2images.param.format": "Image format.",
+  "tool.pdf2images.param.format.jpg": "smaller files, for photos and scans",
+  "tool.pdf2images.param.format.png": "sharp text",
+  "tool.pdf2images.progress.page": "Page {page} of {count}",
+  "tool.pdf2images.suffix": "images",
+  "tool.pdf2images.summary": {
+    "one": "{count} image in {folder}",
+    "other": "{count} images in {folder}"
+  },
+  "tool.pdf2images.summary.partial": {
+    "one": "{count} image in {folder}. PDFs with errors: {failed}.",
+    "other": "{count} images in {folder}. PDFs with errors: {failed}."
+  },
+  "tool.pdf2images.ui.dpi.150": "Screen · 150 DPI",
+  "tool.pdf2images.ui.dpi.300": "Print · 300 DPI",
+  "tool.pdf2images.ui.format": "Format",
+  "tool.pdf2images.ui.pixels": "{name}, page 1: {width} × {height} px",
+  "tool.pdf2images.ui.resolution": "Resolution",
+  "tool.pdf2images.ui.run": "Export images",
+  "tool.pdf2images.warning.restricted": "This PDF has restrictions that the images don't carry.",
   "tool.protect.all_failed": "No PDF could be processed.",
   "tool.protect.description": "Add or remove the password of one or more PDFs.",
   "tool.protect.error.already": "The PDF is already protected; remove its password first.",
