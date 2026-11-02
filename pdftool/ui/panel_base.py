@@ -101,6 +101,9 @@ class BaseToolPanel(PdfTool):
     # Además, los botones de elegir suben a la fila del título. Solo donde son
     # botones: el nombre del archivo elegido necesita su propia fila.
     input_in_title_when_compact = False
+    # El cuerpo hace scroll por su cuenta (p. ej. una cuadrícula), así que al
+    # estar cargado ocupa el espacio libre en vez de ir dentro del área con scroll.
+    body_scrolls_itself = False
     # Función pura de la herramienta: run(inputs, params, progress) -> ToolResult.
     logic: Callable[..., ToolResult] | None = None
     # Definición sin Flet de la herramienta (`tools/<id>/spec.py`). Al
@@ -143,6 +146,8 @@ class BaseToolPanel(PdfTool):
     _result_actions: ft.Row
     _feedback: ft.Column
     _scroll_area: ft.Column
+    _scroll_column: ft.Column
+    _scroll_content: ft.Container
     _empty_hint: ft.Text
     _description: ft.Text
     _top_divider: ft.Divider
@@ -212,6 +217,14 @@ class BaseToolPanel(PdfTool):
     def can_run(self) -> bool:
         raise NotImplementedError
 
+    def _is_loaded(self) -> bool:
+        """Si ya hay contenido que mostrar, aunque aún no se pueda ejecutar."""
+        return self.can_run()
+
+    def extra_actions(self) -> list[ft.Control]:
+        """Hook: botones junto a la acción principal."""
+        return []
+
     def _empty_action_hint(self) -> str:
         """Explica junto al botón qué falta para poder ejecutar."""
         required = self.min_files
@@ -242,8 +255,13 @@ class BaseToolPanel(PdfTool):
         self.run_btn.disabled = not ready or self._running
         self._empty_hint.value = "" if ready else self._empty_action_hint()
         self._empty_hint.visible = not ready
-        self._scroll_area.expand_loose = not (ready and self.expand_body_when_ready)
-        self._apply_density(compact=ready and self.compact_when_ready)
+        loaded = self._is_loaded()
+        self._scroll_area.expand_loose = not (loaded and self.expand_body_when_ready)
+        if self.body_scrolls_itself:
+            self._scroll_area.scroll = None if loaded else ft.ScrollMode.ALWAYS
+            self._scroll_content.expand = loaded
+            self._scroll_column.expand = loaded
+        self._apply_density(compact=loaded and self.compact_when_ready)
 
     def _apply_density(self, *, compact: bool) -> None:
         input_bar = self._input_slot.content or self._title_input_slot.content
@@ -581,6 +599,12 @@ class BaseToolPanel(PdfTool):
             expand=True,
             expand_loose=True,
         )
+        self._scroll_column = ft.Column(spacing=16)
+        self._scroll_content = ft.Container(
+            self._scroll_column,
+            # Hueco para que la barra de scroll no pise los controles.
+            padding=ft.padding.only(right=12),
+        )
         self._sync_ready_state()
 
         if self._picker not in page.overlay:
@@ -597,23 +621,15 @@ class BaseToolPanel(PdfTool):
         # Así ningún control queda fuera de la ventana mínima, con independencia
         # de cuántas opciones tenga la herramienta o de si aparece el aviso de
         # versión nueva.
-        self._scroll_area.controls = [
-            ft.Container(
-                ft.Column(
-                    [
-                        self._build_title(),
-                        self._description,
-                        self._top_divider,
-                        self._input_slot,
-                        *self.extra_controls(),
-                        body,
-                    ],
-                    spacing=16,
-                ),
-                # Hueco para que la barra de scroll no pise los controles.
-                padding=ft.padding.only(right=12),
-            )
+        self._scroll_column.controls = [
+            self._build_title(),
+            self._description,
+            self._top_divider,
+            self._input_slot,
+            *self.extra_controls(),
+            body,
         ]
+        self._scroll_area.controls = [self._scroll_content]
         self._root = ft.Column(
             [
                 self._scroll_area,
@@ -623,6 +639,7 @@ class BaseToolPanel(PdfTool):
                 ft.Row(
                     [
                         self.run_btn,
+                        *self.extra_actions(),
                         self.cancel_btn,
                         ft.Container(expand=True),
                         self._counter,
