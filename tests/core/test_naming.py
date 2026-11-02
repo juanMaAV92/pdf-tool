@@ -1,4 +1,9 @@
-from pdftool.core.naming import output_path, unique_path
+from pdftool.core.naming import (
+    output_dir_path,
+    output_path,
+    series_path,
+    unique_path,
+)
 
 
 def test_free_candidate_is_returned_unchanged(tmp_path):
@@ -130,3 +135,32 @@ def test_localized_suffix_falls_back_to_english_when_invalid(tmp_path):
     i18n.use_locales_dir(tmp_path)
     i18n.set_language("xx")
     assert localized_suffix("tool.watermark.suffix") == "watermark"
+
+
+def test_output_dir_goes_next_to_the_original(tmp_path):
+    assert output_dir_path(tmp_path / "doc.pdf", "img") == tmp_path / "doc_img"
+
+
+def test_output_dir_uses_the_chosen_folder(tmp_path):
+    out = tmp_path / "salida"
+    assert output_dir_path(tmp_path / "doc.pdf", "img", out_dir=out) == out / "doc_img"
+
+
+def test_output_dir_collision_numbers_the_whole_name(tmp_path):
+    (tmp_path / "v1.2_img").mkdir()
+    (tmp_path / "v1.2_img (1)").mkdir()
+    assert output_dir_path(tmp_path / "v1.2.pdf", "img") == tmp_path / "v1.2_img (2)"
+
+
+def test_output_dir_avoids_an_existing_file_with_that_name(tmp_path):
+    (tmp_path / "doc_img").write_bytes(b"x")
+    assert output_dir_path(tmp_path / "doc.pdf", "img") == tmp_path / "doc_img (1)"
+
+
+def test_series_path_pads_the_page_number(tmp_path):
+    assert series_path(tmp_path, "doc", 7, 3, "jpg") == tmp_path / "doc_p007.jpg"
+    assert series_path(tmp_path, "doc", 1234, 4, "png") == tmp_path / "doc_p1234.png"
+
+
+def test_series_path_keeps_dots_in_the_stem(tmp_path):
+    assert series_path(tmp_path, "v1.2", 1, 3, "jpg") == tmp_path / "v1.2_p001.jpg"
