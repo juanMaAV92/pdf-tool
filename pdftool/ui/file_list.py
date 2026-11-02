@@ -21,6 +21,7 @@ class MultiFileToolPanel(BaseToolPanel):
     # Flechas de orden solo donde el orden cambia el resultado (Unir): en las
     # herramientas 1→1 sugieren algo que no ocurre.
     reorderable: bool = False
+    input_in_title_when_compact = True
 
     def build_input(self, page) -> ft.Control:
         previous_task = getattr(self, "_thumb_task", None)
@@ -60,11 +61,9 @@ class MultiFileToolPanel(BaseToolPanel):
             self._refresh()
 
     def build_body(self) -> ft.Control:
-        # La lista rellena el cuerpo y scrollea sola cuando no cabe; el footer
-        # (ejecutar, progreso, status) queda siempre visible.
-        # ListView construye solo las filas visibles: con cientos de archivos
-        # el scroll sigue siendo fluido.
-        self._file_list = ft.ListView(spacing=4, expand=True)
+        # Hace scroll junto con las opciones: el footer (ejecutar, progreso,
+        # status) queda siempre visible.
+        self._file_list = ft.Column(spacing=4, tight=True)
         return self._file_list
 
     @staticmethod

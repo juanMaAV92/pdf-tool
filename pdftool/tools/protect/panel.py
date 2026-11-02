@@ -23,7 +23,7 @@ class ProtectTool(MultiFileToolPanel):
     def extra_controls(self) -> list[ft.Control]:
         self._mode_dd = ft.Dropdown(
             label=t("tool.protect.ui.action"),
-            width=240,
+            width=320,
             value="protect",
             options=[
                 ft.dropdown.Option("protect", t("tool.protect.ui.mode.protect")),
@@ -33,19 +33,31 @@ class ProtectTool(MultiFileToolPanel):
         self._mode_dd.on_change = self._on_mode_change
         self._pw_field = ft.TextField(
             label=t("tool.protect.ui.password"),
-            width=320,
+            width=245,
             password=True,
             can_reveal_password=True,
         )
         # Un error al teclear dejaría un PDF que nadie puede abrir.
         self._confirm_field = ft.TextField(
             label=t("tool.protect.ui.confirm"),
-            width=320,
+            width=245,
             password=True,
             can_reveal_password=True,
-            helper_text=t("tool.protect.ui.keep_safe"),
         )
-        return [self._mode_dd, self._pw_field, self._confirm_field]
+        # Aviso en su propia línea: dentro de un campo se recortaría.
+        self._keep_safe = ft.Text(
+            t("tool.protect.ui.keep_safe"),
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+        )
+        return [
+            self._mode_dd,
+            ft.Row(
+                [self._pw_field, self._confirm_field],
+                wrap=True,
+            ),
+            self._keep_safe,
+        ]
 
     def _on_mode_change(self, _e) -> None:
         protecting = self._mode_dd.value == "protect"
@@ -53,6 +65,7 @@ class ProtectTool(MultiFileToolPanel):
             "tool.protect.ui.password" if protecting else "tool.protect.ui.current"
         )
         self._confirm_field.visible = protecting
+        self._keep_safe.visible = protecting
         self.run_btn.text = t(
             "tool.protect.ui.run" if protecting else "tool.protect.ui.run_remove"
         )

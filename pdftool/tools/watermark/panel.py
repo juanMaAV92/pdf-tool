@@ -57,10 +57,16 @@ class WatermarkTool(SingleFileToolPanel):
             keyboard_type=ft.KeyboardType.NUMBER,
         )
         return [
-            self._text_field,
-            ft.Row([self._color_dd, self._size_field]),
-            ft.Column(
-                [ft.Text(t("tool.watermark.ui.opacity")), self._opacity], spacing=0
+            ft.Row([self._text_field, self._color_dd], wrap=True),
+            ft.Row(
+                [
+                    self._size_field,
+                    ft.Column(
+                        [ft.Text(t("tool.watermark.ui.opacity")), self._opacity],
+                        spacing=0,
+                    ),
+                ],
+                wrap=True,
             ),
         ]
 
