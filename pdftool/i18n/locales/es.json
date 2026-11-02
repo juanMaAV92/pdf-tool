@@ -141,7 +141,7 @@
   "tool.merge.suffix": "unido",
   "tool.merge.summary": "{count} PDFs unidos → {name}",
   "tool.merge.ui.run": "Unir",
-  "tool.organize.description": "Rota, reordena, elimina, extrae y duplica páginas. Tu original no cambia ni sale de tu equipo.",
+  "tool.organize.description": "Rota, reordena, elimina, extrae y duplica páginas.",
   "tool.organize.error.bad_position": "La posición debe estar entre 1 y {last}.",
   "tool.organize.error.changed": "El archivo cambió después de abrirlo. Vuelve a elegirlo.",
   "tool.organize.error.duplicate_form": "La página {page} tiene campos de formulario y no se puede duplicar.",

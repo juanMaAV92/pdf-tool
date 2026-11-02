@@ -54,6 +54,10 @@ pdf-tool compress grande.pdf --target-mb 2 --json  # resultado en JSON
 pdf-tool compress grande.pdf --target-mb 2 --mode preserve   # conserva texto y enlaces
 pdf-tool merge a.pdf b.pdf c.pdf --output-name informe
 pdf-tool split doc.pdf --ranges "1-3, 5, 8-"
+pdf-tool organize doc.pdf --pages "1,3-4,6-"       # elimina las páginas 2 y 5
+pdf-tool organize doc.pdf --pages "end-1"          # invierte el orden
+pdf-tool organize doc.pdf --pages "3,1-2@90,2"     # mueve, rota y duplica
+pdf-tool pdf2images doc.pdf --format png --dpi 300
 printf '%s' "$CLAVE" | pdf-tool protect doc.pdf --password-stdin
 ```
 
@@ -65,6 +69,9 @@ printf '%s' "$CLAVE" | pdf-tool protect doc.pdf --password-stdin
   `3` el lote terminó pero algún archivo falló.
 - **Contraseñas:** se leen de stdin (`--password-stdin`) o de la variable
   `PDFTOOL_PASSWORD`, nunca de los argumentos.
+- **Las páginas eliminadas se van de verdad:** `organize` quita su contenido, los
+  valores de sus formularios y sus marcadores del archivo nuevo, y nunca publica un
+  archivo que aún los guarde.
 - **Idioma:** los mensajes y los nombres de los archivos siguen el idioma del
   sistema; `--lang en` o `--lang es` lo cambian (o la variable `PDFTOOL_LANG`).
 - **Modos de compresión:** `max` (por defecto) primero reduce las imágenes y solo
@@ -119,10 +126,12 @@ falta, la skill pide permiso para instalarla.
 
 ## 🖥️ App de escritorio
 
-<img width="980" alt="App de escritorio de pdf-tool: pantalla de inicio con las seis herramientas" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot-es.png" />
+<img width="980" alt="App de escritorio de pdf-tool: pantalla de inicio con las ocho herramientas" src="https://raw.githubusercontent.com/juanMaAV92/pdf-tool/main/docs/screenshot-es.png" />
 
-Las mismas siete herramientas con una interfaz sencilla, en español o inglés, para
-macOS y Windows. No necesita Python.
+Las mismas ocho herramientas con una interfaz sencilla, en español o inglés, para
+macOS y Windows. No necesita Python. Para organizar páginas trabajas sobre miniaturas:
+las seleccionas y las rotas, mueves, eliminas o duplicas, o arrastras una página a su
+sitio. La app abre PDFs de hasta 1000 páginas; la CLI no tiene límite.
 
 [![Descargar](https://img.shields.io/badge/⬇️_Descargar-última_versión-2ea44f?style=for-the-badge)](https://github.com/juanMaAV92/pdf-tool/releases/latest)
 
